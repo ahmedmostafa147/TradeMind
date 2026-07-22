@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/widgets/app_logo_title.dart';
 import '../watchlist/paste_recommendations_screen.dart';
 import '../watchlist/watchlist_form_screen.dart';
 import '../watchlist/watchlist_providers.dart';
@@ -25,12 +26,7 @@ class TodayScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'قرار اليوم',
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: const AppLogoTitle(title: 'قرار اليوم'),
         actions: [
           IconButton(
             icon: const Icon(Icons.content_paste_go_rounded),

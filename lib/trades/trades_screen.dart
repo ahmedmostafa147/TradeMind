@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/calc/trade_metrics.dart';
+import '../core/widgets/app_logo_title.dart';
 import '../settings/settings_providers.dart';
 import 'trade.dart';
 import 'trade_detail_screen.dart';
@@ -18,7 +19,7 @@ class TradesScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('سجل الصفقات')),
+      appBar: AppBar(title: const AppLogoTitle(title: 'سجل الصفقات')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openForm(context),
         icon: const Icon(Icons.add),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/calc/sizing_result.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
+import '../core/widgets/app_logo_title.dart';
 import '../core/widgets/risk_warning.dart';
 import '../settings/settings_providers.dart';
 import '../trades/trade_draft.dart';
@@ -50,7 +51,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
     final colors = context.resultColors;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('حاسبة الصفقة')),
+      appBar: AppBar(title: const AppLogoTitle(title: 'حاسبة الصفقة')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

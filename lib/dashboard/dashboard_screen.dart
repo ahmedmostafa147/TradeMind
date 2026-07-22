@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/formatters.dart';
 import '../core/theme.dart';
+import '../core/widgets/app_logo_title.dart';
 import '../settings/settings_providers.dart';
 import 'analytics_screen.dart';
 import 'dashboard_providers.dart';
@@ -29,7 +30,7 @@ class DashboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('لوحة التحكم'),
+        title: const AppLogoTitle(title: 'لوحة التحكم'),
         actions: [
           IconButton(
             icon: const Icon(Icons.insights_outlined),
