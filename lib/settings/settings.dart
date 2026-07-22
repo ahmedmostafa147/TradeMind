@@ -1,0 +1,63 @@
+/// User-configurable risk rule. Persisted as primitive keys, not as a blob —
+/// see lib/trades/hive_keys.dart.
+class Settings {
+  static const double defaultCapital = 17000;
+  static const double defaultMaxRiskPercent = 0.02;
+
+  /// Trading capital in EGP.
+  final double capital;
+
+  /// Maximum fraction of capital riskable on one trade. A FRACTION (0.02),
+  /// never a percent (2.0). The Settings screen is the only place that
+  /// converts, so nothing downstream has to guess the unit.
+  final double maxRiskPercent;
+
+  /// Show the pre-trade checklist before saving a planned or open trade.
+  final bool enableChecklist;
+
+  /// Ask before destructive actions. Defaults on — deleting a trade is not
+  /// recoverable, and this journal is the only copy of the data.
+  final bool enableConfirmations;
+
+  /// Days an open position may sit before «قرار اليوم» flags it as waiting.
+  final int waitingThresholdDays;
+
+  /// Percentages the smart builder starts from. Fractions, like
+  /// [maxRiskPercent] — 0.05 is 5%.
+  final double defaultTakeProfitPercent;
+  final double defaultStopLossPercent;
+
+  static const int defaultWaitingThresholdDays = 30;
+  static const double fallbackTakeProfitPercent = 0.05;
+  static const double fallbackStopLossPercent = 0.02;
+
+  const Settings({
+    this.capital = defaultCapital,
+    this.maxRiskPercent = defaultMaxRiskPercent,
+    this.enableChecklist = true,
+    this.enableConfirmations = true,
+    this.waitingThresholdDays = defaultWaitingThresholdDays,
+    this.defaultTakeProfitPercent = fallbackTakeProfitPercent,
+    this.defaultStopLossPercent = fallbackStopLossPercent,
+  });
+
+  Settings copyWith({
+    double? capital,
+    double? maxRiskPercent,
+    bool? enableChecklist,
+    bool? enableConfirmations,
+    int? waitingThresholdDays,
+    double? defaultTakeProfitPercent,
+    double? defaultStopLossPercent,
+  }) => Settings(
+    capital: capital ?? this.capital,
+    maxRiskPercent: maxRiskPercent ?? this.maxRiskPercent,
+    enableChecklist: enableChecklist ?? this.enableChecklist,
+    enableConfirmations: enableConfirmations ?? this.enableConfirmations,
+    waitingThresholdDays: waitingThresholdDays ?? this.waitingThresholdDays,
+    defaultTakeProfitPercent:
+        defaultTakeProfitPercent ?? this.defaultTakeProfitPercent,
+    defaultStopLossPercent:
+        defaultStopLossPercent ?? this.defaultStopLossPercent,
+  );
+}

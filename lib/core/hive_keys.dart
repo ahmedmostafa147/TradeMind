@@ -1,0 +1,38 @@
+/// Hive box names, key names, and typeId allocation, in one place so the
+/// on-disk contract is reviewable at a glance.
+library;
+
+/// Untyped box holding the single Settings object as primitive keys.
+///
+/// Stored as loose keys rather than a serialised blob on purpose: adding a
+/// field becomes a one-line `box.get(key, defaultValue:)` with no adapter and
+/// no migration.
+const String kSettingsBox = 'settings';
+
+const String kCapitalKey = 'capital'; // double, EGP
+const String kMaxRiskKey = 'maxRiskPercent'; // double, FRACTION (0.02 not 2.0)
+const String kThemeModeKey = 'themeMode'; // int, ThemeMode index
+const String kEnableChecklistKey = 'enableChecklist'; // bool
+const String kEnableConfirmationsKey = 'enableConfirmations'; // bool
+const String kWaitingThresholdKey = 'waitingThresholdDays'; // int
+const String kDefaultTakeProfitKey = 'defaultTakeProfitPercent'; // double
+const String kDefaultStopLossKey = 'defaultStopLossPercent'; // double
+
+/// Box of trades, keyed by Trade.id (the uuid) so update and delete are O(1)
+/// and idempotent.
+const String kTradesBox = 'trades';
+
+/// typeId allocation. These are the migration contract — never reuse or
+/// renumber one that has shipped.
+///   0 — reserved, deliberately unused
+///   1 — Trade
+///   2 — TimelineEntry
+///   3 — WatchlistItem
+///   4+ — free
+const int kTradeTypeId = 1;
+const int kTimelineEntryTypeId = 2;
+const int kWatchlistItemTypeId = 3;
+
+/// Watchlist entries, keyed by their own uuid. Not trades — a separate box so
+/// nothing in the journal's statistics can ever see them.
+const String kWatchlistBox = 'watchlist';
