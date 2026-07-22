@@ -8,6 +8,48 @@ class AppThemeComponents {
 
   static const String _fontFamily = 'Cairo';
 
+  static TextTheme makeTextTheme(TextTheme base, PaletteScheme p) {
+    final custom = base.apply(fontFamily: _fontFamily);
+    return custom.copyWith(
+      bodyLarge: custom.bodyLarge?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: p.onSurface,
+      ),
+      bodyMedium: custom.bodyMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: p.onSurface,
+      ),
+      bodySmall: custom.bodySmall?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: p.onSurfaceVariant,
+      ),
+      titleLarge: custom.titleLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: p.onSurface,
+      ),
+      titleMedium: custom.titleMedium?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: p.onSurface,
+      ),
+      titleSmall: custom.titleSmall?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: p.onSurface,
+      ),
+      labelLarge: custom.labelLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+        color: p.onSurface,
+      ),
+      labelMedium: custom.labelMedium?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: p.onSurfaceVariant,
+      ),
+      labelSmall: custom.labelSmall?.copyWith(
+        fontWeight: FontWeight.w600,
+        color: p.onSurfaceVariant,
+      ),
+    );
+  }
+
   static FilledButtonThemeData filledButton(PaletteScheme p) =>
       FilledButtonThemeData(
         style: FilledButton.styleFrom(
