@@ -6,16 +6,15 @@
 /// mystery prefill. A route argument has exactly the route's lifetime and needs
 /// no clearing logic.
 class TradeDraft {
+  final String? ticker;
   final double? entryPrice;
   final double? stopPrice;
   final int? quantity;
-
-  /// The planned target, when the draft came from the smart builder.
   final double? takeProfitPrice;
-
   final String? reason;
 
   const TradeDraft({
+    this.ticker,
     this.entryPrice,
     this.stopPrice,
     this.quantity,

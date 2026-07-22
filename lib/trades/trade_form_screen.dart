@@ -76,7 +76,9 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
     String priceText(double? value) =>
         value == null ? '' : value.toStringAsFixed(2);
 
-    _tickerController = TextEditingController(text: existing?.ticker ?? '');
+    _tickerController = TextEditingController(
+      text: existing?.ticker ?? draft?.ticker ?? '',
+    );
     _reasonController = TextEditingController(
       text: existing?.reason ?? draft?.reason ?? '',
     );

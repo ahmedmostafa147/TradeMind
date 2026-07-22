@@ -4,6 +4,8 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 
 import 'app.dart';
 import 'core/hive_keys.dart';
+import 'features/auth/providers/auth_providers.dart';
+import 'features/auth/repositories/auth_repository.dart';
 import 'settings/settings_providers.dart';
 import 'trades/timeline_entry_adapter.dart';
 import 'trades/trade.dart';
@@ -29,15 +31,16 @@ Future<void> main() async {
     final settingsBox = await Hive.openBox(kSettingsBox);
     final tradesBox = await Hive.openBox<Trade>(kTradesBox);
     final watchlistBox = await Hive.openBox<WatchlistItem>(kWatchlistBox);
+    final authBox = await Hive.openBox(kAuthBox);
 
     runApp(
       ProviderScope(
-        // Opening the boxes here, before runApp, is what lets every notifier be
-        // a plain Notifier instead of an AsyncNotifier.
         overrides: [
           settingsBoxProvider.overrideWithValue(settingsBox),
           tradesBoxProvider.overrideWithValue(tradesBox),
           watchlistBoxProvider.overrideWithValue(watchlistBox),
+          authBoxProvider.overrideWithValue(authBox),
+          authProvider.overrideWith(() => AuthRepository(authBox)),
         ],
         child: const EgxJournalApp(),
       ),

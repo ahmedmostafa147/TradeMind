@@ -35,9 +35,9 @@ class DashboardScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.insights_outlined),
             tooltip: 'الإحصائيات',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const AnalyticsScreen()),
-            ),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const AnalyticsScreen())),
           ),
         ],
       ),
@@ -71,10 +71,7 @@ class DashboardScreen extends ConsumerWidget {
                     : percent(stats.totalReturnPct),
                 valueColor: signColor(stats.totalReturnPct),
               ),
-              StatCard(
-                label: 'نسبة النجاح',
-                value: percent(stats.winRate),
-              ),
+              StatCard(label: 'نسبة النجاح', value: percent(stats.winRate)),
               StatCard(
                 label: 'متوسط R لكل صفقة',
                 value: rMultiple(stats.averageR),

@@ -36,3 +36,6 @@ const int kWatchlistItemTypeId = 3;
 /// Watchlist entries, keyed by their own uuid. Not trades — a separate box so
 /// nothing in the journal's statistics can ever see them.
 const String kWatchlistBox = 'watchlist';
+
+/// User authentication and session box.
+const String kAuthBox = 'auth';

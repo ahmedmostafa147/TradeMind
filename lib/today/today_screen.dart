@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/widgets/app_logo_title.dart';
+import '../features/ai_parser/widgets/ai_trade_sheet.dart';
 import '../watchlist/paste_recommendations_screen.dart';
 import '../watchlist/watchlist_form_screen.dart';
 import '../watchlist/watchlist_providers.dart';
@@ -28,6 +29,15 @@ class TodayScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const AppLogoTitle(title: 'قرار اليوم'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.auto_awesome, color: Colors.amber),
+            tooltip: 'تحليل توصية بالـ AI',
+            onPressed: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => const AiTradeSheet(),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.content_paste_go_rounded),
             tooltip: 'لصق ترشيحات',
