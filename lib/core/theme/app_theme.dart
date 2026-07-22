@@ -47,7 +47,7 @@ class AppTheme {
       shadow: p.shadow,
     );
 
-    final textTheme = base.textTheme.apply(fontFamily: _fontFamily);
+    final textTheme = AppThemeComponents.makeTextTheme(base.textTheme, p);
 
     return ThemeData(
       useMaterial3: true,
@@ -55,7 +55,8 @@ class AppTheme {
       scaffoldBackgroundColor: p.background,
       fontFamily: _fontFamily,
       textTheme: textTheme,
-      primaryTextTheme: base.primaryTextTheme.apply(fontFamily: _fontFamily),
+      primaryTextTheme:
+          AppThemeComponents.makeTextTheme(base.primaryTextTheme, p),
       dividerColor: p.outlineVariant,
       dividerTheme: DividerThemeData(
         color: p.outlineVariant,

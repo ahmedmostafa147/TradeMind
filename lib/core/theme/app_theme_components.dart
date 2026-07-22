@@ -102,14 +102,12 @@ class AppThemeComponents {
       );
 
   static CardThemeData card(PaletteScheme p, bool isDark) => CardThemeData(
-        color: p.surface,
-        surfaceTintColor: Colors.transparent,
-        elevation: isDark ? 0 : 2,
-        shadowColor: p.shadow,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-      );
+    color: p.surface,
+    surfaceTintColor: Colors.transparent,
+    elevation: isDark ? 0 : 2,
+    shadowColor: p.shadow,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+  );
 
   static NavigationBarThemeData navigationBar(PaletteScheme p) =>
       NavigationBarThemeData(
@@ -120,14 +118,12 @@ class AppThemeComponents {
       );
 
   static SnackBarThemeData snackBar(PaletteScheme p) => SnackBarThemeData(
-        backgroundColor: p.inverseSurface,
-        contentTextStyle: const TextStyle(
-          color: Colors.white,
-          fontFamily: _fontFamily,
-        ),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      );
+    backgroundColor: p.inverseSurface,
+    contentTextStyle: const TextStyle(
+      color: Colors.white,
+      fontFamily: _fontFamily,
+    ),
+    behavior: SnackBarBehavior.floating,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  );
 }
