@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -16,11 +17,13 @@ import 'watchlist/watchlist_item_adapter.dart';
 import 'watchlist/watchlist_providers.dart';
 
 Future<void> main() async {
-  // Order matters: ensureInitialized before path_provider is touched, and the
-  // adapter must be registered BEFORE the typed box is opened or open() throws.
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
+    try {
+      await Firebase.initializeApp();
+    } catch (_) {}
+
     await Hive.initFlutter();
     // TimelineEntry is nested inside Trade, so its adapter must be registered
     // too — Trade's own read() would otherwise fail to decode field 15.
