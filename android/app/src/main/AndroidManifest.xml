@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Firebase Auth, Firestore, the EGX quote lookup and the AI parser all
+         need the network. Flutter's template only declares this in the debug
+         and profile manifests (for the dev-time VM service), so without it here
+         every one of those features fails on a RELEASE build only — the kind of
+         bug that ships. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:label="TradeMind"
         android:name="${applicationName}"

@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "680175215",
+    "project_id": "trademind-6222c",
+    "storage_bucket": "trademind-6222c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:680175215:android:7f0ad1b35c2fce3c394f9a",
+        "android_client_info": {
+          "package_name": "com.trademind.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "680175215-eaj9ea5etm3h5du0il3r7ipmcol4ltc4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtNV7qrxYBWEfAM8TB6cj6rN6Yy5InqR8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "680175215-eaj9ea5etm3h5du0il3r7ipmcol4ltc4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

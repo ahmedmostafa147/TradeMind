@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/formatters.dart';
+import '../../../core/theme.dart';
 import '../models/egx_stock_info.dart';
 import '../services/egx_market_service.dart';
 
@@ -61,9 +62,12 @@ class _StockQuoteBadgeState extends State<StockQuoteBadge> {
       return const SizedBox.shrink();
     }
 
+    // A daily move is the same kind of fact as a trade outcome, so it uses the
+    // same tokens. Hardcoding the hexes here would both break the one-line
+    // palette swap and leave the light-mode green unreadable on a dark surface.
+    final colors = context.resultColors;
     final isPositive = info.change >= 0;
-    final changeColor =
-        isPositive ? const Color(0xFF0E7C4A) : const Color(0xFFB3261E);
+    final changeColor = isPositive ? colors.win : colors.loss;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -99,7 +103,7 @@ class _StockQuoteBadgeState extends State<StockQuoteBadge> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: changeColor.withValues(alpha: 0.12),
+              color: colors.surfaceFor(changeColor),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(

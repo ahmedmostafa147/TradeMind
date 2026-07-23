@@ -84,6 +84,12 @@ class SmartTradePlan {
     required double stopLossPercent,
     double? entryPrice,
     int? userQty,
+    // An absolute stop, for the "stop by price" input mode. When given and
+    // valid it takes precedence over [stopLossPercent]; the percentage is then
+    // derived from it for display, so the two modes stay consistent and the
+    // price the trader typed is used exactly rather than round-tripped through
+    // a percentage. Null keeps the original percentage-driven behaviour.
+    double? stopPrice,
   }) {
     final entry =
         (entryPrice != null && entryPrice.isFinite && entryPrice > 0)
@@ -93,19 +99,34 @@ class SmartTradePlan {
     final validTp = takeProfitPercent.isFinite && takeProfitPercent > 0
         ? takeProfitPercent
         : 0.0;
-    final validSl =
-        stopLossPercent.isFinite &&
-            stopLossPercent > 0 &&
-            // A stop at or beyond 100% below entry is meaningless.
-            stopLossPercent < 1
-        ? stopLossPercent
-        : 0.0;
+
+    final overrideStop =
+        (stopPrice != null &&
+            stopPrice.isFinite &&
+            stopPrice > 0 &&
+            entry != null &&
+            stopPrice < entry)
+        ? roundToPiastre(stopPrice)
+        : null;
+
+    // With an explicit stop price the percentage is whatever that price
+    // implies; otherwise it is the value picked directly.
+    final validSl = overrideStop != null
+        ? (entry! - overrideStop) / entry
+        : (stopLossPercent.isFinite &&
+                  stopLossPercent > 0 &&
+                  // A stop at or beyond 100% below entry is meaningless.
+                  stopLossPercent < 1
+              ? stopLossPercent
+              : 0.0);
 
     double? takeProfitPrice;
-    double? stopLossPrice;
+    double? stopLossPrice = overrideStop;
     if (entry != null) {
       if (validTp > 0) takeProfitPrice = roundToPiastre(entry * (1 + validTp));
-      if (validSl > 0) stopLossPrice = roundToPiastre(entry * (1 - validSl));
+      if (overrideStop == null && validSl > 0) {
+        stopLossPrice = roundToPiastre(entry * (1 - validSl));
+      }
     }
 
     // Rounding can collapse a tiny percentage onto the entry price itself —

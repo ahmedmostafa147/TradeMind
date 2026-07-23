@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:egx_trade_journal/app.dart';
 import 'package:egx_trade_journal/core/hive_keys.dart';
+import 'package:egx_trade_journal/features/auth/providers/auth_providers.dart';
+import 'package:egx_trade_journal/features/auth/repositories/auth_repository.dart';
+import 'package:egx_trade_journal/features/market/market_providers.dart';
 import 'package:egx_trade_journal/settings/settings_providers.dart';
 import 'package:egx_trade_journal/trades/checklist.dart';
 import 'package:egx_trade_journal/trades/timeline_entry.dart';
@@ -25,6 +28,7 @@ void main() {
   late Box settingsBox;
   late Box<Trade> tradesBox;
   late Box<WatchlistItem> watchlistBox;
+  late Box authBox;
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('egx_acceptance');
@@ -41,6 +45,11 @@ void main() {
     settingsBox = await Hive.openBox(kSettingsBox);
     tradesBox = await Hive.openBox<Trade>(kTradesBox);
     watchlistBox = await Hive.openBox<WatchlistItem>(kWatchlistBox);
+    authBox = await Hive.openBox(kAuthBox);
+    // Past the first-run auth screen as a guest. These tests are about the
+    // journal, and a guest is the state most users are in — the sign-in screen
+    // itself is covered by auth_repository_test and auth_gate_test.
+    await authBox.put('skipped_auth', true);
   });
 
   tearDown(() async {
@@ -69,6 +78,14 @@ void main() {
           settingsBoxProvider.overrideWithValue(settingsBox),
           tradesBoxProvider.overrideWithValue(tradesBox),
           watchlistBoxProvider.overrideWithValue(watchlistBox),
+          // Mirrors main(): both auth providers throw until overridden, and
+          // the settings screen watches them, so the whole app fails to build
+          // without this pair.
+          authBoxProvider.overrideWithValue(authBox),
+          authProvider.overrideWith(() => AuthRepository(authBox)),
+          // Keep the open-trade live-price lookup offline and instant, so no
+          // test hits the network or spins on the loading indicator.
+          livePriceProvider.overrideWith((ref, symbol) async => null),
         ],
         child: const EgxJournalApp(),
       ),
@@ -76,44 +93,32 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  // The calculator screen now carries the smart builder above the manual
-  // calculator, and both have a "سعر الدخول" field — so these target the
-  // manual one by key rather than by position.
-  final manualEntry = find.descendant(
-    of: find.byKey(const ValueKey('manual-entry-price')),
-    matching: find.byType(TextField),
-  );
-  final manualStop = find.descendant(
-    of: find.byKey(const ValueKey('manual-stop-price')),
-    matching: find.byType(TextField),
-  );
+  // The manual calculator was merged into the smart builder: the stop is now
+  // entered as an absolute price by switching the builder to "سعر" mode. These
+  // target the builder's own fields by key.
+  final entryField = find.byKey(const ValueKey('entry-price-field'));
+  final stopPriceField = find.byKey(const ValueKey('stop-price-field'));
 
   Future<void> openTab(WidgetTester tester, String label) async {
     await tester.tap(find.text(label).last);
     await tester.pumpAndSettle();
   }
 
-  /// Opens the calculator tab and scrolls past the smart builder so the manual
-  /// calculator's fields and readouts are actually built — a lazy ListView has
-  /// not constructed them while they sit below the fold.
+  /// Opens the calculator and switches the stop input to absolute-price mode,
+  /// which is what the manual calculator used to provide.
   Future<void> openManualCalculator(WidgetTester tester) async {
     await openTab(tester, 'حاسبة الصفقة');
-    // Anchored on the section heading rather than a field: the heading sits
-    // immediately above both inputs, so stopping there leaves them together in
-    // the viewport. Targeting the lower field instead scrolls the upper one out
-    // and the list disposes it.
-    await tester.scrollUntilVisible(
-      find.text('الحاسبة اليدوية'),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
+    // The stop-mode toggle: pick "سعر" so a stop price can be typed directly.
+    await tester.ensureVisible(find.text('سعر'));
+    await tester.tap(find.text('سعر'));
     await tester.pumpAndSettle();
   }
 
-  /// Brings the manual calculator's results card into the tree.
+  /// The builder recomputes inline, so the results are already on screen; this
+  /// just brings the summary card fully into view before asserting.
   Future<void> showManualResults(WidgetTester tester) async {
     await tester.scrollUntilVisible(
-      find.text('المخاطرة للسهم الواحد'),
+      find.text('الأسهم المقترحة'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
@@ -177,8 +182,8 @@ void main() {
       await pumpApp(tester);
       await openManualCalculator(tester);
 
-      await tester.enterText(manualEntry, '10.00');
-      await tester.enterText(manualStop, '9.50');
+      await tester.enterText(entryField, '10.00');
+      await tester.enterText(stopPriceField, '9.50');
       await tester.pumpAndSettle();
       await showManualResults(tester);
 
@@ -207,8 +212,8 @@ void main() {
       await pumpApp(tester);
       await openManualCalculator(tester);
 
-      await tester.enterText(manualEntry, '1.10');
-      await tester.enterText(manualStop, '1.00');
+      await tester.enterText(entryField, '1.10');
+      await tester.enterText(stopPriceField, '1.00');
       await tester.pumpAndSettle();
       await showManualResults(tester);
 
@@ -227,8 +232,8 @@ void main() {
       await pumpApp(tester);
       await openManualCalculator(tester);
 
-      await tester.enterText(manualEntry, '9.00');
-      await tester.enterText(manualStop, '10.00');
+      await tester.enterText(entryField, '9.00');
+      await tester.enterText(stopPriceField, '10.00');
       await tester.pumpAndSettle();
 
       expect(

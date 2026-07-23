@@ -30,9 +30,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _capitalController = TextEditingController(
       text: settings.capital.toStringAsFixed(2),
     );
+    // Displayed as a PERCENT (2.0) while stored as a fraction (0.02). This
+    // screen owns the conversion in both directions; nothing downstream has to
+    // guess the unit.
     _riskController = TextEditingController(
       text: (settings.maxRiskPercent * 100).toStringAsFixed(1),
     );
+    // The drafts back the max-loss readout and the two error messages. They are
+    // only reassigned in the onChanged handlers, so without seeding them here
+    // the screen opens claiming both fields are empty and shows "—" instead of
+    // the saved limit — until the user types.
+    _draftCapital = settings.capital;
+    _draftRiskPercent = settings.maxRiskPercent * 100;
   }
 
   @override

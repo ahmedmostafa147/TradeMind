@@ -55,12 +55,15 @@ class ReadoutRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isUnset = value == kEmptyValue || value.trim() == '—';
+    final effectiveColor = isUnset ? theme.colorScheme.outline : valueColor;
+
     final valueStyle = emphasise
         ? theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            color: valueColor,
+            color: effectiveColor,
           )
-        : theme.textTheme.bodyLarge?.copyWith(color: valueColor);
+        : theme.textTheme.bodyLarge?.copyWith(color: effectiveColor);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),

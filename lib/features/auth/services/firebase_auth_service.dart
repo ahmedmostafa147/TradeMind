@@ -1,56 +1,87 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-/// Firebase Authentication service wrapper.
+import 'auth_exception.dart';
+
+/// Firebase Authentication wrapper.
+///
+/// Every method either returns a credential Firebase actually verified, or
+/// throws [AuthException]. It never returns a "sort of signed in" result: the
+/// caller uses the return value to decide whether a session exists, so a
+/// half-success here would become a real unauthenticated session upstream.
 class FirebaseAuthService {
+  const FirebaseAuthService._();
+
+  /// Whether `Firebase.initializeApp()` succeeded during startup.
+  ///
+  /// `main()` swallows an initialisation failure so the journal still opens
+  /// offline. That leaves `FirebaseAuth.instance` throwing on every call, so
+  /// each entry point checks this first and reports a clear reason instead.
+  static bool get isAvailable => Firebase.apps.isNotEmpty;
+
   static FirebaseAuth get _auth => FirebaseAuth.instance;
 
-  static User? get currentUser => _auth.currentUser;
+  static User? get currentUser => isAvailable ? _auth.currentUser : null;
 
-  static Stream<User?> get authStateChanges => _auth.authStateChanges();
+  static Stream<User?> get authStateChanges =>
+      isAvailable ? _auth.authStateChanges() : const Stream<User?>.empty();
 
-  /// Sign up user with Email and Password.
-  static Future<UserCredential?> signUp({
+  /// Creates an account. Throws [AuthException] on any failure.
+  static Future<UserCredential> signUp({
     required String email,
     required String password,
     required String displayName,
   }) async {
+    if (!isAvailable) throw AuthException.backendUnavailable;
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
-      if (credential.user != null) {
-        await credential.user!.updateDisplayName(displayName);
-      }
+      await credential.user?.updateDisplayName(displayName);
       return credential;
     } on FirebaseAuthException catch (e) {
-      throw e.message ?? 'حدث خطأ أثناء إنشاء الحساب';
-    } catch (e) {
-      throw 'تعذّر الاتصال بخدمة الحسابات: $e';
+      throw AuthException.fromCode(e.code);
+    } on AuthException {
+      rethrow;
+    } catch (_) {
+      throw const AuthException(
+        AuthFailure.unknown,
+        'تعذّر إنشاء الحساب. جرّب تاني.',
+      );
     }
   }
 
-  /// Sign in user with Email and Password.
-  static Future<UserCredential?> signIn({
+  /// Signs in. Throws [AuthException] on any failure.
+  static Future<UserCredential> signIn({
     required String email,
     required String password,
   }) async {
+    if (!isAvailable) throw AuthException.backendUnavailable;
     try {
       return await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
     } on FirebaseAuthException catch (e) {
-      throw e.message ?? 'اسم المستخدم أو كلمة السر غير صحيحة';
-    } catch (e) {
-      throw 'تعذّر تسجيل الدخول: $e';
+      throw AuthException.fromCode(e.code);
+    } on AuthException {
+      rethrow;
+    } catch (_) {
+      throw const AuthException(
+        AuthFailure.unknown,
+        'تعذّر تسجيل الدخول. جرّب تاني.',
+      );
     }
   }
 
-  /// Sign out current user.
+  /// Signs out. Safe to call when Firebase never initialised.
   static Future<void> signOut() async {
+    if (!isAvailable) return;
     try {
       await _auth.signOut();
-    } catch (_) {}
+    } catch (_) {
+      // Local session is cleared by the caller regardless.
+    }
   }
 }

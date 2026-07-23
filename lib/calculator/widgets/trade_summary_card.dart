@@ -20,13 +20,15 @@ class TradeSummaryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = context.resultColors;
     final positive = plan.rewardBeatsRisk;
+    final hasPrices = plan.entryPrice != null;
     final accent = positive ? colors.win : colors.loss;
+    final borderColor = hasPrices ? accent : theme.colorScheme.outlineVariant;
     final quality = plan.quality;
 
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: accent, width: 1.5),
+        side: BorderSide(color: borderColor, width: hasPrices ? 1.5 : 1),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),

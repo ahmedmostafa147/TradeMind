@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme.dart';
+import 'features/auth/screens/auth_screen.dart';
 import 'settings/settings_providers.dart';
 import 'shell/home_shell.dart';
 
@@ -31,7 +32,9 @@ class EgxJournalApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
 
-      home: const HomeShell(),
+      // First run lands on the auth screen; once the user signs in or chooses
+      // to stay a guest, the gate lets the journal through on every launch.
+      home: const AuthGate(child: HomeShell()),
     );
   }
 }

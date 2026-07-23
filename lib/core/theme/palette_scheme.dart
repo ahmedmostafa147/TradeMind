@@ -44,6 +44,12 @@ class PaletteScheme {
   final Color openBorder;
   final Color breakevenBorder;
 
+  /// The AI-feature accent — the "sparkle" icon that marks anything parsed by
+  /// the model. Its own token rather than [brand]: in a monochrome palette the
+  /// brand is black, and a black sparkle is indistinguishable from an ordinary
+  /// icon, which is the one thing this affordance must not be.
+  final Color aiAccent;
+
   final Color shadow;
   final Color headerFrom;
   final Color headerTo;
@@ -82,6 +88,7 @@ class PaletteScheme {
     required this.lossBorder,
     required this.openBorder,
     required this.breakevenBorder,
+    required this.aiAccent,
     required this.shadow,
     required this.headerFrom,
     required this.headerTo,

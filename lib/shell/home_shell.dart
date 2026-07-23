@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../calculator/calculator_screen.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../features/sync/providers/sync_provider.dart';
 import '../settings/settings_screen.dart';
 import '../today/today_screen.dart';
 import '../trades/trades_screen.dart';
@@ -10,18 +12,25 @@ import '../trades/trades_screen.dart';
 /// for. A drawer would hide every primary surface behind a gesture that also
 /// collides with Android's right-edge back swipe under RTL. NavigationBar
 /// mirrors itself automatically, so قرار اليوم lands rightmost with no work.
-class HomeShell extends StatefulWidget {
+class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
   @override
-  State<HomeShell> createState() => _HomeShellState();
+  ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
 
   @override
   Widget build(BuildContext context) {
+    // The shell is what keeps the sync controller alive. A Riverpod provider
+    // nothing watches is never constructed, so this single line is the
+    // difference between the cloud backup running and it being dead code —
+    // which is what it was: the observer existed but was never referenced, so
+    // no trade was ever uploaded.
+    ref.watch(syncControllerProvider);
+
     return Scaffold(
       // IndexedStack, not a rebuild-on-switch: it preserves scroll position and
       // half-typed calculator input across tab changes.

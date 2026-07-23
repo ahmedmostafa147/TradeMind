@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/calc/daily_decisions.dart';
 import '../../core/formatters.dart';
 import '../../core/theme.dart';
+import '../../features/market/widgets/live_pnl_view.dart';
 import '../../trades/widgets/result_badge.dart';
 
 class TradeActionCard extends StatelessWidget {
@@ -133,6 +134,17 @@ class TradeActionCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                // Running result for a live position — the number a trader
+                // opens this screen to see. Only open trades have one; a planned
+                // idea has not risked money yet.
+                if (trade.isOpen && trade.ticker.trim().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  LivePnlView(
+                    ticker: trade.ticker,
+                    entryPrice: trade.entryPrice,
+                    quantity: trade.quantity,
+                  ),
+                ],
                 const SizedBox(height: 14),
                 Row(children: _spaced(actions)),
               ],

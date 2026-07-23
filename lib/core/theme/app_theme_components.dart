@@ -11,42 +11,15 @@ class AppThemeComponents {
   static TextTheme makeTextTheme(TextTheme base, PaletteScheme p) {
     final custom = base.apply(fontFamily: _fontFamily);
     return custom.copyWith(
-      bodyLarge: custom.bodyLarge?.copyWith(
-        fontWeight: FontWeight.w600,
-        color: p.onSurface,
-      ),
-      bodyMedium: custom.bodyMedium?.copyWith(
-        fontWeight: FontWeight.w600,
-        color: p.onSurface,
-      ),
-      bodySmall: custom.bodySmall?.copyWith(
-        fontWeight: FontWeight.w600,
-        color: p.onSurfaceVariant,
-      ),
-      titleLarge: custom.titleLarge?.copyWith(
-        fontWeight: FontWeight.w700,
-        color: p.onSurface,
-      ),
-      titleMedium: custom.titleMedium?.copyWith(
-        fontWeight: FontWeight.w700,
-        color: p.onSurface,
-      ),
-      titleSmall: custom.titleSmall?.copyWith(
-        fontWeight: FontWeight.w700,
-        color: p.onSurface,
-      ),
-      labelLarge: custom.labelLarge?.copyWith(
-        fontWeight: FontWeight.w700,
-        color: p.onSurface,
-      ),
-      labelMedium: custom.labelMedium?.copyWith(
-        fontWeight: FontWeight.w600,
-        color: p.onSurfaceVariant,
-      ),
-      labelSmall: custom.labelSmall?.copyWith(
-        fontWeight: FontWeight.w600,
-        color: p.onSurfaceVariant,
-      ),
+      bodyLarge: custom.bodyLarge?.copyWith(fontWeight: FontWeight.w600, color: p.onSurface),
+      bodyMedium: custom.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: p.onSurface),
+      bodySmall: custom.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: p.onSurfaceVariant),
+      titleLarge: custom.titleLarge?.copyWith(fontWeight: FontWeight.w700, color: p.onSurface),
+      titleMedium: custom.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: p.onSurface),
+      titleSmall: custom.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: p.onSurface),
+      labelLarge: custom.labelLarge?.copyWith(fontWeight: FontWeight.w700, color: p.onSurface),
+      labelMedium: custom.labelMedium?.copyWith(fontWeight: FontWeight.w600, color: p.onSurfaceVariant),
+      labelSmall: custom.labelSmall?.copyWith(fontWeight: FontWeight.w600, color: p.onSurfaceVariant),
     );
   }
 
@@ -113,8 +86,34 @@ class AppThemeComponents {
       NavigationBarThemeData(
         backgroundColor: p.surface,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: p.brandContainer,
-        elevation: 3,
+        elevation: 8,
+        height: 68,
+        indicatorColor: p.brand,
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return IconThemeData(color: p.onBrand, size: 24);
+          }
+          return IconThemeData(
+            color: p.onSurfaceVariant.withValues(alpha: 0.7),
+            size: 22,
+          );
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return TextStyle(
+              color: p.onSurface,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              fontFamily: _fontFamily,
+            );
+          }
+          return TextStyle(
+            color: p.onSurfaceVariant.withValues(alpha: 0.7),
+            fontWeight: FontWeight.w500,
+            fontSize: 11,
+            fontFamily: _fontFamily,
+          );
+        }),
       );
 
   static SnackBarThemeData snackBar(PaletteScheme p) => SnackBarThemeData(

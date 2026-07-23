@@ -20,9 +20,21 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
+    // Firebase is optional: the journal is local-first and must open with or
+    // without it. A failure here is swallowed so the app still starts, but it
+    // is logged rather than hidden — silently continuing is what made a missing
+    // google-services.json look like a working sign-in for so long.
+    //
+    // `FirebaseAuthService.isAvailable` reads the outcome of this call, and the
+    // login sheet tells the user plainly when it failed.
     try {
       await Firebase.initializeApp();
-    } catch (_) {}
+    } catch (error) {
+      debugPrint(
+        'Firebase init failed — sign-in and cloud backup are disabled. '
+        'Add android/app/google-services.json to enable them. ($error)',
+      );
+    }
 
     await Hive.initFlutter();
     // TimelineEntry is nested inside Trade, so its adapter must be registered

@@ -1,4 +1,4 @@
-package com.egxjournal.egx_trade_journal
+package com.trademind.app
 
 import io.flutter.embedding.android.FlutterActivity
 

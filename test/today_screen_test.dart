@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:egx_trade_journal/app.dart';
 import 'package:egx_trade_journal/core/hive_keys.dart';
+import 'package:egx_trade_journal/features/auth/providers/auth_providers.dart';
+import 'package:egx_trade_journal/features/auth/repositories/auth_repository.dart';
+import 'package:egx_trade_journal/features/market/market_providers.dart';
 import 'package:egx_trade_journal/settings/settings_providers.dart';
 import 'package:egx_trade_journal/trades/timeline_entry_adapter.dart';
 import 'package:egx_trade_journal/trades/trade.dart';
@@ -25,6 +28,7 @@ void main() {
   late Box settingsBox;
   late Box<Trade> tradesBox;
   late Box<WatchlistItem> watchlistBox;
+  late Box authBox;
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('egx_today');
@@ -41,6 +45,9 @@ void main() {
     settingsBox = await Hive.openBox(kSettingsBox);
     tradesBox = await Hive.openBox<Trade>(kTradesBox);
     watchlistBox = await Hive.openBox<WatchlistItem>(kWatchlistBox);
+    authBox = await Hive.openBox(kAuthBox);
+    // See acceptance_test: start past the first-run auth screen as a guest.
+    await authBox.put('skipped_auth', true);
   });
 
   tearDown(() async {
@@ -60,6 +67,13 @@ void main() {
           tradesBoxProvider.overrideWithValue(tradesBox),
           watchlistBoxProvider.overrideWithValue(watchlistBox),
           todayProvider.overrideWithValue(fixedToday),
+          // See acceptance_test: both auth providers throw until overridden.
+          authBoxProvider.overrideWithValue(authBox),
+          authProvider.overrideWith(() => AuthRepository(authBox)),
+          // Open-trade cards now show a live P&L that would otherwise hit the
+          // network and spin forever under pumpAndSettle. Pin it to "no price"
+          // so the tests stay offline and deterministic.
+          livePriceProvider.overrideWith((ref, symbol) async => null),
         ],
         child: const EgxJournalApp(),
       ),

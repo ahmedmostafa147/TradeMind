@@ -7,10 +7,12 @@ import '../../core/formatters.dart';
 import '../../settings/settings_providers.dart';
 import '../../trades/trade_draft.dart';
 import '../../trades/trade_form_screen.dart';
+import 'percent_picker.dart';
+import 'smart_trade_controls.dart';
 import 'trade_summary_card.dart';
 
-/// «منشئ الصفقة الذكي» — enter a price, pick two percentages, get a fully
-/// sized trade. No mental arithmetic anywhere in the flow.
+enum StopInputMode { percent, price }
+
 class SmartTradeBuilder extends ConsumerStatefulWidget {
   const SmartTradeBuilder({super.key});
 
@@ -25,9 +27,9 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
   final _entryController = TextEditingController();
   final _takeProfitController = TextEditingController();
   final _stopLossController = TextEditingController();
+  final _stopPriceController = TextEditingController();
 
-  /// Null until the defaults have been seeded from settings, which cannot be
-  /// read in initState because the settings box is provider-scoped.
+  StopInputMode _stopMode = StopInputMode.percent;
   double? _takeProfitPercent;
   double? _stopLossPercent;
 
@@ -36,6 +38,7 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
     _entryController.dispose();
     _takeProfitController.dispose();
     _stopLossController.dispose();
+    _stopPriceController.dispose();
     super.dispose();
   }
 
@@ -53,7 +56,6 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
     });
   }
 
-  /// Trims the trailing ".0" so a 5% preset reads "5" rather than "5.0".
   static String _percentText(double fraction) {
     final percent = fraction * 100;
     return percent == percent.roundToDouble()
@@ -66,7 +68,6 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
     final settings = ref.watch(settingsProvider);
     final theme = Theme.of(context);
 
-    // Seeded once from the configured defaults, then owned by the user's taps.
     _takeProfitPercent ??= settings.defaultTakeProfitPercent;
     _stopLossPercent ??= settings.defaultStopLossPercent;
     if (_takeProfitController.text.isEmpty) {
@@ -76,33 +77,26 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
       _stopLossController.text = _percentText(_stopLossPercent!);
     }
 
+    final inPriceMode = _stopMode == StopInputMode.price;
+    final stopPrice =
+        inPriceMode ? parseNumber(_stopPriceController.text) : null;
+
     final plan = SmartTradePlan.compute(
       capital: settings.capital,
       maxRiskPercent: settings.maxRiskPercent,
       takeProfitPercent: _takeProfitPercent!,
-      stopLossPercent: _stopLossPercent!,
+      stopLossPercent: inPriceMode ? 0.0 : _stopLossPercent!,
       entryPrice: parseNumber(_entryController.text),
+      stopPrice: stopPrice,
     );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'منشئ الصفقة الذكي',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'اكتب سعر الدخول واختار النسب — التطبيق يحسب الباقي.',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
+        const SmartTradeHeader(),
         const SizedBox(height: 16),
-
         TextField(
+          key: const ValueKey('entry-price-field'),
           controller: _entryController,
           onChanged: (_) => setState(() {}),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -117,8 +111,7 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
           ),
         ),
         const SizedBox(height: 20),
-
-        _PercentPicker(
+        PercentPicker(
           title: 'نسبة الهدف',
           presets: _takeProfitPresets,
           selected: _takeProfitPercent,
@@ -127,20 +120,41 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
           onTyped: (fraction) => setState(() => _takeProfitPercent = fraction),
         ),
         const SizedBox(height: 20),
-
-        _PercentPicker(
-          title: 'نسبة وقف الخسارة',
-          presets: _stopLossPresets,
-          selected: _stopLossPercent,
-          controller: _stopLossController,
-          onSelected: _setStopLoss,
-          onTyped: (fraction) => setState(() => _stopLossPercent = fraction),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('وقف الخسارة', style: theme.textTheme.titleSmall),
+            SegmentedButton<StopInputMode>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: StopInputMode.percent, label: Text('نسبة')),
+                ButtonSegment(value: StopInputMode.price, label: Text('سعر')),
+              ],
+              selected: {_stopMode},
+              onSelectionChanged: (s) => setState(() => _stopMode = s.first),
+            ),
+          ],
         ),
+        const SizedBox(height: 8),
+        if (_stopMode == StopInputMode.percent)
+          PercentPicker(
+            title: 'نسبة وقف الخسارة',
+            showTitle: false,
+            presets: _stopLossPresets,
+            selected: _stopLossPercent,
+            controller: _stopLossController,
+            onSelected: _setStopLoss,
+            onTyped: (fraction) => setState(() => _stopLossPercent = fraction),
+          )
+        else
+          StopPriceField(
+            controller: _stopPriceController,
+            onChanged: (_) => setState(() {}),
+            plan: plan,
+          ),
         const SizedBox(height: 20),
-
         TradeSummaryCard(plan: plan),
         const SizedBox(height: 16),
-
         FilledButton.icon(
           onPressed: _canCreate(plan) ? () => _createTrade(plan) : null,
           icon: const Icon(Icons.add_chart_rounded),
@@ -164,96 +178,12 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
             stopPrice: plan.stopLossPrice,
             quantity: plan.sizing.effectiveQty,
             takeProfitPrice: plan.takeProfitPrice,
-            reason:
-                'هدف ${_percentText(plan.takeProfitPercent)}% '
-                'ووقف ${_percentText(plan.stopLossPercent)}%',
+            reason: _stopMode == StopInputMode.price
+                ? 'هدف ${_percentText(plan.takeProfitPercent)}% ووقف عند ${money(plan.stopLossPrice)}'
+                : 'هدف ${_percentText(plan.takeProfitPercent)}% ووقف ${_percentText(plan.stopLossPercent)}%',
           ),
         ),
       ),
     );
-  }
-}
-
-class _PercentPicker extends StatelessWidget {
-  final String title;
-  final List<double> presets;
-  final double? selected;
-  final TextEditingController controller;
-  final ValueChanged<double> onSelected;
-  final ValueChanged<double> onTyped;
-
-  const _PercentPicker({
-    required this.title,
-    required this.presets,
-    required this.selected,
-    required this.controller,
-    required this.onSelected,
-    required this.onTyped,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: theme.textTheme.titleSmall),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final preset in presets)
-                    ChoiceChip(
-                      label: Text('${_label(preset)}%'),
-                      // Compared with a tolerance so a typed "5" still lights
-                      // up the 5% chip despite the round-trip through text.
-                      selected:
-                          selected != null &&
-                          (selected! - preset).abs() < 1e-9,
-                      onSelected: (_) => onSelected(preset),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            SizedBox(
-              width: 92,
-              child: TextField(
-                controller: controller,
-                onChanged: (value) {
-                  final percent = parseNumber(value);
-                  if (percent != null && percent > 0) onTyped(percent / 100);
-                },
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.٠-٩]')),
-                ],
-                textDirection: TextDirection.ltr,
-                textAlign: TextAlign.center,
-                decoration: const InputDecoration(
-                  suffixText: '%',
-                  isDense: true,
-                  labelText: 'يدوي',
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  static String _label(double fraction) {
-    final percent = fraction * 100;
-    return percent == percent.roundToDouble()
-        ? percent.round().toString()
-        : percent.toStringAsFixed(1);
   }
 }

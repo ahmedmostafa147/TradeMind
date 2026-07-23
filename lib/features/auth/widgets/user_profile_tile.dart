@@ -19,7 +19,7 @@ class UserProfileTile extends ConsumerWidget {
         leading: CircleAvatar(
           backgroundColor: theme.colorScheme.primaryContainer,
           child: Text(
-            user.isLoggedIn ? user.name[0].toUpperCase() : '؟',
+            user.isLoggedIn ? user.initial : '؟',
             style: TextStyle(
               color: theme.colorScheme.onPrimaryContainer,
               fontWeight: FontWeight.bold,
@@ -40,7 +40,13 @@ class UserProfileTile extends ConsumerWidget {
             ? IconButton(
                 icon: const Icon(Icons.logout),
                 tooltip: 'تسجيل الخروج',
-                onPressed: () => ref.read(authProvider.notifier).logout(),
+                onPressed: () async {
+                  await ref.read(authProvider.notifier).logout();
+                  // Clear the guest opt-out too, so signing out returns to the
+                  // auth screen instead of dropping into the journal with no
+                  // way back to it.
+                  await ref.read(authGateSkipProvider.notifier).reset();
+                },
               )
             : FilledButton.tonal(
                 onPressed: () => showModalBottomSheet(

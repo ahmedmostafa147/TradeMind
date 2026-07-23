@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/calc/trade_metrics.dart';
 import '../../core/formatters.dart';
 import '../../core/theme.dart';
+import '../../features/market/widgets/live_pnl_view.dart';
+import '../../features/market/widgets/ticker_avatar.dart';
 import '../trade.dart';
 import 'result_badge.dart';
 
@@ -54,6 +56,8 @@ class TradeTile extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                   ],
+                  TickerAvatar(ticker: trade.ticker, size: 36),
+                  const SizedBox(width: 10),
                   Text(
                     trade.ticker,
                     style: theme.textTheme.titleMedium?.copyWith(
@@ -115,6 +119,16 @@ class TradeTile extends StatelessWidget {
                   ),
                 ],
               ),
+              // Only an open position has a running result worth pricing; a
+              // closed trade already shows its final P&L above.
+              if (trade.isOpen && trade.ticker.trim().isNotEmpty) ...[
+                const SizedBox(height: 12),
+                LivePnlView(
+                  ticker: trade.ticker,
+                  entryPrice: trade.entryPrice,
+                  quantity: trade.quantity,
+                ),
+              ],
             ],
           ),
         ),

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:egx_trade_journal/calculator/calculator_screen.dart';
+import 'package:egx_trade_journal/calculator/widgets/smart_trade_builder.dart';
 import 'package:egx_trade_journal/core/hive_keys.dart';
 import 'package:egx_trade_journal/core/theme.dart';
 import 'package:egx_trade_journal/settings/settings_providers.dart';
@@ -77,14 +78,37 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('the builder appears above the untouched manual calculator', (
+  testWidgets('the builder is the whole calculator, with a stop-mode toggle', (
     tester,
   ) async {
     await pumpCalculator(tester);
 
     expect(find.text('منشئ الصفقة الذكي'), findsOneWidget);
-    await scrollTo(tester, find.text('الحاسبة اليدوية'));
-    expect(find.text('الحاسبة اليدوية'), findsOneWidget);
+    // The separate manual calculator is gone; its capability lives in the
+    // "سعر" stop mode instead.
+    expect(find.text('الحاسبة اليدوية'), findsNothing);
+    expect(find.text('وقف الخسارة'), findsWidgets);
+    expect(find.byType(SegmentedButton<StopInputMode>), findsOneWidget);
+  });
+
+  testWidgets('the stop-by-price mode sizes from an absolute stop', (
+    tester,
+  ) async {
+    await pumpCalculator(tester);
+    await enterPrice(tester, '10.00');
+
+    await tester.tap(find.text('سعر'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey('stop-price-field')),
+      '9.50',
+    );
+    await tester.pumpAndSettle();
+    await scrollTo(tester, find.text('الأسهم المقترحة'));
+
+    // Default capital 17,000 at 2% → 340 max loss ÷ 0.50 risk/share = 680.
+    expect(find.text('680'), findsOneWidget);
   });
 
   testWidgets("the spec's example renders 42.42 and 39.59", (tester) async {

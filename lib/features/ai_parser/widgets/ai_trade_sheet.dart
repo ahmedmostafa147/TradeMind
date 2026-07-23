@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/theme.dart';
 import '../../../trades/trade_draft.dart';
 import '../../../trades/trade_form_screen.dart';
 import '../../market/widgets/stock_quote_badge.dart';
@@ -22,6 +23,10 @@ class _AiTradeSheetState extends State<AiTradeSheet> {
   bool _analyzing = false;
   AiTradeData? _extracted;
 
+  /// Set when analysis fails, so the sheet can explain instead of silently
+  /// showing nothing.
+  String? _error;
+
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: source);
@@ -32,14 +37,31 @@ class _AiTradeSheetState extends State<AiTradeSheet> {
       _image = file;
       _analyzing = true;
       _extracted = null;
+      _error = null;
     });
 
-    final extracted = await AiTradeParserService.parseTradeImage(file);
-    if (mounted) {
-      setState(() {
-        _extracted = extracted;
-        _analyzing = false;
-      });
+    try {
+      final extracted = await AiTradeParserService.parseTradeImage(file);
+      if (mounted) {
+        setState(() {
+          _extracted = extracted;
+          _analyzing = false;
+        });
+      }
+    } on AiParseException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          _analyzing = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _error = 'تعذّر تحليل الصورة. جرّب تاني.';
+          _analyzing = false;
+        });
+      }
     }
   }
 
@@ -74,7 +96,11 @@ class _AiTradeSheetState extends State<AiTradeSheet> {
         children: [
           Row(
             children: [
-              const Icon(Icons.auto_awesome, color: Colors.amber, size: 28),
+              Icon(
+                Icons.auto_awesome,
+                color: context.palette.aiAccent,
+                size: 28,
+              ),
               const SizedBox(width: 10),
               Text(
                 'قراءة التوصية بالذكاء الاصطناعي',
@@ -105,6 +131,35 @@ class _AiTradeSheetState extends State<AiTradeSheet> {
                 ),
               ),
             ),
+          ] else if (_error != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.error_outline_rounded,
+                    size: 18,
+                    color: theme.colorScheme.error,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _error!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onErrorContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _SourceButtons(onPick: _pickImage),
           ] else if (data != null) ...[
             StockQuoteBadge(symbol: data.ticker),
             const SizedBox(height: 16),
