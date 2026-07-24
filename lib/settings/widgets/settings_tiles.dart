@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formatters.dart';
+import '../../core/theme.dart';
 import '../settings_providers.dart';
 
 /// The live max-loss readout card.
@@ -260,6 +261,128 @@ class ThemeModeTile extends ConsumerWidget {
         showSelectedIcon: false,
         onSelectionChanged: (selection) =>
             ref.read(themeModeProvider.notifier).set(selection.first),
+      ),
+    );
+  }
+}
+
+/// Where the Gemini API key is entered.
+///
+/// Exists because the key used to be compile-time only: without a
+/// `--dart-define` at build time the AI screen could do nothing but report that
+/// it was not configured, which is what it did on every normal `flutter run`.
+class GeminiKeyTile extends ConsumerStatefulWidget {
+  const GeminiKeyTile({super.key});
+
+  @override
+  ConsumerState<GeminiKeyTile> createState() => _GeminiKeyTileState();
+}
+
+class _GeminiKeyTileState extends ConsumerState<GeminiKeyTile> {
+  final _controller = TextEditingController();
+  bool _obscure = true;
+  bool _seeded = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final stored = ref.watch(geminiKeyProvider);
+
+    // Seeded once. Re-syncing on every build would fight the user's cursor.
+    if (!_seeded) {
+      _controller.text = stored;
+      _seeded = true;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'مفتاح الذكاء الاصطناعي (Gemini)',
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'لتحليل صور التوصيات. احصل على مفتاح مجاني من aistudio.google.com',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _controller,
+            obscureText: _obscure,
+            autocorrect: false,
+            enableSuggestions: false,
+            textDirection: TextDirection.ltr,
+            decoration: InputDecoration(
+              labelText: 'API key',
+              hintText: 'AIza...',
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscure
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                ),
+                tooltip: _obscure ? 'إظهار المفتاح' : 'إخفاء المفتاح',
+                onPressed: () => setState(() => _obscure = !_obscure),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              FilledButton(
+                onPressed: () async {
+                  await ref
+                      .read(geminiKeyProvider.notifier)
+                      .set(_controller.text);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('تم حفظ المفتاح')),
+                    );
+                  }
+                },
+                child: const Text('حفظ'),
+              ),
+              const SizedBox(width: 8),
+              if (stored.isNotEmpty)
+                TextButton(
+                  onPressed: () async {
+                    _controller.clear();
+                    await ref.read(geminiKeyProvider.notifier).set('');
+                  },
+                  child: const Text('مسح'),
+                ),
+              const Spacer(),
+              if (stored.isNotEmpty)
+                Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 16,
+                      color: context.resultColors.win,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'مفعّل',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: context.resultColors.win,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

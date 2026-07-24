@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce/hive.dart';
 
 import '../core/hive_keys.dart';
+import '../features/ai_parser/services/gemini_config.dart';
 import 'settings.dart';
 
 /// Overridden in main() with the box opened before runApp. Throwing here is the
@@ -111,6 +112,40 @@ class SettingsNotifier extends Notifier<Settings> {
     if (!fraction.isFinite || fraction <= 0 || fraction >= 1) return;
     await _box.put(kDefaultStopLossKey, fraction);
     state = state.copyWith(defaultStopLossPercent: fraction);
+  }
+}
+
+/// The Gemini API key, entered in Settings.
+///
+/// Kept out of [Settings] — like [themeModeProvider] — so that model keeps
+/// matching the spec's field list. Reading it also pushes the value into
+/// [GeminiConfig], which is what the parser service reads, so the key is live
+/// as soon as the provider is first built.
+final geminiKeyProvider = NotifierProvider<GeminiKeyNotifier, String>(
+  GeminiKeyNotifier.new,
+);
+
+class GeminiKeyNotifier extends Notifier<String> {
+  @override
+  String build() {
+    final raw = ref.watch(settingsBoxProvider).get(kGeminiKeyKey);
+    final key = raw is String ? raw.trim() : '';
+    GeminiConfig.setRuntimeKey(key);
+    return key;
+  }
+
+  Future<void> set(String key) async {
+    final clean = key.trim();
+    // State first so the UI reflects the change immediately; the disk write
+    // follows. Also pushed into GeminiConfig, which is plain static state and
+    // has no way to observe the provider.
+    state = clean;
+    GeminiConfig.setRuntimeKey(clean);
+    if (clean.isEmpty) {
+      await ref.read(settingsBoxProvider).delete(kGeminiKeyKey);
+    } else {
+      await ref.read(settingsBoxProvider).put(kGeminiKeyKey, clean);
+    }
   }
 }
 

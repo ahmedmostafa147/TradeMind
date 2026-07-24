@@ -44,7 +44,8 @@ class EgxStockInfo {
 
     return EgxStockInfo(
       symbol: (meta['symbol'] as String? ?? ticker).replaceAll('.CA', ''),
-      name: meta['longName'] as String? ??
+      name: preferredName ??
+          meta['longName'] as String? ??
           meta['shortName'] as String? ??
           ticker,
       price: currentPrice,

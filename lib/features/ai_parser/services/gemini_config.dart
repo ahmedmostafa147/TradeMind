@@ -1,23 +1,38 @@
 /// Configuration for the Gemini vision parser.
 ///
-/// Paste your Google AI Studio key here to turn the real image analysis on.
-/// Get one free at https://aistudio.google.com → "Get API key". Leaving it
-/// blank keeps the AI button visible but honestly reporting that it is not set
-/// up, instead of pretending to read the image.
+/// The key can come from either place, checked in this order:
 ///
-/// ⚠️ A key committed here ships inside the APK and can be extracted from it.
-/// For a personal build that is acceptable; before any public release, move the
-/// call behind your own server (or a Firebase Cloud Function) so the key is
-/// never in the app. Also lock the key down in Google AI Studio to the
-/// Generative Language API only.
+/// 1. **Settings screen** — pasted at runtime and stored in Hive. Nothing to
+///    rebuild, which is why this exists: a `--dart-define`-only key meant that
+///    simply running the app left the AI permanently reporting "not set up".
+/// 2. **`--dart-define=GEMINI_API_KEY=...`** — baked in at build time, useful
+///    for a release build.
+///
+/// Get a key free at https://aistudio.google.com → "Get API key".
+///
+/// ⚠️ A key compiled in with --dart-define ships inside the APK and can be
+/// extracted from it. Before any public release, move the call behind your own
+/// server (or a Firebase Cloud Function) so the key is never in the app.
 class GeminiConfig {
   const GeminiConfig._();
 
-  /// Empty means "not configured". Pass via --dart-define=GEMINI_API_KEY=your_key
-  static const String apiKey =
-      String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+  /// Build-time key. Empty unless passed with --dart-define.
+  static const String _compiledKey = String.fromEnvironment(
+    'GEMINI_API_KEY',
+    defaultValue: '',
+  );
 
-  /// The vision-capable model. Flash is the cheapest that reads images well.
+  /// Runtime key from Settings. Set by the app at startup and whenever the
+  /// user saves a new one; takes precedence over the compiled key.
+  static String _runtimeKey = '';
+
+  static void setRuntimeKey(String? key) => _runtimeKey = key?.trim() ?? '';
+
+  /// The key actually used for requests.
+  static String get apiKey =>
+      _runtimeKey.isNotEmpty ? _runtimeKey : _compiledKey;
+
+  /// The vision-capable model.
   static const String model = 'gemini-3.6-flash';
 
   static bool get isConfigured => apiKey.isNotEmpty;

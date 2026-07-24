@@ -18,6 +18,10 @@ const String kWaitingThresholdKey = 'waitingThresholdDays'; // int
 const String kDefaultTakeProfitKey = 'defaultTakeProfitPercent'; // double
 const String kDefaultStopLossKey = 'defaultStopLossPercent'; // double
 
+/// Gemini API key entered in Settings. Kept out of the compile-time
+/// `--dart-define` so the key can be set without rebuilding the app.
+const String kGeminiKeyKey = 'geminiApiKey'; // String
+
 /// Box of trades, keyed by Trade.id (the uuid) so update and delete are O(1)
 /// and idempotent.
 const String kTradesBox = 'trades';

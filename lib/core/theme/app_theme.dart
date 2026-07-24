@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_theme_chips.dart';
 import 'app_theme_components.dart';
 import 'palette.dart';
 import 'result_colors.dart';
@@ -83,14 +84,8 @@ class AppTheme {
       outlinedButtonTheme: AppThemeComponents.outlinedButton(p),
       inputDecorationTheme: AppThemeComponents.inputDecoration(p),
       cardTheme: AppThemeComponents.card(p, isDark),
-      chipTheme: ChipThemeData(
-        backgroundColor: p.surfaceHighest,
-        side: BorderSide(color: p.outlineVariant),
-        labelStyle: TextStyle(color: p.onSurface, fontFamily: _fontFamily),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-      ),
+      chipTheme: AppThemeChips.chip(p),
+      segmentedButtonTheme: AppThemeChips.segmentedButton(p),
       navigationBarTheme: AppThemeComponents.navigationBar(p),
       snackBarTheme: AppThemeComponents.snackBar(p),
     );

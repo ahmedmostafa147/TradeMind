@@ -130,6 +130,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const Divider(),
           const ThemeModeTile(),
           const Divider(),
+          const GeminiKeyTile(),
+          const Divider(),
           const BehaviourTiles(),
         ],
       ),
