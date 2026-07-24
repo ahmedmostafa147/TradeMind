@@ -3,71 +3,129 @@ import 'package:http/http.dart' as http;
 
 import '../models/egx_stock_info.dart';
 
-/// EGX Egyptian Stock Exchange market data service.
+/// EGX (Egyptian Exchange) market data.
+///
+/// Prices come from Yahoo's chart endpoint, which is unofficial: it needs no
+/// key but it is not a contract, and it can change or disappear. Treat a
+/// missing price as "unknown", never as zero.
 class EgxMarketService {
   static final Map<String, EgxStockInfo> _cache = {};
 
-  /// Known Egyptian stocks directory with Arabic names.
+  /// Yahoo rejects Dart's default `Dart/3.x (dart:io)` agent with
+  /// **429 Too Many Requests** — on the very first call, so it reads as rate
+  /// limiting when it is really agent filtering. A browser agent returns 200.
+  /// This single header is the difference between the live price working and
+  /// every quote silently failing.
+  static const _headers = {
+    'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+        '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'application/json',
+  };
+
+  /// Known Egyptian stocks with Arabic names, for offline suggestions and to
+  /// label a ticker before any quote arrives.
+  ///
+  /// Every code here was verified against the live endpoint — an earlier
+  /// version mapped `HELW` to حديد عز, but HELW returns no data at all and
+  /// Ezz Steel is `ESRS`.
   static const Map<String, String> egxDirectory = {
     'COMI': 'البنك التجاري الدولي (CIB)',
     'TMGH': 'مجموعة طلعت مصطفى القابضة',
     'SWDY': 'السويدي إلكتريك',
     'EAST': 'الشرقية - إيسترن كومباني',
-    'ABUK': 'أبو قير للأساد والأصباغ',
-    'HRHO': 'مجموعة أي إف جي القابضة (هيرميس)',
+    'ABUK': 'أبو قير للأسمدة والصناعات الكيماوية',
+    'HRHO': 'مجموعة إي إف چي القابضة (هيرميس)',
     'ETEL': 'المصرية للاتصالات',
-    'EKHO': 'المصرية الكويتية القابضة',
+    'EKHO': 'القابضة المصرية الكويتية',
     'ORWE': 'النساجون الشرقيون',
     'AMOC': 'الإسكندرية للزيوت المعدنية (أموك)',
     'CICH': 'سي آي كابيتال القابضة',
     'MFPC': 'مصر لإنتاج الأسمدة (موبكو)',
-    'HELW': 'حديد عز',
     'ISPH': 'ابن سينا فارما',
+    'ESRS': 'حديد عز',
+    'SKPC': 'سيدي كرير للبتروكيماويات',
+    'OCDI': 'السادس من أكتوبر للتنمية (سوديك)',
+    'PHDC': 'بالم هيلز للتعمير',
+    'HDBK': 'بنك التعمير والإسكان',
+    'ADIB': 'مصرف أبوظبي الإسلامي - مصر',
+    'CIEB': 'بنك كريدي أجريكول مصر',
+    'JUFO': 'جهينة للصناعات الغذائية',
+    'EFIH': 'إي فاينانس للاستثمارات المالية والرقمية',
+    'BTFH': 'بلتون المالية القابضة',
+    'GBCO': 'جي بي كورب (غبور)',
+    'EFID': 'إيديتا للصناعات الغذائية',
+    'ARCC': 'العربية للأسمنت',
+    'SUGR': 'الدلتا للسكر',
+    'RAYA': 'راية القابضة',
+    'OLFI': 'عبور لاند للصناعات الغذائية',
+    'EGAL': 'مصر للألومنيوم',
   };
 
-  /// Fetches stock info & live price for given symbol (e.g., COMI, TMGH).
+  /// The Arabic name for a ticker, or null when it is not in the directory.
+  static String? nameFor(String symbol) =>
+      egxDirectory[normalize(symbol)];
+
+  /// Directory entries matching [query] by code or by Arabic name, for the
+  /// ticker autocomplete. Empty query returns the whole list.
+  static List<MapEntry<String, String>> search(String query) {
+    final q = query.trim();
+    if (q.isEmpty) return egxDirectory.entries.toList();
+    final upper = q.toUpperCase();
+    return egxDirectory.entries
+        .where(
+          (e) => e.key.contains(upper) || e.value.contains(q),
+        )
+        .toList();
+  }
+
+  /// Strips the `.CA` suffix and normalises case, so "comi.ca" and "COMI" hit
+  /// the same cache entry.
+  static String normalize(String symbol) =>
+      symbol.trim().toUpperCase().replaceAll('.CA', '');
+
+  /// Live quote for [symbol], or null when it cannot be fetched.
+  ///
+  /// Returns null rather than a zero-priced placeholder: callers render "price
+  /// unavailable" for null, and a 0.0 would otherwise be arithmetic-ed into a
+  /// 100% loss.
   static Future<EgxStockInfo?> fetchStockInfo(String symbol) async {
-    final cleanSymbol = symbol.trim().toUpperCase().replaceAll('.CA', '');
+    final cleanSymbol = normalize(symbol);
     if (cleanSymbol.isEmpty) return null;
 
-    if (_cache.containsKey(cleanSymbol)) {
-      final cached = _cache[cleanSymbol]!;
-      if (DateTime.now().difference(cached.lastUpdated).inMinutes < 5) {
-        return cached;
-      }
+    final cached = _cache[cleanSymbol];
+    if (cached != null &&
+        DateTime.now().difference(cached.lastUpdated).inMinutes < 5) {
+      return cached;
     }
 
     try {
       final url = Uri.parse(
         'https://query1.finance.yahoo.com/v8/finance/chart/$cleanSymbol.CA',
       );
-      final response = await http.get(url).timeout(const Duration(seconds: 6));
+      final response = await http
+          .get(url, headers: _headers)
+          .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final result = data['chart']?['result'] as List?;
-        if (result != null && result.isNotEmpty) {
-          final info = EgxStockInfo.fromYahooJson(
-            cleanSymbol,
-            result.first as Map<String, dynamic>,
-          );
-          _cache[cleanSymbol] = info;
-          return info;
-        }
-      }
-    } catch (_) {}
+      if (response.statusCode != 200) return null;
 
-    // Fallback info if offline or ticker unsupported
-    final arabicName = egxDirectory[cleanSymbol] ?? cleanSymbol;
-    return EgxStockInfo(
-      symbol: cleanSymbol,
-      name: arabicName,
-      price: 0.0,
-      change: 0.0,
-      changePercent: 0.0,
-      high52: 0.0,
-      low52: 0.0,
-      lastUpdated: DateTime.now(),
-    );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final result = data['chart']?['result'] as List?;
+      if (result == null || result.isEmpty) return null;
+
+      final info = EgxStockInfo.fromYahooJson(
+        cleanSymbol,
+        result.first as Map<String, dynamic>,
+        // Yahoo has no Arabic names and often no longName for EGX at all, so
+        // the curated directory wins when it knows the ticker.
+        preferredName: egxDirectory[cleanSymbol],
+      );
+      if (info.price <= 0) return null;
+
+      _cache[cleanSymbol] = info;
+      return info;
+    } catch (_) {
+      return null;
+    }
   }
 }

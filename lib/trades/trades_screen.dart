@@ -6,8 +6,8 @@ import '../core/widgets/app_logo_title.dart';
 import '../settings/settings_providers.dart';
 import 'trade.dart';
 import 'trade_detail_screen.dart';
-import 'trade_form_screen.dart';
 import 'trades_providers.dart';
+import 'widgets/quick_add_trade_sheet.dart';
 import 'widgets/trade_tile.dart';
 
 class TradesScreen extends ConsumerWidget {
@@ -19,11 +19,28 @@ class TradesScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const AppLogoTitle(title: 'سجل الصفقات')),
+      appBar: AppBar(
+        title: const AppLogoTitle(title: 'سجل الصفقات'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.flash_on_rounded, color: Colors.amber),
+            tooltip: 'صفقة سريعة',
+            onPressed: () => showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => const QuickAddTradeSheet(),
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openForm(context),
-        icon: const Icon(Icons.add),
-        label: const Text('إضافة صفقة'),
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => const QuickAddTradeSheet(),
+        ),
+        icon: const Icon(Icons.flash_on_rounded),
+        label: const Text('صفقة سريعة'),
       ),
       body: trades.isEmpty
           ? const _EmptyState()
@@ -61,12 +78,6 @@ class TradesScreen extends ConsumerWidget {
                 );
               },
             ),
-    );
-  }
-
-  void _openForm(BuildContext context, {Trade? existing}) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => TradeFormScreen(existing: existing)),
     );
   }
 

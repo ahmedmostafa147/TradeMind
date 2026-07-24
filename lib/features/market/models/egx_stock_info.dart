@@ -25,7 +25,13 @@ class EgxStockInfo {
     required this.lastUpdated,
   });
 
-  factory EgxStockInfo.fromYahooJson(String ticker, Map<String, dynamic> json) {
+  factory EgxStockInfo.fromYahooJson(
+    String ticker,
+    Map<String, dynamic> json, {
+    /// Wins over Yahoo's own name when supplied — the curated Arabic directory
+    /// is more useful here than "COMI.CA,0P0000AUZ4,5721726".
+    String? preferredName,
+  }) {
     final meta = json['meta'] as Map<String, dynamic>? ?? {};
     final currentPrice =
         (meta['regularMarketPrice'] as num?)?.toDouble() ?? 0.0;
