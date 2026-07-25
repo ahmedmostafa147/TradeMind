@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/calc/risk_math.dart';
 import '../core/formatters.dart';
 import '../core/widgets/app_logo_title.dart';
+import '../features/auth/widgets/delete_account_tile.dart';
 import '../features/auth/widgets/user_profile_tile.dart';
 import 'settings_providers.dart';
 import 'widgets/settings_tiles.dart';
@@ -133,6 +134,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const GeminiKeyTile(),
           const Divider(),
           const BehaviourTiles(),
+          // Last, and only for a signed-in user: destructive and irreversible,
+          // so it sits below everything rather than next to a toggle.
+          const SizedBox(height: 24),
+          const DeleteAccountTile(),
         ],
       ),
     );

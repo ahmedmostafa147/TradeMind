@@ -21,7 +21,7 @@ class UserAccount {
   static const guest = UserAccount(
     id: 'guest',
     name: 'زائر',
-    email: 'guest@trademind.app',
+    email: 'guest@tradepilot.app',
     isLoggedIn: false,
   );
 

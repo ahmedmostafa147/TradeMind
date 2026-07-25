@@ -84,4 +84,38 @@ class FirebaseAuthService {
       // Local session is cleared by the caller regardless.
     }
   }
+
+  /// Permanently deletes the signed-in account.
+  ///
+  /// Unlike [signOut] this never swallows a failure. A silent failure here
+  /// would tell the user their account was erased while the identity — and
+  /// their claim on the Firestore subtree keyed to it — is still live, which
+  /// is the opposite of what Play's deletion requirement exists to guarantee.
+  ///
+  /// Firebase rejects deletion on a stale session with `requires-recent-login`,
+  /// which surfaces as [AuthFailure.requiresRecentLogin] for the user to fix.
+  static Future<void> deleteAccount() async {
+    if (!isAvailable) throw AuthException.backendUnavailable;
+
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw const AuthException(
+        AuthFailure.invalidCredentials,
+        'مفيش حساب مسجّل دخول عشان يتمسح.',
+      );
+    }
+
+    try {
+      await user.delete();
+    } on FirebaseAuthException catch (e) {
+      throw AuthException.fromCode(e.code);
+    } on AuthException {
+      rethrow;
+    } catch (_) {
+      throw const AuthException(
+        AuthFailure.unknown,
+        'تعذّر حذف الحساب. جرّب تاني.',
+      );
+    }
+  }
 }

@@ -27,6 +27,11 @@ enum AuthFailure {
   /// stay silent rather than show a red banner for a deliberate choice.
   cancelled,
 
+  /// Firebase refuses to delete an account whose session is old, so the user
+  /// has to sign in again first. Typed separately because it is the one
+  /// deletion failure the user can actually resolve.
+  requiresRecentLogin,
+
   unknown,
 }
 
@@ -74,6 +79,10 @@ class AuthException implements Exception {
     'invalid-credential' => const AuthException(
       AuthFailure.invalidCredentials,
       'البريد الإلكتروني أو كلمة السر غير صحيحة.',
+    ),
+    'requires-recent-login' => const AuthException(
+      AuthFailure.requiresRecentLogin,
+      'عشان تمسح حسابك لازم تسجّل دخول تاني الأول. اخرج ثم ادخل وجرّب.',
     ),
     _ => const AuthException(
       AuthFailure.unknown,

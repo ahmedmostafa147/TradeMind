@@ -15,6 +15,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Declared inside the match block — a function at file scope, outside
+    // `service`, is a syntax error the deploy rejects.
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
     // The parent document itself is never written by the app; it exists only
     // as a container. Denying it keeps the surface to what is actually used.
     match /users/{userId} {
@@ -35,8 +41,4 @@ service cloud.firestore {
       allow read, write: if false;
     }
   }
-}
-
-function isOwner(userId) {
-  return request.auth != null && request.auth.uid == userId;
 }

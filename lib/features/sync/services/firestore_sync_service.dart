@@ -92,6 +92,33 @@ class FirestoreSyncService {
     } catch (_) {}
   }
 
+  /// Erases everything stored for [userId].
+  ///
+  /// This is the one method here that **throws on failure** instead of treating
+  /// the cloud as best-effort. Everywhere else a swallowed error costs a backup
+  /// the local journal can rebuild; here it would leave a user who asked to be
+  /// forgotten with their trades still on the server while the app said they
+  /// were gone. The caller deletes the identity only after this returns, so a
+  /// throw keeps the account — and therefore the only credential that can reach
+  /// this data — alive to try again.
+  ///
+  /// Documents go in batches because Firestore caps one batch at 500 writes.
+  static Future<void> deleteAllData(String userId) async {
+    if (_rejects(userId)) return;
+
+    for (final collection in [_trades(userId), _watchlist(userId)]) {
+      final snapshot = await collection.get();
+      const chunkSize = 400;
+      for (var i = 0; i < snapshot.docs.length; i += chunkSize) {
+        final batch = _db.batch();
+        for (final doc in snapshot.docs.skip(i).take(chunkSize)) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      }
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Download — the half that makes the backup worth having
   // ---------------------------------------------------------------------------

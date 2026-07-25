@@ -118,7 +118,7 @@ flutter install --release
 
 | | |
 |---|---|
-| `applicationId` | `com.trademind.app` — دايم، متغيّرهوش بعد النشر |
+| `applicationId` | `com.trademind.app` — دايم، متغيّرهوش بعد النشر (الاسم المعروض TradePilot) |
 | `targetSdk` / `compileSdk` | 36 (من Flutter) — Play بيطلب 35 كحد أدنى |
 | `minSdk` | 24 |
 | صلاحيات | `INTERNET` بس |

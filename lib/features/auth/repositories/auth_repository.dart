@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce/hive.dart';
 
+import '../../sync/services/firestore_sync_service.dart';
 import '../models/user_account.dart';
 import '../services/auth_exception.dart';
 import '../services/firebase_auth_service.dart';
@@ -115,6 +116,39 @@ class AuthRepository extends Notifier<UserAccount> {
   /// fails — otherwise a network blip would leave the user stuck signed in.
   Future<void> logout() async {
     await FirebaseAuthService.signOut();
+    await GoogleAuthService.signOut();
+    await _box.delete(_sessionKey);
+    state = UserAccount.guest;
+  }
+
+  /// Permanently deletes the account and everything stored against it.
+  ///
+  /// Google Play requires any app offering account creation to offer deletion
+  /// too, in-app and from the web. This is the in-app half.
+  ///
+  /// Order matters and is not interchangeable: cloud data first, identity
+  /// second. The Firestore rules key every document to the caller's own uid, so
+  /// deleting the account first would strip the only credential that can reach
+  /// the data and strand it on the server permanently. If the data delete
+  /// throws, the account survives and the user can retry.
+  ///
+  /// [wipeLocalJournal] clears the on-device boxes as well. It is the caller's
+  /// explicit choice, defaulted off: the local journal is not part of the
+  /// account, may predate it, and is the user's only copy once the cloud one
+  /// is gone.
+  Future<void> deleteAccount({
+    required bool wipeLocalJournal,
+    required Future<void> Function() clearLocalJournal,
+  }) async {
+    final userId = state.id;
+
+    await FirestoreSyncService.deleteAllData(userId);
+    await FirebaseAuthService.deleteAccount();
+
+    // Only after the identity is actually gone — an early wipe would destroy
+    // the user's data on a delete that then failed.
+    if (wipeLocalJournal) await clearLocalJournal();
+
     await GoogleAuthService.signOut();
     await _box.delete(_sessionKey);
     state = UserAccount.guest;
