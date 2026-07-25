@@ -5,7 +5,10 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/calc/sizing_result.dart';
 import '../../core/formatters.dart';
+import '../../core/theme.dart';
+import '../../core/widgets/risk_warning.dart';
 import '../../features/market/widgets/stock_quote_badge.dart';
+import '../../features/market/widgets/ticker_field.dart';
 import '../../settings/settings_providers.dart';
 import '../trade.dart';
 import '../trade_draft.dart';
@@ -27,12 +30,18 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
   final _stopController = TextEditingController();
   final _targetController = TextEditingController();
 
+  /// Left empty the risk rule sizes the position, which assumes the whole
+  /// account backs it. Traders rarely commit everything, so the quantity has
+  /// to be typeable here and not only in the full form.
+  final _quantityController = TextEditingController();
+
   @override
   void dispose() {
     _tickerController.dispose();
     _entryController.dispose();
     _stopController.dispose();
     _targetController.dispose();
+    _quantityController.dispose();
     super.dispose();
   }
 
@@ -41,8 +50,12 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
     final entry = parseNumber(_entryController.text);
     final stop = parseNumber(_stopController.text);
     final target = parseNumber(_targetController.text);
+    final qty = sizing.effectiveQty;
 
     if (ticker.isEmpty || entry == null || stop == null) return;
+    // Never invent a quantity: a fallback of 1 used to save a position nobody
+    // chose, with risk figures to match.
+    if (qty == null || qty <= 0) return;
 
     final trade = Trade(
       id: const Uuid().v4(),
@@ -51,7 +64,7 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
       reason: 'صفقة سريعة',
       entryPrice: entry,
       stopPrice: stop,
-      quantity: sizing.effectiveQty ?? 1,
+      quantity: qty,
       takeProfitPrice: target,
       status: TradeStatus.planned,
     );
@@ -74,6 +87,7 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
       entryPrice: entry,
       stopPrice: stop,
       takeProfitPrice: target,
+      quantity: parseInteger(_quantityController.text),
       reason: 'صفقة سريعة',
     );
 
@@ -95,14 +109,19 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
       maxRiskPercent: settings.maxRiskPercent,
       entry: entry,
       stop: stop,
+      userQty: parseInteger(_quantityController.text),
     );
 
     final isValid = _tickerController.text.trim().isNotEmpty &&
         entry != null &&
         stop != null &&
-        stop < entry;
+        stop < entry &&
+        (sizing.effectiveQty ?? 0) > 0;
 
-    return Padding(
+    // Scrollable, not a bare Column: the ticker suggestions appear inline and
+    // push the sheet past the space left above the keyboard, which overflowed
+    // the bottom by ~46px instead of scrolling.
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         24,
         20,
@@ -115,15 +134,26 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
         children: [
           Row(
             children: [
-              const Icon(Icons.flash_on_rounded, color: Colors.amber, size: 28),
+              Icon(
+                Icons.flash_on_rounded,
+                color: context.palette.aiAccent,
+                size: 28,
+              ),
               const SizedBox(width: 10),
-              Text(
-                'إضافة صفقة سريعة',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+              // Expanded, not Spacer: the title plus the full-details button
+              // are wider than a phone at this text size and the row was
+              // overflowing by ~74px. Now the title takes the slack and
+              // ellipsises instead.
+              Expanded(
+                child: Text(
+                  'إضافة صفقة سريعة',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
               TextButton(
                 onPressed: _openFullForm,
                 child: const Text('التفاصيل الكاملة ←'),
@@ -131,15 +161,9 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
             ],
           ),
           const SizedBox(height: 12),
-          TextField(
+          TickerField(
             controller: _tickerController,
-            textCapitalization: TextCapitalization.characters,
-            onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              labelText: 'رمز السهم',
-              hintText: 'COMI',
-              prefixIcon: Icon(Icons.show_chart_rounded),
-            ),
+            onChanged: () => setState(() {}),
           ),
           if (_tickerController.text.trim().isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -186,42 +210,82 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
             ],
           ),
           const SizedBox(height: 12),
-          TextField(
-            controller: _targetController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9.٠-٩]')),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _targetController,
+                  onChanged: (_) => setState(() {}),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.٠-٩]')),
+                  ],
+                  textDirection: TextDirection.ltr,
+                  textAlign: TextAlign.right,
+                  decoration: const InputDecoration(
+                    labelText: 'الهدف (اختياري)',
+                    suffixText: kCurrencySuffix,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _quantityController,
+                  onChanged: (_) => setState(() {}),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9٠-٩]')),
+                  ],
+                  textDirection: TextDirection.ltr,
+                  textAlign: TextAlign.right,
+                  decoration: InputDecoration(
+                    labelText: 'عدد الأسهم',
+                    helperText: sizing.suggestedQty != null
+                        ? 'المقترح: ${quantity(sizing.suggestedQty)}'
+                        : null,
+                  ),
+                ),
+              ),
             ],
-            textDirection: TextDirection.ltr,
-            textAlign: TextAlign.right,
-            decoration: const InputDecoration(
-              labelText: 'سعر الهدف (اختياري)',
-              suffixText: kCurrencySuffix,
-            ),
           ),
-          if (sizing.effectiveQty != null && sizing.effectiveQty! > 0) ...[
+          if (sizing.overRisk) ...[
+            const SizedBox(height: 12),
+            const RiskWarning(),
+          ],
+          if ((sizing.effectiveQty ?? 0) > 0) ...[
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 4,
+              ),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainerLow,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: theme.colorScheme.outlineVariant),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
                 children: [
-                  Text(
-                    'الأسهم المحسوبة: ${quantity(sizing.effectiveQty)}',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  ReadoutRow(
+                    label: 'عدد الأسهم',
+                    value: quantity(sizing.effectiveQty),
                   ),
-                  Text(
-                    'المخاطرة: ${money(sizing.maxLoss)}',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  ReadoutRow(
+                    label: 'قيمة المركز',
+                    value: money(sizing.positionValue),
+                  ),
+                  // This used to read `maxLoss` — the loss budget from
+                  // settings, identical for every trade — while labelled as
+                  // this position's risk. With a typed quantity that reading
+                  // was plainly wrong, so it now shows what is actually at
+                  // stake here.
+                  ReadoutRow(
+                    label: 'المخاطرة',
+                    value: '${money(sizing.riskEgp)} · ${percent(sizing.riskPct)}',
+                    valueColor: sizing.overRisk ? context.resultColors.loss : null,
+                    emphasise: true,
                   ),
                 ],
               ),

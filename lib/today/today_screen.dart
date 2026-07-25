@@ -32,10 +32,14 @@ class TodayScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.auto_awesome, color: context.palette.aiAccent),
-            tooltip: 'تحليل توصية بالـ AI',
+            tooltip: 'تحليل توصيات بالـ AI',
             onPressed: () => showModalBottomSheet(
               context: context,
               isScrollControlled: true,
+              // The sheet now lists every trade found across several images, so
+              // it can run the full height of the screen — without this the
+              // top of the list sits under the status bar.
+              useSafeArea: true,
               builder: (_) => const AiTradeSheet(),
             ),
           ),

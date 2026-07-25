@@ -90,6 +90,9 @@ class SmartTradePlan {
     // price the trader typed is used exactly rather than round-tripped through
     // a percentage. Null keeps the original percentage-driven behaviour.
     double? stopPrice,
+    /// Cash committed to this position. Forwarded to [SizingResult]; see the
+    /// note there on how it interacts with the risk limit.
+    double? budget,
   }) {
     final entry =
         (entryPrice != null && entryPrice.isFinite && entryPrice > 0)
@@ -169,6 +172,7 @@ class SmartTradePlan {
       entry: entry,
       stop: stopLossPrice,
       userQty: userQty,
+      budget: budget,
     );
 
     final qty = sizing.effectiveQty;

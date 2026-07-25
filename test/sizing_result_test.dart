@@ -130,4 +130,61 @@ void main() {
     expect(SizingResult.empty.overRisk, isFalse);
     expect(SizingResult.empty.maxLoss, 0);
   });
+
+  group('position budget', () {
+    // Capital 17,000 at 2% → 340 loss budget. Entry 10.00, stop 9.50 → risk
+    // 0.50/share → the risk rule alone allows 680 shares (6,800 EGP).
+    SizingResult sized({double? budget}) => SizingResult.compute(
+      capital: 17000,
+      maxRiskPercent: 0.02,
+      entry: 10.00,
+      stop: 9.50,
+      budget: budget,
+    );
+
+    test('no budget keeps the risk-rule quantity', () {
+      final r = sized();
+      expect(r.suggestedQty, 680);
+      expect(r.limitedByBudget, isFalse);
+    });
+
+    test('a smaller budget caps the quantity', () {
+      // 2,000 EGP buys 200 shares at 10.00, well under the 680 risk allows.
+      final r = sized(budget: 2000);
+      expect(r.suggestedQty, 200);
+      expect(r.positionValue, 2000);
+      expect(r.limitedByBudget, isTrue);
+    });
+
+    test('a larger budget does NOT loosen the risk limit', () {
+      // The whole point: money available must never raise the risk taken.
+      final r = sized(budget: 999999);
+      expect(r.suggestedQty, 680);
+      expect(r.limitedByBudget, isFalse);
+    });
+
+    test('the budget buys whole shares only', () {
+      // 1,050 / 10.00 = 105 exactly; 1,055 must not become 105.5.
+      expect(sized(budget: 1055).suggestedQty, 105);
+    });
+
+    test('a budget under one share yields zero, not a fraction', () {
+      final r = sized(budget: 5);
+      expect(r.suggestedQty, 0);
+      // Still the trader's own cap, not an undersized account.
+      expect(r.capitalTooSmall, isFalse);
+    });
+
+    test('a capped position risks less than the limit', () {
+      final r = sized(budget: 2000);
+      // 200 shares × 0.50 = 100 EGP risked, well under the 340 budget.
+      expect(r.riskEgp, 100);
+      expect(r.overRisk, isFalse);
+    });
+
+    test('a zero or negative budget is ignored', () {
+      expect(sized(budget: 0).suggestedQty, 680);
+      expect(sized(budget: -100).suggestedQty, 680);
+    });
+  });
 }

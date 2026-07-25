@@ -13,6 +13,11 @@ class PercentPicker extends StatelessWidget {
   final ValueChanged<double> onSelected;
   final ValueChanged<double> onTyped;
 
+  /// Key for the manual percentage box, so callers (and tests) can address it
+  /// directly instead of by position — inserting any field above it used to
+  /// silently re-point positional lookups at the wrong input.
+  final Key? fieldKey;
+
   const PercentPicker({
     super.key,
     required this.title,
@@ -22,6 +27,7 @@ class PercentPicker extends StatelessWidget {
     required this.onSelected,
     required this.onTyped,
     this.showTitle = true,
+    this.fieldKey,
   });
 
   @override
@@ -64,6 +70,7 @@ class PercentPicker extends StatelessWidget {
             _CustomPercentInput(
               controller: controller,
               onTyped: onTyped,
+              fieldKey: fieldKey,
             ),
           ],
         ),
@@ -136,9 +143,14 @@ class _CustomPercentInput extends StatelessWidget {
   final TextEditingController controller;
   final ValueChanged<double> onTyped;
 
+  /// Placed on the inner TextField, not on this wrapper, so `find.byKey`
+  /// resolves straight to the editable widget.
+  final Key? fieldKey;
+
   const _CustomPercentInput({
     required this.controller,
     required this.onTyped,
+    this.fieldKey,
   });
 
   @override
@@ -149,6 +161,7 @@ class _CustomPercentInput extends StatelessWidget {
       width: 90,
       height: 42,
       child: TextField(
+        key: fieldKey,
         controller: controller,
         onChanged: (value) {
           final percent = parseNumber(value);

@@ -104,6 +104,29 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Opens the full trade form from the trades tab.
+  ///
+  /// The FAB now opens the quick-add sheet rather than the full form, so
+  /// reaching the form means going through "التفاصيل الكاملة".
+  Future<void> openFullTradeForm(WidgetTester tester) async {
+    await tester.tap(find.text('صفقة سريعة').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('التفاصيل الكاملة ←'));
+    await tester.pumpAndSettle();
+  }
+
+  /// Tags, screenshots and the timeline moved behind a collapsed section.
+  Future<void> expandOptionalSections(WidgetTester tester) async {
+    final header = find.text('أدوات ومرفقات إضافية (صور، تصنيفات، سجل)');
+    await tester.scrollUntilVisible(
+      header,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(header);
+    await tester.pumpAndSettle();
+  }
+
   /// Opens the calculator and switches the stop input to absolute-price mode,
   /// which is what the manual calculator used to provide.
   Future<void> openManualCalculator(WidgetTester tester) async {
@@ -172,7 +195,7 @@ void main() {
     await openTab(tester, 'سجل الصفقات');
 
     expect(find.text('لسه مفيش صفقات'), findsOneWidget);
-    expect(find.text('إضافة صفقة'), findsWidgets);
+    expect(find.text('صفقة سريعة'), findsWidgets);
   });
 
   group('calculator — the spec fixture on screen', () {
@@ -443,13 +466,8 @@ void main() {
       );
       expect(ticker.controller?.text, 'COMI');
 
-      // The tag chips live further down the lazily-built form.
-      await tester.scrollUntilVisible(
-        find.text('التصنيفات'),
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pumpAndSettle();
+      // Tags now sit inside a collapsed "extras" section on the form.
+      await expandOptionalSections(tester);
       expect(find.text('بريك أوت'), findsWidgets, reason: 'التصنيفات محفوظة');
     });
   });
@@ -459,7 +477,11 @@ void main() {
   ) async {
     await pumpApp(tester);
     await openTab(tester, 'سجل الصفقات');
-    await tester.tap(find.text('إضافة صفقة').last);
+    await openFullTradeForm(tester);
+
+    // A new trade now starts as "مخططة", so switch to "مفتوحة" first: only an
+    // executed position has an exit to record.
+    await tester.tap(find.widgetWithText(ChoiceChip, 'مفتوحة'));
     await tester.pumpAndSettle();
 
     // The exit section sits at the bottom of a lazily-built form, so it has to
@@ -489,17 +511,76 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('an exit price with no date is refused, not crashed on', (
+    tester,
+  ) async {
+    // [Trade] asserts exitPrice and exitDate are set together. The form offers
+    // them as two independent inputs — with a clear button on the date — so a
+    // price alone used to throw an AssertionError on save and take the app
+    // down. This is the exact path the "إقفال" button sends people down.
+    await pumpApp(tester);
+    await openTab(tester, 'سجل الصفقات');
+    await openFullTradeForm(tester);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, 'مفتوحة'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'رمز السهم'),
+      'COMI',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'سبب الدخول والتحليل الفني'),
+      'اختراق',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'سعر الدخول'),
+      '10.00',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'سعر الاستوب'),
+      '9.50',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'عدد الأسهم'),
+      '680',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextFormField, 'سعر الخروج'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'سعر الخروج'),
+      '12.00',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('حفظ'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull, reason: 'the reported crash');
+    expect(find.text('اختار تاريخ الخروج'), findsOneWidget);
+    expect(
+      find.text('قبل ما تحفظ'),
+      findsNothing,
+      reason: 'validation runs before the checklist, so the save never starts',
+    );
+    expect(tradesBox.isEmpty, isTrue, reason: 'nothing half-saved');
+  });
+
   testWidgets('the checklist sheet appears before saving when enabled', (
     tester,
   ) async {
     await pumpApp(tester);
     await openTab(tester, 'سجل الصفقات');
-    await tester.tap(find.text('إضافة صفقة').last);
-    await tester.pumpAndSettle();
+    await openFullTradeForm(tester);
 
-    await tester.enterText(find.widgetWithText(TextFormField, 'الرمز'), 'COMI');
+    await tester.enterText(find.widgetWithText(TextFormField, 'رمز السهم'), 'COMI');
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'سبب الدخول'),
+      find.widgetWithText(TextFormField, 'سبب الدخول والتحليل الفني'),
       'اختراق',
     );
     await tester.enterText(
@@ -535,7 +616,7 @@ void main() {
 
     expect(find.text('قبل ما تحفظ'), findsNothing, reason: 'sheet dismissed');
     expect(
-      find.text('إضافة صفقة'),
+      find.text('سبب الدخول والتحليل الفني'),
       findsWidgets,
       reason: 'still on the form, nothing saved',
     );

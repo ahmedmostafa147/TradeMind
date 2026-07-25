@@ -1,8 +1,23 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Upload-key credentials, kept OUT of the repository — android/.gitignore
+// excludes both this file and *.jks. Play ties the app to the first key it
+// ever sees, so losing it means never updating this listing again: back the
+// .jks up somewhere that is not this machine.
+//
+// See android/key.properties.example for the four keys, and RELEASE.md for how
+// to generate the keystore.
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("key.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+val hasReleaseKey = keystoreProperties.getProperty("storeFile") != null
 
 android {
     namespace = "com.trademind.app"
@@ -29,11 +44,43 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Falls back to the debug key so `flutter run --release` still works
+            // on a machine without the keystore. Play rejects a debug-signed
+            // upload outright, so this cannot ship by accident — but the warning
+            // below is there so it is never a surprise either.
+            signingConfig = if (hasReleaseKey) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn(
+                    "key.properties not found in android/ — the release build " +
+                        "is signed with the DEBUG key and CANNOT be uploaded to " +
+                        "Google Play. See RELEASE.md."
+                )
+                signingConfigs.getByName("debug")
+            }
+
+            // R8: strips unused code and resources. Worth roughly a third of the
+            // download size here, most of it unused Firebase and Play Services
+            // classes pulled in by google_sign_in.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

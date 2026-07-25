@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/calc/sizing_result.dart';
 import '../../core/formatters.dart';
 import '../../features/market/widgets/stock_quote_badge.dart';
+import '../../features/market/widgets/ticker_field.dart';
 import '../timeline_entry.dart';
 import '../trade_status.dart';
 import 'trade_form_attachments.dart';
@@ -28,6 +29,12 @@ class TradeFormBody extends StatelessWidget {
   final List<TimelineEntry> timeline;
   final ValueChanged<List<TimelineEntry>> onTimelineChanged;
 
+  /// Exit price and date. Only meaningful for a position that was actually
+  /// taken, so the section is hidden for planned and cancelled ideas.
+  final TextEditingController exitController;
+  final DateTime? exitDate;
+  final ValueChanged<DateTime?> onExitDateChanged;
+
   const TradeFormBody({
     super.key,
     required this.status,
@@ -47,6 +54,9 @@ class TradeFormBody extends StatelessWidget {
     required this.onRemoveScreenshot,
     required this.timeline,
     required this.onTimelineChanged,
+    required this.exitController,
+    required this.exitDate,
+    required this.onExitDateChanged,
   });
 
   @override
@@ -61,13 +71,8 @@ class TradeFormBody extends StatelessWidget {
           onChanged: onStatusChanged,
         ),
         const SizedBox(height: 16),
-        TextFormField(
+        TickerField(
           controller: tickerController,
-          textCapitalization: TextCapitalization.characters,
-          decoration: const InputDecoration(
-            labelText: 'رمز السهم',
-            hintText: 'COMI',
-          ),
           validator: (v) =>
               (v == null || v.trim().isEmpty) ? 'أدخل الرمز' : null,
         ),
@@ -145,6 +150,60 @@ class TradeFormBody extends StatelessWidget {
           validator: (v) =>
               (v == null || v.trim().isEmpty) ? 'اكتب سبب الدخول' : null,
         ),
+        // Restores the only way to close a trade. The refactor dropped these
+        // inputs while `_exitController` stayed wired into the save path, so
+        // the "إقفال" button sent people to a form that could not record an
+        // exit — and with no closed trades, P&L, win rate and the equity curve
+        // could never be anything but empty.
+        if (status.isExecuted) ...[
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 8),
+          Text(
+            'الخروج من الصفقة',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'سيبهم فاضيين لو الصفقة لسه مفتوحة.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: FormNumberField(
+                  controller: exitController,
+                  label: 'سعر الخروج',
+                  suffix: kCurrencySuffix,
+                  onChanged: () {},
+                  // [Trade] asserts exitPrice and exitDate are set together, so
+                  // a price with no date crashed the save outright. Both halves
+                  // are reported here because the date field is not a
+                  // FormField and cannot show an error of its own.
+                  validator: (_) {
+                    final price = parseNumber(exitController.text);
+                    if (price == null) {
+                      // A date alone is dropped silently on save; say so rather
+                      // than discarding what the user picked.
+                      return exitDate == null ? null : 'اكتب سعر الخروج كمان';
+                    }
+                    if (price <= 0) return 'أدخل سعر صحيح';
+                    if (exitDate == null) return 'اختار تاريخ الخروج';
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: _ExitDateField(
+                date: exitDate,
+                onChanged: onExitDateChanged,
+              )),
+            ],
+          ),
+        ],
         const SizedBox(height: 16),
         TradeFormAttachments(
           tags: tags,
@@ -157,6 +216,50 @@ class TradeFormBody extends StatelessWidget {
           notesController: notesController,
         ),
       ],
+    );
+  }
+}
+
+/// Exit date picker, styled to sit beside the exit price field.
+class _ExitDateField extends StatelessWidget {
+  final DateTime? date;
+  final ValueChanged<DateTime?> onChanged;
+
+  const _ExitDateField({required this.date, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: date ?? DateTime.now(),
+          firstDate: DateTime(2000),
+          lastDate: DateTime.now().add(const Duration(days: 1)),
+        );
+        if (picked != null) onChanged(picked);
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'تاريخ الخروج',
+          // Clearing matters: an exit price without a date is rejected by the
+          // Trade model, so the user needs a way back out of a half-entry.
+          suffixIcon: date == null
+              ? const Icon(Icons.calendar_today_rounded, size: 18)
+              : IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  tooltip: 'مسح التاريخ',
+                  onPressed: () => onChanged(null),
+                ),
+        ),
+        child: NumericText(
+          date == null ? '—' : dateLabel(date!),
+          style: theme.textTheme.bodyLarge,
+        ),
+      ),
     );
   }
 }

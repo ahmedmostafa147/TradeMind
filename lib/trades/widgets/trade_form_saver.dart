@@ -48,8 +48,15 @@ class TradeFormSaver {
     }
 
     final isExecuted = status.isExecuted;
-    final exitPrice = isExecuted ? parseNumber(exitPriceText ?? '') : null;
+    final typedExitPrice = isExecuted ? parseNumber(exitPriceText ?? '') : null;
     final notes = notesText.trim();
+
+    // [Trade] asserts the pair is set together or not at all, so a half-filled
+    // exit would throw rather than save. Form validation rejects that before
+    // reaching here; this only guarantees no future call site can crash the
+    // app, by dropping the lone half instead.
+    final resolvedExitDate = typedExitPrice == null ? null : exitDate;
+    final exitPrice = resolvedExitDate == null ? null : typedExitPrice;
 
     final trade = Trade(
       id: existing?.id ?? const Uuid().v4(),
@@ -61,7 +68,7 @@ class TradeFormSaver {
       quantity: quantity,
       takeProfitPrice: takeProfitPrice,
       exitPrice: exitPrice,
-      exitDate: exitPrice == null ? null : exitDate,
+      exitDate: resolvedExitDate,
       notes: notes.isEmpty ? null : notes,
       status: status,
       tags: tags,

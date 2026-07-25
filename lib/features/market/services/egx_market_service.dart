@@ -100,8 +100,14 @@ class EgxMarketService {
     }
 
     try {
+      // The range/interval are required, not cosmetic: without them Yahoo
+      // returns empty `indicators` and the only price left is the stale `meta`
+      // block. A year of daily candles is what makes [EgxStockInfo.high52] and
+      // `low52` mean what their names say — a month of them did not — and it
+      // is still only ~250 numbers.
       final url = Uri.parse(
-        'https://query1.finance.yahoo.com/v8/finance/chart/$cleanSymbol.CA',
+        'https://query1.finance.yahoo.com/v8/finance/chart/$cleanSymbol.CA'
+        '?range=1y&interval=1d',
       );
       final response = await http
           .get(url, headers: _headers)
@@ -120,7 +126,8 @@ class EgxMarketService {
         // the curated directory wins when it knows the ticker.
         preferredName: egxDirectory[cleanSymbol],
       );
-      if (info.price <= 0) return null;
+      // Null when the symbol has no candles at all (ESRS behaves this way).
+      if (info == null || info.price <= 0) return null;
 
       _cache[cleanSymbol] = info;
       return info;

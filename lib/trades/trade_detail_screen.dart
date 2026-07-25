@@ -137,6 +137,12 @@ class TradeDetailScreen extends ConsumerWidget {
                 ),
                 ReadoutRow(label: 'سعر الدخول', value: money(trade.entryPrice)),
                 ReadoutRow(label: 'سعر الاستوب', value: money(trade.stopPrice)),
+                // The one level the detail page never showed, even though the
+                // form asks for it and the scenarios project from it.
+                ReadoutRow(
+                  label: 'الهدف',
+                  value: money(trade.takeProfitPrice),
+                ),
                 ReadoutRow(label: 'عدد الأسهم', value: quantity(trade.quantity)),
                 ReadoutRow(
                   label: 'قيمة المركز',

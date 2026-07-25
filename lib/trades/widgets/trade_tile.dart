@@ -7,6 +7,7 @@ import '../../features/market/widgets/live_pnl_view.dart';
 import '../../features/market/widgets/ticker_avatar.dart';
 import '../trade.dart';
 import 'result_badge.dart';
+import 'trade_levels.dart';
 
 class TradeTile extends StatelessWidget {
   final Trade trade;
@@ -95,6 +96,16 @@ class TradeTile extends StatelessWidget {
                   ],
                 ),
               ],
+              // The plan itself, which this row used to omit entirely: a tile
+              // showing only P&L, R and risk % gave no way to tell what the
+              // trade actually was without opening it.
+              const SizedBox(height: 12),
+              TradeLevels(
+                trade: trade,
+                positionValue: metrics.positionValue,
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
               const SizedBox(height: 12),
               Row(
                 children: [

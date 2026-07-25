@@ -1,0 +1,13 @@
+# Copy to android/key.properties and fill in with YOUR values.
+#
+# key.properties and *.jks are both in android/.gitignore — keep it that way.
+# Anyone holding this file plus the .jks can publish an update to your listing.
+#
+# storeFile is resolved relative to android/app/, so a keystore sitting at
+# android/app/upload-keystore.jks is just "upload-keystore.jks". An absolute
+# path outside the repo is safer still.
+
+storePassword=CHANGE_ME
+keyPassword=CHANGE_ME
+keyAlias=upload
+storeFile=upload-keystore.jks

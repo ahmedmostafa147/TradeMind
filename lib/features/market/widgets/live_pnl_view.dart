@@ -91,7 +91,7 @@ class LivePnlView extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'ربح/خسارة لحظية',
+                      'ربح/خسارة غير محققة',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -111,7 +111,9 @@ class LivePnlView extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    'السعر الحالي',
+                    // EGX gives a daily close, not a live tick. Labelling it
+                    // "السعر الحالي" overstated what the number is.
+                    'آخر إغلاق',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -123,6 +125,16 @@ class LivePnlView extends ConsumerWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  if (info.priceDate case final date?) ...[
+                    const SizedBox(height: 2),
+                    NumericText(
+                      dateLabel(date),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ],

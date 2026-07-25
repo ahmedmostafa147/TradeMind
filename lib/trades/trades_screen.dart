@@ -144,7 +144,9 @@ class _EmptyState extends StatelessWidget {
             Text('لسه مفيش صفقات', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
-              'اضغط «إضافة صفقة» تحت عشان تسجّل أول صفقة، '
+              // Names the button that actually exists — this used to say
+              // «إضافة صفقة», which no longer appears anywhere on the screen.
+              'اضغط «صفقة سريعة» تحت عشان تسجّل أول صفقة، '
               'أو ابدأ من «حاسبة الصفقة» عشان تعرف الكمية المناسبة الأول.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium,

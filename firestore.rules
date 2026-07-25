@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// Cloud Firestore access rules for the journal's backup.
+//
+// The app writes to exactly two paths, both under the signed-in user:
+//   users/{uid}/trades/{tradeId}
+//   users/{uid}/watchlist/{itemId}
+//
+// A project left in test mode allows any authenticated user — in practice
+// anyone at all, since sign-up is open — to read and write every other user's
+// trades. These rules close that: a request may only touch the subtree whose
+// uid matches the caller's own token.
+//
+// Deploy with:  firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // The parent document itself is never written by the app; it exists only
+    // as a container. Denying it keeps the surface to what is actually used.
+    match /users/{userId} {
+      allow read, write: if false;
+
+      match /trades/{tradeId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /watchlist/{itemId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Anything not matched above is denied, including any path a future
+    // version adds before its rule does.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+function isOwner(userId) {
+  return request.auth != null && request.auth.uid == userId;
+}

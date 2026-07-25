@@ -31,6 +31,14 @@ class SizingResult {
   /// showing a bare 0.
   final bool capitalTooSmall;
 
+  /// True when the quantity was cut down to fit the money the trader is
+  /// actually putting in, rather than by the risk rule. Lets the UI say why
+  /// the suggestion is smaller than the risk budget alone would allow.
+  final bool limitedByBudget;
+
+  /// The cash cap that produced [limitedByBudget], when one was given.
+  final double? budget;
+
   const SizingResult._({
     required this.maxLoss,
     required this.riskPerShare,
@@ -41,6 +49,8 @@ class SizingResult {
     required this.riskPct,
     required this.overRisk,
     required this.capitalTooSmall,
+    this.limitedByBudget = false,
+    this.budget,
   });
 
   static const SizingResult empty = SizingResult._(
@@ -61,6 +71,12 @@ class SizingResult {
     double? entry,
     double? stop,
     int? userQty,
+    // Cash the trader is willing to commit to THIS position, which is usually
+    // far less than their whole capital. The risk rule alone sizes as if the
+    // entire account backs every trade; this caps the suggestion at what they
+    // are actually spending. The risk limit still applies — whichever of the
+    // two allows fewer shares wins.
+    double? budget,
   }) {
     final maxLoss = maxLossPerTrade(
       capital: capital,
@@ -80,13 +96,31 @@ class SizingResult {
         ? validEntry - validStop
         : null;
 
-    final suggestedQty = (validEntry != null && validStop != null)
+    final riskQty = (validEntry != null && validStop != null)
         ? suggestedQuantity(
             maxLoss: maxLoss,
             entry: validEntry,
             stop: validStop,
           )
         : null;
+
+    final validBudget = (budget != null && budget.isFinite && budget > 0)
+        ? budget
+        : null;
+
+    // How many whole shares the cash actually buys.
+    final budgetQty = (validBudget != null && validEntry != null)
+        ? (validBudget / validEntry).floor()
+        : null;
+
+    // The tighter of the two constraints, so neither the risk rule nor the
+    // wallet is ever exceeded.
+    final suggestedQty = (riskQty != null && budgetQty != null)
+        ? (budgetQty < riskQty ? budgetQty : riskQty)
+        : (riskQty ?? budgetQty);
+
+    final limitedByBudget =
+        riskQty != null && budgetQty != null && budgetQty < riskQty;
 
     final effectiveQty = (userQty != null && userQty > 0)
         ? userQty
@@ -119,7 +153,11 @@ class SizingResult {
       riskEgp: riskEgp,
       riskPct: riskPct,
       overRisk: riskPct != null && exceedsRiskLimit(riskPct, maxRiskPercent),
-      capitalTooSmall: suggestedQty == 0,
+      // Only a risk-budget shortfall counts: a budget too small for one share
+      // is the trader's own cap, not an "account too small" problem.
+      capitalTooSmall: riskQty == 0,
+      limitedByBudget: limitedByBudget,
+      budget: validBudget,
     );
   }
 }

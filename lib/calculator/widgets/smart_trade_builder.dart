@@ -28,6 +28,7 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
   final _takeProfitController = TextEditingController();
   final _stopLossController = TextEditingController();
   final _stopPriceController = TextEditingController();
+  final _budgetController = TextEditingController();
 
   StopInputMode _stopMode = StopInputMode.percent;
   double? _takeProfitPercent;
@@ -39,6 +40,7 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
     _takeProfitController.dispose();
     _stopLossController.dispose();
     _stopPriceController.dispose();
+    _budgetController.dispose();
     super.dispose();
   }
 
@@ -88,6 +90,7 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
       stopLossPercent: inPriceMode ? 0.0 : _stopLossPercent!,
       entryPrice: parseNumber(_entryController.text),
       stopPrice: stopPrice,
+      budget: parseNumber(_budgetController.text),
     );
 
     return Column(
@@ -110,9 +113,32 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
             suffixText: kCurrencySuffix,
           ),
         ),
+        const SizedBox(height: 16),
+
+        // Without this the sizing assumes the whole account backs the trade,
+        // which is not how anyone actually buys — most people commit a slice.
+        TextField(
+          key: const ValueKey('budget-field'),
+          controller: _budgetController,
+          onChanged: (_) => setState(() {}),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9.٠-٩]')),
+          ],
+          textDirection: TextDirection.ltr,
+          textAlign: TextAlign.right,
+          decoration: InputDecoration(
+            labelText: 'المبلغ اللي هدخل بيه (اختياري)',
+            suffixText: kCurrencySuffix,
+            helperText: plan.sizing.limitedByBudget
+                ? 'الكمية اتحددت بالمبلغ ده، مش بحد المخاطرة'
+                : 'سيبه فاضي عشان يستخدم حد المخاطرة بس',
+          ),
+        ),
         const SizedBox(height: 20),
         PercentPicker(
           title: 'نسبة الهدف',
+          fieldKey: const ValueKey('take-profit-percent-field'),
           presets: _takeProfitPresets,
           selected: _takeProfitPercent,
           controller: _takeProfitController,
@@ -140,6 +166,7 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
           PercentPicker(
             title: 'نسبة وقف الخسارة',
             showTitle: false,
+            fieldKey: const ValueKey('stop-percent-field'),
             presets: _stopLossPresets,
             selected: _stopLossPercent,
             controller: _stopLossController,

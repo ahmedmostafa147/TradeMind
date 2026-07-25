@@ -5,6 +5,7 @@ import '../../core/formatters.dart';
 import '../../core/theme.dart';
 import '../../features/market/widgets/live_pnl_view.dart';
 import '../../trades/widgets/result_badge.dart';
+import '../../trades/widgets/trade_levels.dart';
 
 class TradeActionCard extends StatelessWidget {
   final DecisionItem item;
@@ -114,15 +115,20 @@ class TradeActionCard extends StatelessWidget {
                     ),
                   ),
                 ],
+                // The plan first, in the order every other screen shows it,
+                // then what this card adds on top. The target and the position
+                // value used to be missing here, and the share count vanished
+                // entirely on a planned idea rather than reading as "not set".
                 const SizedBox(height: 12),
+                TradeLevels(
+                  trade: trade,
+                  positionValue: metrics.positionValue,
+                ),
+                const SizedBox(height: 8),
                 Wrap(
                   spacing: 16,
                   runSpacing: 8,
                   children: [
-                    _Fact(label: 'الدخول', value: money(trade.entryPrice)),
-                    _Fact(label: 'الاستوب', value: money(trade.stopPrice)),
-                    if (trade.quantity > 0)
-                      _Fact(label: 'الكمية', value: quantity(trade.quantity)),
                     _Fact(
                       label: 'المخاطرة',
                       value: percent(metrics.riskPct),

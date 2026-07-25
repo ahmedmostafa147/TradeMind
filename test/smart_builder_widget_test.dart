@@ -134,8 +134,8 @@ void main() {
     expect(find.text('98.00 ج.م'), findsOneWidget);
 
     // Switch the target to 3% — no button, no reload.
-    await scrollTo(tester, find.widgetWithText(ChoiceChip, '3%').first);
-    await tester.tap(find.widgetWithText(ChoiceChip, '3%').first);
+    await scrollTo(tester, find.text('3%').first);
+    await tester.tap(find.text('3%').first);
     await tester.pumpAndSettle();
 
     await scrollTo(tester, find.text('ملخص الصفقة'));
@@ -150,10 +150,10 @@ void main() {
     await enterPrice(tester, '100.00');
 
     // 3% target against a 3% stop is a 1.0 ratio — a warning, not a win.
-    await scrollTo(tester, find.widgetWithText(ChoiceChip, '3%').first);
-    await tester.tap(find.widgetWithText(ChoiceChip, '3%').first);
+    await scrollTo(tester, find.text('3%').first);
+    await tester.tap(find.text('3%').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ChoiceChip, '3%').last);
+    await tester.tap(find.text('3%').last);
     await tester.pumpAndSettle();
 
     await scrollTo(tester, find.text('ملخص الصفقة'));
@@ -211,7 +211,7 @@ void main() {
 
     // The target sits further down the form, and a lazy ListView has not built
     // it yet — scroll it into existence before reading it.
-    await scrollTo(tester, find.text('سعر الهدف (اختياري)'));
+    await scrollTo(tester, find.text('الهدف (اختياري)'));
     expect(builtFieldValues(), contains('42.42'));
   });
 
@@ -219,8 +219,12 @@ void main() {
     await pumpCalculator(tester);
     await enterPrice(tester, '100.00');
 
-    // The manual take-profit box is the second TextField in the builder.
-    await tester.enterText(find.byType(TextField).at(1), '8');
+    // Addressed by key: the builder gained a budget field above this one, and
+    // a positional lookup silently pointed at the wrong input.
+    await tester.enterText(
+      find.byKey(const ValueKey('take-profit-percent-field')),
+      '8',
+    );
     await tester.pumpAndSettle();
 
     await scrollTo(tester, find.text('ملخص الصفقة'));
