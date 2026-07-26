@@ -108,7 +108,7 @@ void main() {
     await pumpApp(tester);
 
     expect(find.text('قرار اليوم'), findsWidgets);
-    expect(find.text('لا توجد مهام اليوم.'), findsOneWidget);
+    expect(find.text('ابدأ أول صفقة'), findsOneWidget);
     // The spec asks for a ✅; the screen renders the Material equivalent so it
     // themes and scales with the rest of the UI.
     expect(find.byIcon(Icons.task_alt_rounded), findsOneWidget);
@@ -229,11 +229,14 @@ void main() {
     await pumpApp(tester);
 
     // No action is required, but the closed trade is still worth seeing — so
-    // the compact banner shows instead of the full-screen empty state. The
-    // banner carries a longer reassurance after the shared phrase, hence the
-    // substring match. Asserted before scrolling, since the lazy list disposes
-    // it once it leaves the viewport.
+    // the compact banner shows instead of the full-screen empty state. This
+    // matches the BANNER's own wording, which is not the empty state's:
+    // "nothing to do today" is the right message when there are trades but no
+    // pending decisions, while the empty state is for a journal with nothing
+    // in it at all. Asserted before scrolling, since the lazy list disposes it
+    // once it leaves the viewport.
     expect(find.textContaining('لا توجد مهام اليوم'), findsOneWidget);
+    expect(find.text('ابدأ أول صفقة'), findsNothing);
 
     // The closed section is the last one, below the fold in a lazy list.
     await tester.scrollUntilVisible(
@@ -341,7 +344,7 @@ void main() {
     });
     await pumpApp(tester);
 
-    expect(find.text('لا توجد مهام اليوم.'), findsNothing);
+    expect(find.text('ابدأ أول صفقة'), findsNothing);
     expect(find.text('قائمة المتابعة'), findsOneWidget);
   });
 
@@ -354,7 +357,7 @@ void main() {
     });
     await pumpApp(tester);
 
-    expect(find.text('لا توجد مهام اليوم.'), findsOneWidget);
+    expect(find.text('ابدأ أول صفقة'), findsOneWidget);
   });
 
   testWidgets('the waiting threshold is read from settings', (tester) async {

@@ -19,28 +19,15 @@ class TradesScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const AppLogoTitle(title: 'سجل الصفقات'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.flash_on_rounded, color: Colors.amber),
-            tooltip: 'صفقة سريعة',
-            onPressed: () => showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              builder: (_) => const QuickAddTradeSheet(),
-            ),
-          ),
-        ],
-      ),
+      // No duplicate in the AppBar. There used to be an icon there opening the
+      // very same sheet as the button below it — two controls side by side
+      // doing one thing reads as two different things, and the user has to
+      // press one to find out.
+      appBar: AppBar(title: const AppLogoTitle(title: 'سجل الصفقات')),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          builder: (_) => const QuickAddTradeSheet(),
-        ),
-        icon: const Icon(Icons.flash_on_rounded),
-        label: const Text('صفقة سريعة'),
+        onPressed: () => openQuickAddSheet(context),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text(kAddTradeLabel),
       ),
       body: trades.isEmpty
           ? const _EmptyState()
@@ -144,12 +131,19 @@ class _EmptyState extends StatelessWidget {
             Text('لسه مفيش صفقات', style: theme.textTheme.titleLarge),
             const SizedBox(height: 8),
             Text(
-              // Names the button that actually exists — this used to say
-              // «إضافة صفقة», which no longer appears anywhere on the screen.
-              'اضغط «صفقة سريعة» تحت عشان تسجّل أول صفقة، '
-              'أو ابدأ من «حاسبة الصفقة» عشان تعرف الكمية المناسبة الأول.',
+              // No longer points at another tab. It used to name both this
+              // screen's button AND «حاسبة الصفقة», which left the reader
+              // choosing between two starting points for one job.
+              'سجّل أول صفقة بسعر الدخول ووقف الخسارة، '
+              'والباقي التطبيق هيحسبه.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => openQuickAddSheet(context),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text(kAddTradeLabel),
             ),
           ],
         ),

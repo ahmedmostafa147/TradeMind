@@ -12,6 +12,7 @@ import 'package:egx_trade_journal/trades/timeline_entry_adapter.dart';
 import 'package:egx_trade_journal/trades/trade.dart';
 import 'package:egx_trade_journal/trades/trade_adapter.dart';
 import 'package:egx_trade_journal/trades/trades_providers.dart';
+import 'package:egx_trade_journal/trades/widgets/quick_add_trade_sheet.dart';
 import 'package:egx_trade_journal/watchlist/watchlist_item.dart';
 import 'package:egx_trade_journal/watchlist/watchlist_item_adapter.dart';
 import 'package:egx_trade_journal/watchlist/watchlist_providers.dart';
@@ -109,7 +110,7 @@ void main() {
   /// The FAB now opens the quick-add sheet rather than the full form, so
   /// reaching the form means going through "التفاصيل الكاملة".
   Future<void> openFullTradeForm(WidgetTester tester) async {
-    await tester.tap(find.text('صفقة سريعة').last);
+    await tester.tap(find.text(kAddTradeLabel).last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('التفاصيل الكاملة ←'));
     await tester.pumpAndSettle();
@@ -195,7 +196,7 @@ void main() {
     await openTab(tester, 'سجل الصفقات');
 
     expect(find.text('لسه مفيش صفقات'), findsOneWidget);
-    expect(find.text('صفقة سريعة'), findsWidgets);
+    expect(find.text(kAddTradeLabel), findsWidgets);
   });
 
   group('calculator — the spec fixture on screen', () {

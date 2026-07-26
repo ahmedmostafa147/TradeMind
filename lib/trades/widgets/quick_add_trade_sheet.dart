@@ -16,7 +16,25 @@ import '../trade_form_screen.dart';
 import '../trade_status.dart';
 import '../trades_providers.dart';
 
-/// Fast 4-field quick trade modal.
+/// The one name the add-a-trade action goes by, everywhere.
+///
+/// It used to be "صفقة سريعة" on the button, "إضافة صفقة" in one empty state
+/// and "حاسبة الصفقة" in another — three names for what a new user experiences
+/// as one job, which is what made the app feel like it had more moving parts
+/// than it does.
+const String kAddTradeLabel = 'أضف صفقة';
+
+/// Opens the add-trade sheet. Every entry point routes through here so the
+/// presentation (full height, above the keyboard, under the status bar) cannot
+/// drift between callers.
+Future<void> openQuickAddSheet(BuildContext context) => showModalBottomSheet(
+  context: context,
+  isScrollControlled: true,
+  useSafeArea: true,
+  builder: (_) => const QuickAddTradeSheet(),
+);
+
+/// Fast quick-trade modal: ticker, entry, stop, target and share count.
 class QuickAddTradeSheet extends ConsumerStatefulWidget {
   const QuickAddTradeSheet({super.key});
 

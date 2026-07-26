@@ -91,11 +91,14 @@ void main() {
   }
 
   group('gate state', () {
-    test('a fresh install has not passed the gate', () {
+    test('a fresh install goes straight in, without being asked', () {
+      // The journal is local-first and needs no account, so the sign-in screen
+      // is no longer the first thing a new user meets — it was a decision with
+      // no context behind it, in front of an app that works without one.
       final container = makeContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(authGatePassedProvider), isFalse);
+      expect(container.read(authGatePassedProvider), isTrue);
     });
 
     test('skipping opens the gate and is written to disk', () async {
@@ -124,7 +127,7 @@ void main() {
       expect(second.read(authGatePassedProvider), isTrue);
     });
 
-    test('a signed-in user passes the gate without skipping', () async {
+    test('a signed-in user passes the gate', () async {
       await authBox.put('current_user', {
         'id': 'uid-123',
         'name': 'أحمد',
@@ -136,34 +139,54 @@ void main() {
       addTearDown(container.dispose);
 
       expect(container.read(authGatePassedProvider), isTrue);
-      expect(container.read(authGateSkipProvider), isFalse);
     });
 
-    test('resetting closes the gate again', () async {
+    test('signing out puts the sign-in screen back', () async {
       final container = makeContainer();
       addTearDown(container.dispose);
 
-      await container.read(authGateSkipProvider.notifier).skip();
       await container.read(authGateSkipProvider.notifier).reset();
 
       expect(container.read(authGatePassedProvider), isFalse);
-      expect(authBox.get('skipped_auth'), isNull);
+      // Written as false, not deleted: absence now means "fresh install, go
+      // straight in", so deleting would drop the user back into the journal
+      // immediately after they asked to leave it.
+      expect(authBox.get('skipped_auth'), isFalse);
+    });
+
+    test('the reopened gate survives a cold start', () async {
+      final first = makeContainer();
+      await first.read(authGateSkipProvider.notifier).reset();
+      first.dispose();
+
+      final second = makeContainer();
+      addTearDown(second.dispose);
+
+      expect(second.read(authGatePassedProvider), isFalse);
     });
   });
 
   group('what gets rendered', () {
-    testWidgets('a fresh install lands on the auth screen', (tester) async {
-      await pumpApp(tester);
-
-      expect(find.byType(AuthScreen), findsOneWidget);
-      expect(find.byType(HomeShell), findsNothing);
-    });
-
-    testWidgets('the auth screen offers a way in without an account', (
+    testWidgets('a fresh install lands on the journal, not a sign-in wall', (
       tester,
     ) async {
       await pumpApp(tester);
 
+      expect(find.byType(HomeShell), findsOneWidget);
+      expect(
+        find.byType(AuthScreen),
+        findsNothing,
+        reason: 'the first screen of a local-first app is the app',
+      );
+    });
+
+    testWidgets('after signing out, the sign-in screen is shown again', (
+      tester,
+    ) async {
+      await tester.runAsync(() => authBox.put('skipped_auth', false));
+      await pumpApp(tester);
+
+      expect(find.byType(AuthScreen), findsOneWidget);
       expect(
         find.text('متابعة بدون حساب'),
         findsOneWidget,
