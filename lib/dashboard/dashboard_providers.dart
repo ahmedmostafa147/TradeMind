@@ -23,6 +23,7 @@ final portfolioScenariosProvider = Provider<PortfolioScenarios>((ref) {
   return PortfolioScenarios.from(
     ref.watch(tradesProvider),
     defaultTakeProfitPercent: settings.defaultTakeProfitPercent,
+    defaultStopLossPercent: settings.defaultStopLossPercent,
   );
 });
 

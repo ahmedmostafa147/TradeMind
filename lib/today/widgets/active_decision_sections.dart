@@ -48,25 +48,10 @@ class ActiveDecisionSections extends StatelessWidget {
                 ),
             ],
           ),
-        if (decisions.needsReview.isNotEmpty)
-          ActionSection(
-            title: 'محتاجة مراجعة',
-            count: decisions.needsReviewCount,
-            icon: Icons.rate_review_outlined,
-            accent: colors.breakeven,
-            children: [
-              for (final item in decisions.needsReview)
-                TradeActionCard(
-                  item: item,
-                  message: 'راجع الصفقة وأضف ملاحظاتك.',
-                  onTap: () => _openDetail(context, item.trade),
-                  actions: [
-                    AddNoteButton(trade: item.trade),
-                    EditTradeButton(trade: item.trade),
-                  ],
-                ),
-            ],
-          ),
+        // «محتاجة مراجعة» is gone. It fired on any open position untouched for
+        // a week, which is not a decision — it is a reminder to journal, and it
+        // filled the daily screen with cards asking for nothing in particular.
+        // The sections left are the ones that name an actual action.
         if (decisions.waitingTooLong.isNotEmpty)
           ActionSection(
             title: 'منتظرة من زمان',

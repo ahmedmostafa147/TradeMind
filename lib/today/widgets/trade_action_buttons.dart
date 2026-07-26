@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../settings/settings_providers.dart';
 import '../../trades/timeline_entry.dart';
 import '../../trades/trade.dart';
+import '../../trades/trade_detail_screen.dart';
 import '../../trades/trade_form_screen.dart';
 import '../../trades/trade_status.dart';
 import '../../trades/trades_providers.dart';
@@ -180,4 +181,27 @@ Future<void> _addNote(
           notes: asLesson && existingNotes.isEmpty ? text : trade.notes,
         ),
       );
+
+  // Say so. A plain note only ever lands in the timeline, which is visible on
+  // the detail page and nowhere else — so saving one closed the dialog and
+  // changed nothing the user could see, which is indistinguishable from a
+  // button that does not work. It was reported as exactly that.
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        asLesson
+            ? 'اتسجّل الدرس على صفقة ${trade.ticker}'
+            : 'اتسجّلت الملاحظة على صفقة ${trade.ticker}',
+      ),
+      action: SnackBarAction(
+        label: 'اعرضها',
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => TradeDetailScreen(tradeId: trade.id),
+          ),
+        ),
+      ),
+    ),
+  );
 }

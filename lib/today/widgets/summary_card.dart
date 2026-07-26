@@ -66,13 +66,6 @@ class SummaryCard extends StatelessWidget {
             children: [
               _StatTile(label: 'مفتوحة', value: decisions.openCount),
               _StatTile(
-                label: 'محتاجة مراجعة',
-                value: decisions.needsReviewCount,
-                color: decisions.needsReviewCount > 0
-                    ? colors.breakeven
-                    : null,
-              ),
-              _StatTile(
                 label: 'تجاوزت الحد',
                 value: decisions.overRiskCount,
                 color: decisions.overRiskCount > 0 ? colors.loss : null,

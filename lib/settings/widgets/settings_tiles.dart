@@ -21,8 +21,15 @@ class MaxLossCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // NOT a position size. This is the loss budget: the most the
+            // trader may be down when the stop is hit. The old subtitle,
+            // "رأس المال × نسبة المخاطرة" with no other context, read as
+            // though the whole account went into one trade — it was
+            // misreported as a bug on exactly those grounds. The number is
+            // what the entire sizing engine divides by, so the fix is saying
+            // what it means, not removing it.
             Text(
-              'أقصى خسارة مسموحة للصفقة',
+              'أقصى خسارة لو ضرب الاستوب',
               style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -35,8 +42,12 @@ class MaxLossCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              'رأس المال × نسبة المخاطرة',
-              style: theme.textTheme.bodySmall,
+              'دي مش قيمة الصفقة — دي أكبر مبلغ ممكن تخسره فيها. '
+              'التطبيق بيقسّمه على المسافة بين الدخول والاستوب عشان يطلّع '
+              'عدد الأسهم.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),

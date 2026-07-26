@@ -26,8 +26,15 @@ Trade makeTrade({
   takeProfitPrice: target,
 );
 
-PortfolioScenarios scenarios(List<Trade> trades, {double tp = 0.05}) =>
-    PortfolioScenarios.from(trades, defaultTakeProfitPercent: tp);
+PortfolioScenarios scenarios(
+  List<Trade> trades, {
+  double tp = 0.05,
+  double sl = 0.02,
+}) => PortfolioScenarios.from(
+  trades,
+  defaultTakeProfitPercent: tp,
+  defaultStopLossPercent: sl,
+);
 
 void main() {
   group('nothing open', () {
@@ -201,12 +208,60 @@ void main() {
     });
   });
 
-  test('a stop above entry produces a positive "loss", not a crash', () {
-    // Bad data, but it must not throw or produce NaN.
+  test('a stop above entry never reports a gain on the loss line', () {
+    // This used to assert closeTo(100.0) — it pinned the defect as intended
+    // behaviour. "Bad data must not crash" is right; "bad data may print a
+    // profit under «إذا خسرت جميع الصفقات»" is not, and that is what shipped.
     final s = scenarios([
       makeTrade(id: 'a', entry: 10.00, stop: 11.00, target: 12.00, qty: 100),
     ]);
-    expect(s.totalExpectedLoss, closeTo(100.0, 1e-9));
+    expect(s.totalExpectedLoss, isNegative);
     expect(s.totalExpectedLoss!.isFinite, isTrue);
+  });
+
+  group('an unusable stop is not taken literally', () {
+    // Both of these were live: the profit side validated its target and had a
+    // fallback, the loss side read `stopPrice` verbatim.
+
+    test('a stop of zero does not value the loss at the whole position', () {
+      // Imported from a recommendation that carried no stop. Read literally,
+      // 100 shares entered at 10.00 "lose" 1,000 — the entire position — so
+      // "if every trade loses" reported a wipeout.
+      final s = scenarios([
+        makeTrade(id: 'a', entry: 10, stop: 0, qty: 100, target: 12),
+      ], sl: 0.02);
+
+      expect(s.worstCase, isNot(-1000));
+      // Falls back to the configured 2% stop: 9.80, so 0.20 x 100.
+      expect(s.worstCase, closeTo(-20, 0.001));
+    });
+
+    test('a stop above entry does not turn the loss into a profit', () {
+      // The worst reading of the two: the line labelled "if every trade loses"
+      // printed a gain.
+      final s = scenarios([
+        makeTrade(id: 'b', entry: 10, stop: 12, qty: 100, target: 14),
+      ], sl: 0.02);
+
+      expect(s.worstCase, lessThan(0), reason: 'a loss is never positive');
+      expect(s.worstCase, closeTo(-20, 0.001));
+    });
+
+    test('a real stop is still used exactly as given', () {
+      final s = scenarios([
+        makeTrade(id: 'c', entry: 10, stop: 9, qty: 100, target: 12),
+      ], sl: 0.02);
+
+      expect(s.worstCase, closeTo(-100, 0.001), reason: 'the trade own stop');
+      expect(s.bestCase, closeTo(200, 0.001));
+    });
+
+    test('with no stop and no default, the trade contributes no loss', () {
+      final s = scenarios([
+        makeTrade(id: 'd', entry: 10, stop: 0, qty: 100, target: 12),
+      ], sl: 0);
+
+      expect(s.worstCase, 0, reason: 'nothing invented from nothing');
+    });
   });
 }

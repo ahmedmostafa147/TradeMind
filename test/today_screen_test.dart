@@ -190,9 +190,13 @@ void main() {
     });
     await pumpApp(tester);
 
-    // Two matches by design: the summary stat and the section heading.
-    expect(find.text('محتاجة مراجعة'), findsWidgets);
-    expect(find.text('راجع الصفقة وأضف ملاحظاتك.'), findsOneWidget);
+    // «محتاجة مراجعة» is gone: an open position untouched for a week is not a
+    // decision, it is a nag to journal, and it filled the daily screen with
+    // cards that asked for nothing in particular. The trade still appears —
+    // under the section that names a real action.
+    expect(find.text('محتاجة مراجعة'), findsNothing);
+    expect(find.text('راجع الصفقة وأضف ملاحظاتك.'), findsNothing);
+    expect(find.text('COMI'), findsWidgets, reason: 'still on the screen');
   });
 
   testWidgets('an old open trade is flagged as waiting too long', (
@@ -275,8 +279,11 @@ void main() {
     });
     await pumpApp(tester);
 
-    expect(find.text('محتاجة مراجعة'), findsWidgets);
-    expect(find.text('راجع الصفقة وأضف ملاحظاتك.'), findsOneWidget);
+    // No review nag; the trade shows under «أُقفلت مؤخرًا», where the lesson
+    // button lives.
+    expect(find.text('محتاجة مراجعة'), findsNothing);
+    expect(find.text('أُقفلت مؤخرًا'), findsOneWidget);
+    expect(find.text('أضف الدرس'), findsOneWidget);
   });
 
   testWidgets('the summary card counts every bucket', (tester) async {

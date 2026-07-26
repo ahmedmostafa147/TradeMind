@@ -240,7 +240,7 @@ void main() {
     await pumpApp(tester);
     await openTab(tester, 'الإعدادات');
 
-    expect(find.text('أقصى خسارة مسموحة للصفقة'), findsOneWidget);
+    expect(find.text('أقصى خسارة لو ضرب الاستوب'), findsOneWidget);
     expect(find.text('340.00 ج.م'), findsOneWidget);
   });
 
