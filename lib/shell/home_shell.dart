@@ -2,16 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../calculator/calculator_screen.dart';
-import '../dashboard/dashboard_screen.dart';
 import '../features/sync/providers/sync_provider.dart';
 import '../settings/settings_screen.dart';
-import '../today/today_screen.dart';
-import '../trades/trades_screen.dart';
+import 'trades_hub_screen.dart';
 
-/// Five destinations is the top of the 3–5 range bottom navigation is built
-/// for. A drawer would hide every primary surface behind a gesture that also
+/// Three destinations, each a different job: look at my trades, plan a new
+/// one, change my settings.
+///
+/// It was five, and three of those five — «قرار اليوم», «سجل الصفقات» and
+/// «لوحة التحكم» — were the same trades shown three ways. Sitting side by side
+/// in the bar they read as three separate features, so the only way to learn
+/// what each held was to open it. They are now the tabs of [TradesHubScreen],
+/// where the grouping states the relationship outright.
+///
+/// A drawer would hide every primary surface behind a gesture that also
 /// collides with Android's right-edge back swipe under RTL. NavigationBar
-/// mirrors itself automatically, so قرار اليوم lands rightmost with no work.
+/// mirrors itself automatically, so صفقاتي lands rightmost with no work.
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
@@ -37,10 +43,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       body: IndexedStack(
         index: _index,
         children: const [
-          TodayScreen(),
+          TradesHubScreen(),
           CalculatorScreen(),
-          TradesScreen(),
-          DashboardScreen(),
           SettingsScreen(),
         ],
       ),
@@ -49,24 +53,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         onDestinationSelected: (value) => setState(() => _index = value),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.today_outlined),
-            selectedIcon: Icon(Icons.today),
-            label: 'قرار اليوم',
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long),
+            label: 'صفقاتي',
           ),
           NavigationDestination(
             icon: Icon(Icons.calculate_outlined),
             selectedIcon: Icon(Icons.calculate),
             label: 'حاسبة الصفقة',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
-            label: 'سجل الصفقات',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'لوحة التحكم',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

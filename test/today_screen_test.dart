@@ -104,17 +104,24 @@ void main() {
     status: status,
   );
 
-  testWidgets('قرار اليوم is the first screen on launch', (tester) async {
+  testWidgets('the daily decisions are the first thing shown on launch', (
+    tester,
+  ) async {
     await pumpApp(tester);
 
-    expect(find.text('قرار اليوم'), findsWidgets);
+    // «اليوم» is the leading tab of «صفقاتي», which is the leading destination,
+    // so the daily view is still what a launch lands on — it is just no longer
+    // a top-level destination of its own.
+    expect(find.widgetWithText(Tab, 'اليوم'), findsOneWidget);
     expect(find.text('ابدأ أول صفقة'), findsOneWidget);
     // The spec asks for a ✅; the screen renders the Material equivalent so it
     // themes and scales with the rest of the UI.
     expect(find.byIcon(Icons.task_alt_rounded), findsOneWidget);
   });
 
-  testWidgets('bottom navigation follows the required order', (tester) async {
+  testWidgets('bottom navigation is three jobs, not five views', (
+    tester,
+  ) async {
     await pumpApp(tester);
 
     final labels = tester
@@ -122,13 +129,19 @@ void main() {
         .map((d) => d.label)
         .toList();
 
-    expect(labels, [
-      'قرار اليوم',
-      'حاسبة الصفقة',
-      'سجل الصفقات',
-      'لوحة التحكم',
-      'الإعدادات',
-    ]);
+    // Was five, of which «قرار اليوم», «سجل الصفقات» and «لوحة التحكم» were the
+    // same trades shown three ways — indistinguishable as siblings in a bar.
+    // They are tabs inside «صفقاتي» now, so each remaining destination is a
+    // genuinely different job.
+    expect(labels, ['صفقاتي', 'حاسبة الصفقة', 'الإعدادات']);
+
+    expect(
+      tester
+          .widgetList<Tab>(find.byType(Tab))
+          .map((t) => t.text)
+          .toList(),
+      ['اليوم', 'كل الصفقات', 'الأداء'],
+    );
   });
 
   testWidgets('an over-risk trade is pinned above the open section', (

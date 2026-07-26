@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/theme.dart';
-import '../core/widgets/app_logo_title.dart';
-import '../features/ai_parser/widgets/ai_trade_sheet.dart';
-import '../watchlist/paste_recommendations_screen.dart';
-import '../watchlist/watchlist_form_screen.dart';
 import '../watchlist/watchlist_providers.dart';
 import 'today_providers.dart';
 import 'widgets/no_tasks_banner.dart';
@@ -13,9 +8,16 @@ import 'widgets/summary_card.dart';
 import 'widgets/today_empty_state.dart';
 import 'widgets/today_sections_list.dart';
 
-/// «قرار اليوم» — Action center for trades requiring user decisions.
-class TodayScreen extends ConsumerWidget {
-  const TodayScreen({super.key});
+/// «اليوم» — the trades that need a decision right now.
+///
+/// A tab body, not a screen: it carries no Scaffold or AppBar of its own. It
+/// used to be one of five equal bottom-nav destinations alongside «سجل
+/// الصفقات» and «لوحة التحكم», which are the same trades shown differently —
+/// three siblings a new user had to open one by one to tell apart. All three
+/// now live under «صفقاتي», where being views of one thing is stated rather
+/// than left to be discovered. See [TradesHubScreen].
+class TodayView extends ConsumerWidget {
+  const TodayView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -26,69 +28,35 @@ class TodayScreen extends ConsumerWidget {
     final noActions = decisions.isEmpty && watchlist.isEmpty;
     final nothingAtAll = noActions && decisions.recentlyClosed.isEmpty;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const AppLogoTitle(title: 'قرار اليوم'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.auto_awesome, color: context.palette.aiAccent),
-            tooltip: 'تحليل توصيات بالـ AI',
-            onPressed: () => showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              // The sheet now lists every trade found across several images, so
-              // it can run the full height of the screen — without this the
-              // top of the list sits under the status bar.
-              useSafeArea: true,
-              builder: (_) => const AiTradeSheet(),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.content_paste_go_rounded),
-            tooltip: 'لصق ترشيحات',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const PasteRecommendationsScreen(),
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.playlist_add_rounded),
-            tooltip: 'إضافة للمتابعة',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const WatchlistFormScreen()),
-            ),
-          ),
+    if (nothingAtAll) return const TodayEmptyState();
+
+    return ListView(
+      key: const ValueKey('today-list'),
+      // Bottom padding clears the hub's floating action button.
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+      children: [
+        if (noActions) ...[
+          const NoTasksBanner(),
+          const SizedBox(height: 16),
         ],
-      ),
-      body: nothingAtAll
-          ? const TodayEmptyState()
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-              children: [
-                if (noActions) ...[
-                  const NoTasksBanner(),
-                  const SizedBox(height: 16),
-                ],
-                SummaryCard(
-                  decisions: decisions,
-                  watchlistCount: watchlist.length,
-                ),
-                const SizedBox(height: 20),
-                TodaySectionsList(
-                  decisions: decisions,
-                  watchlist: watchlist,
-                ),
-                Center(
-                  child: Text(
-                    'كل الحسابات محلية على جهازك',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.outline,
-                    ),
-                  ),
-                ),
-              ],
+        SummaryCard(
+          decisions: decisions,
+          watchlistCount: watchlist.length,
+        ),
+        const SizedBox(height: 20),
+        TodaySectionsList(
+          decisions: decisions,
+          watchlist: watchlist,
+        ),
+        Center(
+          child: Text(
+            'كل الحسابات محلية على جهازك',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.outline,
             ),
+          ),
+        ),
+      ],
     );
   }
 }

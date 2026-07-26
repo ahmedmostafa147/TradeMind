@@ -100,8 +100,75 @@ void main() {
   final entryField = find.byKey(const ValueKey('entry-price-field'));
   final stopPriceField = find.byKey(const ValueKey('stop-price-field'));
 
+  /// The scrollable of whatever screen is on top.
+  ///
+  /// NOT a bare `find.byType(Scrollable).first`: a pushed route leaves the
+  /// whole shell mounted underneath it, so the first Scrollable in the tree
+  /// belongs to a screen the user cannot see. Scoping to the last Scaffold
+  /// picks the route actually in front.
+  final contentScrollable = find
+      .descendant(
+        of: find.byType(Scaffold).last,
+        matching: find.byType(Scrollable),
+      )
+      .first;
+
+  /// The content list of one «صفقاتي» tab, by key.
+  ///
+  /// The hub needs its own finder because its TabBarView is itself a PageView
+  /// — dragging that switches tab instead of scrolling — and it keeps the
+  /// neighbouring tab built, so neither the first nor the last Scrollable under
+  /// the hub is reliably the visible one. The key is.
+  /// `.first` because the list's own Scrollable is not the only one inside it:
+  /// «الأداء» nests GridViews for the stat tiles, and those are Scrollables too
+  /// (non-scrolling ones). The outermost is the list itself.
+  Finder hubList(String name) => find
+      .descendant(
+        of: find.byKey(ValueKey(name)),
+        matching: find.byType(Scrollable),
+      )
+      .first;
+
+  /// Navigates to a destination by the name it had when there were five tabs.
+  ///
+  /// «قرار اليوم», «سجل الصفقات» and «لوحة التحكم» are now tabs inside
+  /// «صفقاتي», so reaching them takes two taps. Mapping that here rather than
+  /// at forty call sites keeps each test saying WHERE it wants to be instead of
+  /// how the shell happens to be wired this week.
   Future<void> openTab(WidgetTester tester, String label) async {
+    const hubTabs = {
+      'قرار اليوم': 'اليوم',
+      'سجل الصفقات': 'كل الصفقات',
+      'لوحة التحكم': 'الأداء',
+    };
+
+    if (hubTabs[label] case final subTab?) {
+      // Scoped to the NavigationBar: 'صفقاتي' is both the bar's label and the
+      // AppBar's title, so a bare find.text matches two widgets.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text('صفقاتي'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(Tab, subTab));
+      await tester.pumpAndSettle();
+      return;
+    }
+
     await tester.tap(find.text(label).last);
+    await tester.pumpAndSettle();
+  }
+
+  /// The detailed analytics moved from an icon on the dashboard into the hub's
+  /// overflow menu.
+  Future<void> openAnalytics(WidgetTester tester) async {
+    // By tooltip, not by type: PopupMenuButton is generic over the hub's own
+    // private action enum, so no byType finder here can name it.
+    await tester.tap(find.byTooltip('المزيد'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('الإحصائيات التفصيلية').last);
     await tester.pumpAndSettle();
   }
 
@@ -122,7 +189,7 @@ void main() {
     await tester.scrollUntilVisible(
       header,
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: contentScrollable,
     );
     await tester.tap(header);
     await tester.pumpAndSettle();
@@ -144,7 +211,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('الأسهم المقترحة'),
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: contentScrollable,
     );
     await tester.pumpAndSettle();
   }
@@ -154,11 +221,17 @@ void main() {
 
     expect(Directionality.of(tester.element(find.byType(NavigationBar))),
         TextDirection.rtl);
-    expect(find.text('قرار اليوم'), findsWidgets);
-    expect(find.text('لوحة التحكم'), findsWidgets);
-    expect(find.text('سجل الصفقات'), findsWidgets);
+
+    // Three destinations, each a different job — not five, three of which were
+    // the same trades shown differently.
+    expect(find.text('صفقاتي'), findsWidgets);
     expect(find.text('حاسبة الصفقة'), findsWidgets);
     expect(find.text('الإعدادات'), findsWidgets);
+
+    // The three views of the journal are tabs inside صفقاتي now.
+    expect(find.widgetWithText(Tab, 'اليوم'), findsOneWidget);
+    expect(find.widgetWithText(Tab, 'كل الصفقات'), findsOneWidget);
+    expect(find.widgetWithText(Tab, 'الأداء'), findsOneWidget);
   });
 
   testWidgets('settings show max loss of 340.00 at the defaults', (
@@ -183,7 +256,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('الرسم البياني هيظهر بعد أول صفقة مغلقة'),
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: hubList('performance-list'),
     );
     await tester.pumpAndSettle();
 
@@ -336,7 +409,7 @@ void main() {
       await pumpApp(tester);
       await openTab(tester, 'لوحة التحكم');
 
-      await tester.tap(find.byTooltip('الإحصائيات'));
+      await openAnalytics(tester);
       await tester.pumpAndSettle();
 
       expect(find.text('جودة الأداء'), findsOneWidget);
@@ -349,7 +422,7 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('أبرز الصفقات'),
         400,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: contentScrollable,
       );
       await tester.pumpAndSettle();
       expect(find.text('COMI'), findsWidgets, reason: 'أفضل صفقة');
@@ -425,7 +498,7 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('تقييم الانضباط'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: contentScrollable,
       );
       await tester.pumpAndSettle();
       // Checklist complete, risk exactly at limit, stop present, long reason —
@@ -435,7 +508,7 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('التصنيفات'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: contentScrollable,
       );
       await tester.pumpAndSettle();
       expect(find.text('بريك أوت'), findsOneWidget);
@@ -443,7 +516,7 @@ void main() {
       await tester.scrollUntilVisible(
         find.text('اشتريت النهاردة'),
         300,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: contentScrollable,
       );
       await tester.pumpAndSettle();
       expect(find.text('حركت الاستوب'), findsOneWidget);
@@ -490,7 +563,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('سعر الخروج'),
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: contentScrollable,
     );
     await tester.pumpAndSettle();
     expect(find.text('سعر الخروج'), findsOneWidget, reason: 'open has an exit');
@@ -498,7 +571,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.widgetWithText(ChoiceChip, 'مخططة'),
       -300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: contentScrollable,
     );
     await tester.tap(find.widgetWithText(ChoiceChip, 'مخططة'));
     await tester.pumpAndSettle();
@@ -551,7 +624,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.widgetWithText(TextFormField, 'سعر الخروج'),
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: contentScrollable,
     );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'سعر الخروج'),
@@ -634,7 +707,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.text('قائمة التحقق قبل الحفظ'),
       300,
-      scrollable: find.byType(Scrollable).first,
+      scrollable: contentScrollable,
     );
     await tester.pumpAndSettle();
 
@@ -649,8 +722,7 @@ void main() {
   ) async {
     await pumpApp(tester);
     await openTab(tester, 'لوحة التحكم');
-    await tester.tap(find.byTooltip('الإحصائيات'));
-    await tester.pumpAndSettle();
+    await openAnalytics(tester);
 
     expect(find.text('جودة الأداء'), findsOneWidget);
     expect(find.text('—'), findsWidgets);

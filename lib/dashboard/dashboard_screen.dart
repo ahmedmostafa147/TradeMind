@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/formatters.dart';
 import '../core/theme.dart';
-import '../core/widgets/app_logo_title.dart';
 import '../settings/settings_providers.dart';
 import 'analytics_screen.dart';
 import 'dashboard_providers.dart';
@@ -11,8 +10,12 @@ import 'widgets/equity_chart.dart';
 import 'widgets/portfolio_scenarios_card.dart';
 import 'widgets/stat_card.dart';
 
-class DashboardScreen extends ConsumerWidget {
-  const DashboardScreen({super.key});
+/// «الأداء» — what the journal adds up to.
+///
+/// A tab body under [TradesHubScreen]. The deeper breakdown still lives in
+/// [AnalyticsScreen], reached from the hub's menu.
+class PerformanceView extends ConsumerWidget {
+  const PerformanceView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,21 +31,10 @@ class DashboardScreen extends ConsumerWidget {
       return null;
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const AppLogoTitle(title: 'لوحة التحكم'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.insights_outlined),
-            tooltip: 'الإحصائيات',
-            onPressed: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const AnalyticsScreen())),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+    return ListView(
+        key: const ValueKey('performance-list'),
+        // Bottom padding clears the hub's floating action button.
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
         children: [
           StatCard(
             label: 'رأس المال الحالي',
@@ -189,8 +181,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
           ),
         ],
-      ),
-    );
+      );
   }
 }
 

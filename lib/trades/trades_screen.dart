@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/calc/trade_metrics.dart';
-import '../core/widgets/app_logo_title.dart';
 import '../settings/settings_providers.dart';
 import 'trade.dart';
 import 'trade_detail_screen.dart';
@@ -10,28 +9,23 @@ import 'trades_providers.dart';
 import 'widgets/quick_add_trade_sheet.dart';
 import 'widgets/trade_tile.dart';
 
-class TradesScreen extends ConsumerWidget {
-  const TradesScreen({super.key});
+/// «كل الصفقات» — the complete journal, newest first.
+///
+/// A tab body under [TradesHubScreen], so it has no Scaffold, AppBar or FAB of
+/// its own; the hub owns all three, which is what stopped the add button from
+/// existing twice on one screen.
+class TradesView extends ConsumerWidget {
+  const TradesView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final trades = ref.watch(sortedTradesProvider);
     final settings = ref.watch(settingsProvider);
 
-    return Scaffold(
-      // No duplicate in the AppBar. There used to be an icon there opening the
-      // very same sheet as the button below it — two controls side by side
-      // doing one thing reads as two different things, and the user has to
-      // press one to find out.
-      appBar: AppBar(title: const AppLogoTitle(title: 'سجل الصفقات')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => openQuickAddSheet(context),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text(kAddTradeLabel),
-      ),
-      body: trades.isEmpty
+    return trades.isEmpty
           ? const _EmptyState()
           : ListView.separated(
+              key: const ValueKey('trades-list'),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
               itemCount: trades.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
@@ -64,8 +58,7 @@ class TradesScreen extends ConsumerWidget {
                   ),
                 );
               },
-            ),
-    );
+            );
   }
 
   Future<bool> _confirmDelete(BuildContext context, Trade trade) async {
