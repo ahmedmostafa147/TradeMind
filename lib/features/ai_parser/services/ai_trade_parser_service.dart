@@ -53,12 +53,21 @@ class AiTradeParserService {
       "entryPrice": رقم سعر الدخول أو null,
       "stopLoss": رقم وقف الخسارة أو null,
       "takeProfit": رقم الهدف أو null,
-      "notes": "أي ملاحظة مهمة بالعربي، أو فارغ"
+      "notes": "كلمة أو كلمتين بالعربي بس، أو فارغ"
     }
   ]
 }
-حط كل صفقة لوحدها في عنصر منفصل، ومتدمجش صفقتين مع بعض.
-لو مفيش غير صفقة واحدة، رجّع قايمة فيها عنصر واحد.
+
+قواعد مهمة:
+- لو الصورة جدول، كل صف فيه سهم = صفقة منفصلة. استخرج كل الصفوف من غير ما
+  تسيب ولا واحد، حتى لو الجدول طويل.
+- عمود سعر الدخول ممكن يكون اسمه Buy Price Guide أو سعر الشراء أو الدخول.
+  وعمود الهدف Target، ووقف الخسارة Stop loss أو S.L.
+- تجاهل صفوف المؤشرات زي EGX30 و EGX70 — دي مؤشرات سوق مش أسهم، وأعمدتها
+  (R1، R2، S1، S2) دعوم ومقاومات مش دخول وهدف.
+- تجاهل أعمدة النِّسَب المحسوبة زي Risk% و Profit% — متحطهاش كأسعار.
+- خلي notes قصيرة جدًا عشان الرد ميطولش.
+- لو مفيش غير صفقة واحدة، رجّع قايمة فيها عنصر واحد.
 متردّش أي نص خارج الـ JSON.''';
 
   /// Extracts every trade visible across [imageFiles].
@@ -123,9 +132,16 @@ class AiTradeParserService {
         // Gemini 3 reasoning shares the output budget — left unbounded it can
         // hit MAX_TOKENS before any answer is produced.
         'thinkingConfig': {'thinkingLevel': 'low'},
-        // Scaled to the number of trades that may come back, since a list of
-        // ten costs roughly ten times a single object.
-        'maxOutputTokens': 1024 + 512 * imageParts.length,
+        // Generous and flat, NOT scaled per image.
+        //
+        // The cost here is per TRADE, not per picture: a single screenshot of a
+        // broker's session table holds twenty rows, and each one costs roughly
+        // 120 tokens once the Arabic note is counted. The old budget of
+        // 1024 + 512 per image gave one image 1,536 tokens — less than a
+        // thirteen-row table needs — so the reply was cut off mid-JSON and the
+        // whole batch failed as "التحليل طال أوي". Unused output tokens cost
+        // nothing; a truncated answer costs the entire extraction.
+        'maxOutputTokens': 8192,
       },
     });
 

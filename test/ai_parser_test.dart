@@ -458,4 +458,104 @@ void main() {
       );
     });
   });
+
+  group('a full session table', () {
+    // The thirteen rows of a real EGX session sheet, with the two index rows
+    // (EGX30/EGX70) that sit above them left out — those carry supports and
+    // resistances, not an entry and a target, and the prompt tells the model to
+    // skip them.
+    const rows = [
+      ('ZMID', 7.5, 7.43, 7.75),
+      ('ECAP', 33.5, 33.17, 34.7),
+      ('SDTI', 52.45, 51.95, 54.5),
+      ('ISMA', 30.6, 30.3, 32.6),
+      ('MPCO', 1.85, 1.83, 1.96),
+      ('IFAP', 19.55, 19.36, 20.4),
+      ('DAPH', 94.0, 93.0, 98.0),
+      ('EGAS', 52.45, 51.95, 55.5),
+      ('EHDR', 2.9, 2.87, 3.05),
+      ('RMDA', 5.05, 5.0, 5.3),
+      ('TAQA', 14.5, 14.36, 14.85),
+      ('ARAB', 0.243, 0.24, 0.259),
+      ('KRDI', 0.405, 0.401, 0.432),
+    ];
+
+    String tableBody() => _body([
+      {
+        'text': jsonEncode({
+          'trades': [
+            for (final (code, entry, stop, target) in rows)
+              {
+                'ticker': code,
+                'direction': 'buy',
+                'entryPrice': entry,
+                'stopLoss': stop,
+                'takeProfit': target,
+                'notes': 'احتفاظ',
+              },
+          ],
+        }),
+      },
+    ]);
+
+    test('all thirteen rows come back, none dropped', () {
+      final all = AiTradeParserService.debugParse(tableBody());
+
+      expect(all, hasLength(13));
+      expect(all.map((t) => t.ticker), rows.map((r) => r.$1));
+    });
+
+    test('sub-piastre prices survive intact', () {
+      // ARAB and KRDI trade in fractions of a pound; rounding either would
+      // silently move the stop.
+      final all = AiTradeParserService.debugParse(tableBody());
+      final arab = all.firstWhere((t) => t.ticker == 'ARAB');
+
+      expect(arab.entryPrice, 0.243);
+      expect(arab.stopLoss, 0.24);
+      expect(arab.takeProfit, 0.259);
+    });
+
+    test('every row keeps its own three levels', () {
+      final all = AiTradeParserService.debugParse(tableBody());
+
+      for (final trade in all) {
+        expect(trade.entryPrice, isNotNull, reason: trade.ticker);
+        expect(trade.stopLoss, isNotNull, reason: trade.ticker);
+        expect(trade.takeProfit, isNotNull, reason: trade.ticker);
+        // The stop is below the entry and the target above it on every row —
+        // a transposed column would show up here.
+        expect(trade.stopLoss, lessThan(trade.entryPrice!), reason: trade.ticker);
+        expect(
+          trade.takeProfit,
+          greaterThan(trade.entryPrice!),
+          reason: trade.ticker,
+        );
+      }
+    });
+
+    test('an index row that slips through is dropped, not saved as a stock', () {
+      // Belt and braces for the prompt rule: EGX30 arrives with no entry and no
+      // stop, so isValid rejects it and the thirteen real rows survive.
+      final all = AiTradeParserService.debugParse(
+        _body([
+          {
+            'text': jsonEncode({
+              'trades': [
+                {'ticker': 'EGX30', 'entryPrice': null, 'stopLoss': null},
+                {
+                  'ticker': 'ZMID',
+                  'entryPrice': 7.5,
+                  'stopLoss': 7.43,
+                  'takeProfit': 7.75,
+                },
+              ],
+            }),
+          },
+        ]),
+      );
+
+      expect(all.map((t) => t.ticker), ['ZMID']);
+    });
+  });
 }
