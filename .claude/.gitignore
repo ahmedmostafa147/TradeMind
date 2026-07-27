@@ -1,0 +1,3 @@
+# Personal permission allowlist — differs per machine and per person, and
+# committing it would silently grant those permissions to everyone who clones.
+settings.local.json

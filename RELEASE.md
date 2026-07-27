@@ -54,10 +54,38 @@ firebase deploy --only firestore:rules
 
 ---
 
+## 3.5. الموقع — بيوفّر الرابطين اللي Play بيطلبهم
+
+المشروع فيه موقع في `site/` (Next.js، تصدير ثابت). هو اللي بينشر سياسة
+الخصوصية وصفحة حذف الحساب، ودول **شرطين إجباريين** للنشر.
+
+```bash
+cd site
+npm install
+NEXT_PUBLIC_SITE_URL=https://your-domain.com npm run build
+cd ..
+firebase deploy --only hosting
+```
+
+استضافة Firebase متظبّطة في `firebase.json` على `site/out` — نفس المشروع اللي
+فيه Firestore، فمش محتاج حساب جديد. بعد أول نشر، اربط الدومين من
+Firebase Console → Hosting → Add custom domain.
+
+**متبنيش من غير `NEXT_PUBLIC_SITE_URL`** — من غيره الروابط الأساسية والسايت ماب
+وصورة المشاركة كلها بتشاور على `localhost`. البناء بيطبّع تحذير أصفر لو نسيت.
+
+تفاصيل الموقع وفخاخه في `site/README.md`.
+
+---
+
 ## 4. حساب Play Console
 
 - **Privacy policy** — إجباري. التطبيق بيجمع إيميل عن طريق Firebase Auth، فلازم
-  رابط سياسة خصوصية شغّال على الإنترنت.
+  رابط سياسة خصوصية شغّال على الإنترنت. بعد نشر الموقع، الرابط هو
+  `https://your-domain.com/privacy/`.
+- **Account deletion URL** — إجباري كمان لأي تطبيق بيعمل حسابات، ولازم يكون
+  مفتوح من غير ما المستخدم ينزّل التطبيق أو يسجّل دخول:
+  `https://your-domain.com/delete/`.
 - **Data safety form** — قول إن التطبيق بيجمع: الإيميل (للحساب)، وبيانات
   الصفقات (للنسخ الاحتياطي). كله متربط بالمستخدم، ومتشفّر أثناء النقل، والمستخدم
   يقدر يمسحه.
@@ -98,6 +126,8 @@ flutter build appbundle --release
 - [ ] الـ versionCode أعلى من اللي قبله
 - [ ] قواعد Firestore منشورة
 - [ ] SHA-1 بتاع Play متضاف في Firebase
+- [ ] الموقع منشور، و`/privacy/` و`/delete/` بيفتحوا فعلًا
+- [ ] الموقع اتبنى بـ `NEXT_PUBLIC_SITE_URL` مش بالافتراضي
 
 ### تجربة نسخة الـ release محليًا
 

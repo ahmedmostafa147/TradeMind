@@ -1,11 +1,31 @@
-# دفتر صفقات البورصة المصرية — EGX Trade Journal
+# TradePilot — دفتر صفقات البورصة المصرية
 
-تطبيق مجاني بالكامل، أوفلاين 100%، لتسجيل صفقات البورصة المصرية وفرض انضباط
-إدارة المخاطر. قبل كل صفقة بيوريك أقصى كمية أسهم مسموحة حسب قاعدة المخاطرة
-بتاعتك، وبعد كل صفقة بيسجّل النتيجة ويعرض تحليل الأداء.
+تطبيق مجاني بالكامل لتسجيل صفقات البورصة المصرية وفرض انضباط إدارة المخاطر.
+قبل كل صفقة بيوريك أقصى كمية أسهم مسموحة حسب قاعدة المخاطرة بتاعتك، وبعد كل
+صفقة بيسجّل النتيجة ويعرض تحليل الأداء.
 
-A free, fully offline, single-user trade journal for retail traders on the
-Egyptian Exchange. Arabic RTL UI. No backend, no accounts, no network calls.
+A free, offline-**first** trade journal for retail traders on the Egyptian
+Exchange. Arabic RTL UI, Android.
+
+The journal works end to end with no account: trades, the calculator and every
+analytic are local and need no network. Four things reach outside the device,
+all of them optional and all of them off until the user turns them on — sign-in
+and cloud backup (Firebase Auth + Firestore), EGX closing prices, and reading a
+recommendation out of an image (Gemini, with the user's own API key).
+
+> Earlier revisions of this file described the app as "100% offline, no
+> backend, no accounts, no network calls". That stopped being true once sync,
+> auth and market prices landed; the paragraph above is the current shape.
+
+## المستودع فيه حاجتين
+
+| | |
+|---|---|
+| `lib/`, `android/`, `test/` | تطبيق Flutter |
+| `site/` | الموقع العام — صفحة هبوط والصفحات القانونية (Next.js). تفاصيله في [`site/README.md`](site/README.md) |
+
+الموقع مش رفاهية تسويقية: هو اللي بينشر سياسة الخصوصية وصفحة حذف الحساب،
+ودول **شرطان إجباريان** لنشر التطبيق على Google Play — شوف `RELEASE.md`.
 
 ---
 
@@ -187,7 +207,11 @@ because `List.sort` is not stable and date-only values collide constantly;
 
 ---
 
-## Out of scope in v1
+## Out of scope
 
-No broker import, live quotes, short selling, multiple portfolios, cloud sync,
-auth, or multi-currency. CSV export is the natural v1.1 addition.
+No broker import, real-time quotes (prices are the daily close, and the UI says
+«آخر إغلاق» rather than «السعر الحالي» for exactly that reason), short selling,
+multiple portfolios, or multi-currency. CSV export is the natural next addition.
+
+Cloud sync and auth were on this list in v1 and have since shipped — both
+optional, both off by default.
