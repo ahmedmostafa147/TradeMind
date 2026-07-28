@@ -41,11 +41,9 @@ class UserProfileTile extends ConsumerWidget {
                 icon: const Icon(Icons.logout),
                 tooltip: 'تسجيل الخروج',
                 onPressed: () async {
+                  // logout() clears the session; the gate watches isLoggedIn
+                  // and returns to the auth screen by itself.
                   await ref.read(authProvider.notifier).logout();
-                  // Clear the guest opt-out too, so signing out returns to the
-                  // auth screen instead of dropping into the journal with no
-                  // way back to it.
-                  await ref.read(authGateSkipProvider.notifier).reset();
                 },
               )
             : FilledButton.tonal(

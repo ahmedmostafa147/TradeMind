@@ -19,7 +19,7 @@ export const site = {
 
   description:
     'سجّل كل صفقة بسببها وحجمها المحسوب، وارجع لها بعد شهور تعرف غلطت فين. ' +
-    'حاسبة مخاطرة، تحليل أداء، ونسخة احتياطية اختيارية — والتطبيق شغّال من غير حساب.',
+    'حاسبة مخاطرة، تحليل أداء، وصفقاتك محفوظة على حسابك — مجاني بالكامل.',
 
   /**
    * Set once the listing is live. Every download call-to-action reads this and
@@ -39,6 +39,7 @@ export const site = {
    * Set it to the real figure after launch and the line appears by itself.
    */
   userCount: null as number | null,
+
 
   contactEmail: 'ahmed14mostafa17@gmail.com',
 

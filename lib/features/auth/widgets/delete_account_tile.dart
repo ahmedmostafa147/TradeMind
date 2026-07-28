@@ -47,9 +47,9 @@ class _DeleteAccountTileState extends ConsumerState<DeleteAccountTile> {
             },
           );
 
-      // Back to the auth screen rather than into a journal belonging to an
-      // account that no longer exists.
-      await ref.read(authGateSkipProvider.notifier).reset();
+      // No explicit navigation back to the auth screen: deleteAccount clears
+      // the session, and the gate now watches nothing but isLoggedIn, so the
+      // rebuild lands there on its own.
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم حذف الحساب وكل بياناته.')),

@@ -91,40 +91,13 @@ void main() {
   }
 
   group('gate state', () {
-    test('a fresh install goes straight in, without being asked', () {
-      // The journal is local-first and needs no account, so the sign-in screen
-      // is no longer the first thing a new user meets — it was a decision with
-      // no context behind it, in front of an app that works without one.
+    test('a fresh install is stopped at the sign-in screen', () {
+      // The guest path is gone: TradePilot is account-based, so an install
+      // with no session has nothing to show.
       final container = makeContainer();
       addTearDown(container.dispose);
 
-      expect(container.read(authGatePassedProvider), isTrue);
-    });
-
-    test('skipping opens the gate and is written to disk', () async {
-      final container = makeContainer();
-      addTearDown(container.dispose);
-
-      await container.read(authGateSkipProvider.notifier).skip();
-
-      expect(container.read(authGatePassedProvider), isTrue);
-      expect(
-        authBox.get('skipped_auth'),
-        isTrue,
-        reason: 'The choice must survive a cold start.',
-      );
-    });
-
-    test('a new container reads the persisted choice back', () async {
-      final first = makeContainer();
-      await first.read(authGateSkipProvider.notifier).skip();
-      first.dispose();
-
-      // A cold start: fresh container, same boxes.
-      final second = makeContainer();
-      addTearDown(second.dispose);
-
-      expect(second.read(authGatePassedProvider), isTrue);
+      expect(container.read(authGatePassedProvider), isFalse);
     });
 
     test('a signed-in user passes the gate', () async {
@@ -141,68 +114,54 @@ void main() {
       expect(container.read(authGatePassedProvider), isTrue);
     });
 
-    test('signing out puts the sign-in screen back', () async {
-      final container = makeContainer();
-      addTearDown(container.dispose);
-
-      await container.read(authGateSkipProvider.notifier).reset();
-
-      expect(container.read(authGatePassedProvider), isFalse);
-      // Written as false, not deleted: absence now means "fresh install, go
-      // straight in", so deleting would drop the user back into the journal
-      // immediately after they asked to leave it.
-      expect(authBox.get('skipped_auth'), isFalse);
-    });
-
-    test('the reopened gate survives a cold start', () async {
+    test('the session is read from disk, not from the network', () async {
+      // This is what keeps a mandatory gate from locking someone out of their
+      // own records offline: only the FIRST sign-in needs connectivity, and
+      // every launch after it is a local Hive read.
       final first = makeContainer();
-      await first.read(authGateSkipProvider.notifier).reset();
+      await authBox.put('current_user', {
+        'id': 'uid-123',
+        'name': 'أحمد',
+        'email': 'a@b.com',
+        'isLoggedIn': true,
+      });
       first.dispose();
 
       final second = makeContainer();
       addTearDown(second.dispose);
 
-      expect(second.read(authGatePassedProvider), isFalse);
+      expect(second.read(authGatePassedProvider), isTrue);
+    });
+
+    test('a stale guest opt-out on disk no longer opens the gate', () async {
+      // Installs from before the change carry skipped_auth: true. It must not
+      // grant access now, or every existing user would skip sign-in forever.
+      await authBox.put('skipped_auth', true);
+
+      final container = makeContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(authGatePassedProvider), isFalse);
     });
   });
 
   group('what gets rendered', () {
-    testWidgets('a fresh install lands on the journal, not a sign-in wall', (
-      tester,
-    ) async {
-      await pumpApp(tester);
-
-      expect(find.byType(HomeShell), findsOneWidget);
-      expect(
-        find.byType(AuthScreen),
-        findsNothing,
-        reason: 'the first screen of a local-first app is the app',
-      );
-    });
-
-    testWidgets('after signing out, the sign-in screen is shown again', (
-      tester,
-    ) async {
-      await tester.runAsync(() => authBox.put('skipped_auth', false));
+    testWidgets('a fresh install lands on the sign-in screen', (tester) async {
       await pumpApp(tester);
 
       expect(find.byType(AuthScreen), findsOneWidget);
-      expect(
-        find.text('متابعة بدون حساب'),
-        findsOneWidget,
-        reason: 'The journal is local-first; it must stay reachable without '
-            'an account, and without Firebase configured.',
-      );
+      expect(find.byType(HomeShell), findsNothing);
     });
 
-    testWidgets('a guest who already opted out goes to the journal', (
-      tester,
-    ) async {
-      await tester.runAsync(() => authBox.put('skipped_auth', true));
+    testWidgets('the sign-in screen offers no way past it', (tester) async {
       await pumpApp(tester);
 
-      expect(find.byType(HomeShell), findsOneWidget);
-      expect(find.byType(AuthScreen), findsNothing);
+      expect(
+        find.text('متابعة بدون حساب'),
+        findsNothing,
+        reason: 'The guest path was removed; leaving the button would let a '
+            'user tap into a journal the gate no longer lets them keep.',
+      );
     });
 
     testWidgets('a stored session goes straight to the journal', (

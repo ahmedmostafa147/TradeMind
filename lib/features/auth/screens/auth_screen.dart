@@ -50,65 +50,13 @@ class AuthScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  AuthForm(
-                    footer: _GuestFooter(
-                      onSkip: () =>
-                          ref.read(authGateSkipProvider.notifier).skip(),
-                    ),
-                  ),
+                  const AuthForm(),
                 ],
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _GuestFooter extends StatelessWidget {
-  final VoidCallback onSkip;
-
-  const _GuestFooter({required this.onSkip});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(child: Divider(color: theme.colorScheme.outlineVariant)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text(
-                'أو',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            Expanded(child: Divider(color: theme.colorScheme.outlineVariant)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        OutlinedButton.icon(
-          onPressed: onSkip,
-          icon: const Icon(Icons.phone_android_rounded, size: 18),
-          label: const Text('متابعة بدون حساب'),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          'صفقاتك هتتحفظ على جهازك بس. اعمل حساب عشان تاخد نسخة احتياطية '
-          'بالسحابة وتسترجعها لو شلت التطبيق.',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
     );
   }
 }

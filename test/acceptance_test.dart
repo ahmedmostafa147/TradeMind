@@ -47,10 +47,16 @@ void main() {
     tradesBox = await Hive.openBox<Trade>(kTradesBox);
     watchlistBox = await Hive.openBox<WatchlistItem>(kWatchlistBox);
     authBox = await Hive.openBox(kAuthBox);
-    // Past the first-run auth screen as a guest. These tests are about the
-    // journal, and a guest is the state most users are in — the sign-in screen
-    // itself is covered by auth_repository_test and auth_gate_test.
-    await authBox.put('skipped_auth', true);
+    // A signed-in session. The gate is mandatory now, so without one every
+    // test here would render the auth screen instead of the journal it is
+    // about. Sign-in itself is covered by auth_gate_test and
+    // auth_repository_test.
+    await authBox.put('current_user', {
+      'id': 'uid-test',
+      'name': 'أحمد',
+      'email': 'a@b.com',
+      'isLoggedIn': true,
+    });
   });
 
   tearDown(() async {

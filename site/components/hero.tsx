@@ -62,7 +62,7 @@ export function Hero() {
           </div>
 
           <ul className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-fg-muted">
-            {['شغّال من غير حساب', 'بياناتك على جهازك', 'مجاني بالكامل'].map(
+            {['مجاني بالكامل', 'بياناتك محفوظة ليك', 'من غير إعلانات'].map(
               (item) => (
                 <li key={item} className="flex items-center gap-1.5">
                   {/* Brand, not win-green. These are product claims, not a
