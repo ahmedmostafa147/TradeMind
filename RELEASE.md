@@ -71,6 +71,21 @@ firebase deploy --only hosting
 فيه Firestore، فمش محتاج حساب جديد. بعد أول نشر، اربط الدومين من
 Firebase Console → Hosting → Add custom domain.
 
+**أو على Vercel** لو أسهل ليك: الإعداد جاهز في `site/vercel.json`. المهم في
+إعدادات المشروع تحط **Root Directory = `site`** (وإلا هيدوّر على `package.json`
+في الجذر ويلاقي مشروع Flutter)، وتضيف `NEXT_PUBLIC_SITE_URL` في
+Environment Variables.
+
+بعد النشر، الرابطين اللي هتحطهم في Play Console:
+
+| | |
+|---|---|
+| Privacy policy | `https://your-domain.com/privacy/` |
+| Account deletion | `https://your-domain.com/delete/` |
+
+الشرطة المايلة في الآخر مقصودة — `trailingSlash: true` في `next.config.ts`،
+والرابط من غيرها بيعمل تحويلة زيادة.
+
 **متبنيش من غير `NEXT_PUBLIC_SITE_URL`** — من غيره الروابط الأساسية والسايت ماب
 وصورة المشاركة كلها بتشاور على `localhost`. البناء بيطبّع تحذير أصفر لو نسيت.
 

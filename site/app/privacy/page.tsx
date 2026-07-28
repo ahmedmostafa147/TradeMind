@@ -12,11 +12,15 @@ export const metadata: Metadata = {
 };
 
 /**
- * Ported from legal/privacy-policy.html, which was written but never hosted.
+ * THE canonical privacy policy. It began as legal/privacy-policy.html, which
+ * was written but never hosted; that file has been deleted rather than left
+ * alongside this one, because two copies of a legal document are two copies
+ * that drift, and only this one is ever served to anyone.
+ *
  * RELEASE.md lists a working privacy-policy URL as a hard prerequisite for the
  * Play listing, so this page is what unblocks it.
  *
- * One deliberate change from the source: the deletion link is now relative
+ * One deliberate change from that source: the deletion link is now relative
  * («/delete») instead of the hardcoded absolute URL it carried. An absolute
  * link breaks the moment the site moves domain — and it pointed at a page that
  * did not exist, which is worse in a document a Play reviewer reads.

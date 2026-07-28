@@ -37,7 +37,12 @@ export function Problem() {
             {questions.map((question) => (
               <li
                 key={question}
-                className="border-e-2 border-border-strong pe-4 text-xl font-semibold sm:text-2xl"
+                // border-s / ps, not border-e / pe. The list item is a
+                // full-width block, so an inline-END border sits at the far
+                // left of the container — metres away from right-aligned
+                // Arabic, reading as three bars floating in whitespace.
+                // inline-START puts it against the edge the text begins at.
+                className="border-s-2 border-border-strong ps-4 text-xl font-semibold sm:text-2xl"
               >
                 {question}
               </li>

@@ -38,11 +38,9 @@
   --loss-surface: #fbeae9;
   --loss-border: #efc4c1;
 
-  /* The one token that deliberately DIVERGES from the app's palette.
-     The app's light breakeven is #8D6E00, which lands at 4.20:1 on its own
-     breakeven surface — under the 4.5:1 AA floor for the 12px bold badge that
-     uses it. Darkened here to #7B6000 (5.22:1) rather than copied faithfully;
-     the hue is unchanged and the app should follow. */
+  /* 5.22:1 on the surface below. The app carried #8D6E00 here (4.20:1, under
+     the AA floor for the 12px bold badge that uses it); the site was corrected
+     first and monochrome_palette.dart now matches, so the two agree again. */
   --breakeven: #7b6000;
   --breakeven-surface: #f7efdc;
   --breakeven-border: #e2cfa3;

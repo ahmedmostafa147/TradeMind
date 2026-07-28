@@ -30,7 +30,11 @@ const monochromePalette = Palette(
     win: Color(0xFF0E7C4A),
     loss: Color(0xFFB3261E),
     open: Color(0xFF5C5C5C),
-    breakeven: Color(0xFF8D6E00),
+    // Was 0xFF8D6E00, which measured 4.20:1 against [breakevenSurface] — under
+    // the 4.5:1 WCAG AA floor. ResultBadge renders this at 12px bold, which is
+    // not "large text" (that starts at 18.66px bold), so the small-text floor
+    // is the one that applies. 0xFF7B6000 is the same hue at 5.22:1.
+    breakeven: Color(0xFF7B6000),
     winSurface: Color(0xFFE6F2EB),
     lossSurface: Color(0xFFFBEAE9),
     openSurface: Color(0xFFF0F0F0),

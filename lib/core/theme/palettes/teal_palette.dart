@@ -30,7 +30,10 @@ const tealPalette = Palette(
     win: Color(0xFF047857),
     loss: Color(0xFFB91C1C),
     open: Color(0xFF475569),
-    breakeven: Color(0xFFB45309),
+    // Was 0xFFB45309 at 4.46:1 against [breakevenSurface] — a hair under the
+    // 4.5:1 AA floor, and still a fail. See the note in monochrome_palette.dart;
+    // 0xFF9A4708 is the same hue at 5.69:1.
+    breakeven: Color(0xFF9A4708),
     winSurface: Color(0xFFE6F4EE),
     lossSurface: Color(0xFFFCEAEA),
     openSurface: Color(0xFFEDF1F5),
