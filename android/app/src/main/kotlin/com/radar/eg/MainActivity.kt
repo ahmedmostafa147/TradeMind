@@ -1,4 +1,4 @@
-package com.trademind.app
+package com.radar.eg
 
 import io.flutter.embedding.android.FlutterActivity
 

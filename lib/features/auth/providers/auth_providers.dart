@@ -14,7 +14,7 @@ final authProvider = NotifierProvider<AuthRepository, UserAccount>(() {
 
 /// True only when there is a signed-in account.
 ///
-/// The guest path is gone: TradePilot is an account-based product now, and
+/// The guest path is gone: Radar is an account-based product now, and
 /// every install belongs to a user. The previous version let a fresh install
 /// walk straight into the journal and kept sign-in as an optional step in
 /// Settings.

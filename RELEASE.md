@@ -4,6 +4,31 @@
 
 ---
 
+## ٠. ⛔ البناء للأندرويد واقف دلوقتي — خطوة مطلوبة منك
+
+التطبيق اتغيّر اسمه من `com.trademind.app` لـ **`com.radar.eg`**. تلات حاجات من
+الأربعة اتحرّكوا في الكود:
+
+- `namespace` و `applicationId` في `android/app/build.gradle.kts`
+- مسار وحزمة `MainActivity.kt` → `android/app/src/main/kotlin/com/radar/eg/`
+- `android:label` في `AndroidManifest.xml` → `Radar`
+
+**الرابعة إنت اللي تعملها**، ومن غيرها الـ Gradle هيرفض يبني برسالة
+`No matching client found for package name`:
+
+1. Firebase Console → المشروع `trademind-6222c` → ⚙️ Project settings
+2. تحت **Your apps** → **Add app** → أندرويد
+3. الـ package name يبقى **`com.radar.eg`** بالحرف
+4. نزّل `google-services.json` الجديد وحطه مكان القديم في `android/app/`
+
+> التطبيق القديم `com.trademind.app` سيبه في المشروع أو امسحه، مالوش لازمة —
+> المهم إن الجديد موجود.
+
+**بعدها:** لو هتستخدم تسجيل الدخول بجوجل، لازم تضيف **SHA-1** بتاع مفتاح
+التوقيع للتطبيق الجديد في Firebase، وإلا الدخول بجوجل هيفشل (شوف قسم ٤).
+
+---
+
 ## 1. مفتاح التوقيع (مرة واحدة، وميضعش أبدًا)
 
 Google Play بيربط التطبيق بأول مفتاح يشوفه. **لو ضاع المفتاح، مش هتقدر تنزّل
@@ -163,7 +188,7 @@ flutter install --release
 
 | | |
 |---|---|
-| `applicationId` | `com.trademind.app` — دايم، متغيّرهوش بعد النشر (الاسم المعروض TradePilot) |
+| `applicationId` | `com.radar.eg` — يتقفل للأبد بعد أول رفع على Play. الاسم المعروض **Radar**. |
 | `targetSdk` / `compileSdk` | 36 (من Flutter) — Play بيطلب 35 كحد أدنى |
 | `minSdk` | 24 |
 | صلاحيات | `INTERNET` بس |

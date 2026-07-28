@@ -20,7 +20,7 @@ val keystoreProperties = Properties().apply {
 val hasReleaseKey = keystoreProperties.getProperty("storeFile") != null
 
 android {
-    namespace = "com.trademind.app"
+    namespace = "com.radar.eg"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -35,7 +35,7 @@ android {
         // `namespace` above and to MainActivity's Kotlin package — when those
         // three drift, the manifest's relative `.MainActivity` resolves against
         // the namespace and the app dies at launch with ClassNotFoundException.
-        applicationId = "com.trademind.app"
+        applicationId = "com.radar.eg"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

@@ -7,7 +7,7 @@ import { disclaimer, site } from '@/lib/site';
 export const metadata: Metadata = {
   title: 'سياسة الخصوصية',
   description:
-    'أي بيانات بيتعامل معاها TradePilot، وليه، ومع مين بتتشارك — وإزاي تمسح حسابك وبياناتك.',
+    'أي بيانات بيتعامل معاها رادار، وليه، ومع مين بتتشارك — وإزاي تمسح حسابك وبياناتك.',
   alternates: { canonical: '/privacy' },
 };
 

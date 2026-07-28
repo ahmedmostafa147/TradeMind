@@ -64,7 +64,7 @@ export function Problem() {
               <h3 className="text-sm font-bold text-fg-muted">من غير سجل</h3>
             </div>
             <div className="bg-surface p-5">
-              <h3 className="text-sm font-bold">مع TradePilot</h3>
+              <h3 className="text-sm font-bold">مع رادار</h3>
             </div>
           </div>
 

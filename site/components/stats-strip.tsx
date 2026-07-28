@@ -70,7 +70,7 @@ export function StatsStrip() {
             <span className="num font-bold text-fg">
               {site.userCount.toLocaleString('en-US')}
             </span>{' '}
-            متداول بيسجّلوا صفقاتهم على TradePilot
+            متداول بيسجّلوا صفقاتهم على رادار
           </p>
         )}
       </div>

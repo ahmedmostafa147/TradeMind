@@ -8,13 +8,20 @@
  */
 
 export const site = {
-  name: 'TradePilot',
+  /**
+   * The wordmark — the logo, the browser title, the Play listing. Latin, and
+   * the same string Android's `android:label` carries.
+   */
+  name: 'Radar',
 
   /**
-   * The Arabic name is a description, not a transliteration. `TradePilot` stays
-   * Latin everywhere it is the product's name — RELEASE.md fixes it as the
-   * Play display name, and a second Arabic brand would split the search term.
+   * The same name inside Arabic prose. Two fields rather than one because
+   * «Radar بيخلّي لكل صفقة سبب» sets a Latin word mid-sentence in an RTL
+   * paragraph, which breaks the line's rhythm and reads as a typo. The
+   * wordmark stays Latin where it acts as a mark; sentences use this.
    */
+  nameAr: 'رادار',
+
   tagline: 'دفتر صفقات البورصة المصرية',
 
   description:
@@ -79,6 +86,6 @@ export const nav = [
  * to make it too, in the same words.
  */
 export const disclaimer =
-  'TradePilot أداة لتسجيل الصفقات وحساب المخاطرة. التطبيق لا يقدّم نصائح أو ' +
+  'رادار أداة لتسجيل الصفقات وحساب المخاطرة. التطبيق لا يقدّم نصائح أو ' +
   'توصيات استثمارية، ولا ينفّذ أي عمليات بيع أو شراء، ولا يتصل بأي وسيط أو ' +
   'حساب تداول. كل القرارات مسؤوليتك وحدك.';

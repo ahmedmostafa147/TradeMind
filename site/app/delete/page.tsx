@@ -6,7 +6,7 @@ import { site } from '@/lib/site';
 export const metadata: Metadata = {
   title: 'حذف الحساب والبيانات',
   description:
-    'إزاي تمسح حساب TradePilot وكل البيانات المرتبطة بيه — من داخل التطبيق أو بطلب عن طريق البريد.',
+    'إزاي تمسح حساب رادار وكل البيانات المرتبطة بيه — من داخل التطبيق أو بطلب عن طريق البريد.',
   alternates: { canonical: '/delete' },
 };
 
@@ -21,9 +21,9 @@ export const metadata: Metadata = {
  * server to receive it, and a form that silently drops requests is worse than
  * an email that visibly opens.
  */
-const subject = 'طلب حذف حساب TradePilot';
+const subject = 'طلب حذف حساب رادار';
 const body = [
-  'أرجو حذف حسابي وكل البيانات المرتبطة بيه في TradePilot.',
+  'أرجو حذف حسابي وكل البيانات المرتبطة بيه في رادار.',
   '',
   'البريد المسجّل بالحساب: (اكتبه هنا لو مختلف عن اللي باعت الرسالة)',
 ].join('\n');

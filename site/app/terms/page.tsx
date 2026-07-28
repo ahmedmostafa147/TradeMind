@@ -7,7 +7,7 @@ import { disclaimer, site } from '@/lib/site';
 export const metadata: Metadata = {
   title: 'شروط الاستخدام',
   description:
-    'شروط استخدام TradePilot — حدود المسؤولية، طبيعة الأداة، والبيانات المعروضة فيها.',
+    'شروط استخدام رادار — حدود المسؤولية، طبيعة الأداة، والبيانات المعروضة فيها.',
   alternates: { canonical: '/terms' },
 };
 
