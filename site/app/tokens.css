@@ -1,0 +1,166 @@
+/* GENERATED FILE — DO NOT EDIT.
+ *
+ * Source:     design/palettes.json  (active palette: "pharaoh")
+ * Generator:  tool/gen-theme.mjs
+ * Regenerate: npm run theme
+ *
+ * Every value here is also emitted into the Flutter app, from the same
+ * source, in the same run. The two cannot drift.
+ */
+
+:root {
+  color-scheme: light;
+
+  --brand: #d9ff30;
+  --on-brand: #1a1c15;
+  --brand-container: #ecffb0;
+  --on-brand-container: #3f4c00;
+  --accent: #546500;
+  --on-accent: #ffffff;
+  --background: #fafaed;
+  --surface: #ffffff;
+  --surface-low: #f4f4e8;
+  --surface-high: #eeefe2;
+  --surface-highest: #e2e3d7;
+  --on-surface: #1a1c15;
+  --on-surface-variant: #454933;
+  --outline: #5e6250;
+  --outline-variant: #c5c9ad;
+  --inverse-surface: #2f3129;
+  --on-inverse-surface: #f1f2e5;
+  --error: #b3261e;
+  --on-error: #ffffff;
+  --error-container: #fbeae9;
+  --on-error-container: #6b1712;
+  --win: #0e7c4a;
+  --loss: #b3261e;
+  --open: #5e6250;
+  --breakeven: #7b6000;
+  --win-surface: #e6f2eb;
+  --loss-surface: #fbeae9;
+  --open-surface: #eeefe2;
+  --breakeven-surface: #f7efdc;
+  --win-border: #b8d8c6;
+  --loss-border: #efc4c1;
+  --open-border: #c5c9ad;
+  --breakeven-border: #e2cfa3;
+  --ai-accent: #6d28d9;
+  --shadow: #1a1c1514;
+  --header-from: #2f3129;
+  --header-to: #1a1c15;
+
+  /* Short aliases the components read. */
+  --bg: #fafaed;
+  --fg: #1a1c15;
+  --fg-muted: #454933;
+  --fg-subtle: #5e6250;
+  --border: #c5c9ad;
+  --border-strong: #5e6250;
+  --brand-ink: #3f4c00;
+}
+
+/* System preference, but only while the visitor has not chosen explicitly. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --brand: #d9ff30;
+    --on-brand: #181e00;
+    --brand-container: #3f4c00;
+    --on-brand-container: #ccf21e;
+    --accent: #b2d400;
+    --on-accent: #181e00;
+    --background: #0a0b0d;
+    --surface: #121417;
+    --surface-low: #0e1012;
+    --surface-high: #1e2023;
+    --surface-highest: #2a2d31;
+    --on-surface: #f2f0ea;
+    --on-surface-variant: #a8aba0;
+    --outline: #8b8e84;
+    --outline-variant: #2a2d31;
+    --inverse-surface: #f2f0ea;
+    --on-inverse-surface: #1a1c15;
+    --error: #ff6b6b;
+    --on-error: #2b0b0b;
+    --error-container: #2e1516;
+    --on-error-container: #ffd4d2;
+    --win: #3ddc84;
+    --loss: #ff6b6b;
+    --open: #a8aba0;
+    --breakeven: #f5c451;
+    --win-surface: #0f2a1d;
+    --loss-surface: #2e1516;
+    --open-surface: #1e2023;
+    --breakeven-surface: #2b2312;
+    --win-border: #1f5738;
+    --loss-border: #5c2a2b;
+    --open-border: #383b3f;
+    --breakeven-border: #5c4a1e;
+    --ai-accent: #c4b5fd;
+    --shadow: #00000066;
+    --header-from: #1e2023;
+    --header-to: #0a0b0d;
+
+    /* Short aliases the components read. */
+    --bg: #0a0b0d;
+    --fg: #f2f0ea;
+    --fg-muted: #a8aba0;
+    --fg-subtle: #8b8e84;
+    --border: #2a2d31;
+    --border-strong: #8b8e84;
+    --brand-ink: #ccf21e;
+  }
+}
+
+/* An explicit choice always wins, in both directions. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --brand: #d9ff30;
+  --on-brand: #181e00;
+  --brand-container: #3f4c00;
+  --on-brand-container: #ccf21e;
+  --accent: #b2d400;
+  --on-accent: #181e00;
+  --background: #0a0b0d;
+  --surface: #121417;
+  --surface-low: #0e1012;
+  --surface-high: #1e2023;
+  --surface-highest: #2a2d31;
+  --on-surface: #f2f0ea;
+  --on-surface-variant: #a8aba0;
+  --outline: #8b8e84;
+  --outline-variant: #2a2d31;
+  --inverse-surface: #f2f0ea;
+  --on-inverse-surface: #1a1c15;
+  --error: #ff6b6b;
+  --on-error: #2b0b0b;
+  --error-container: #2e1516;
+  --on-error-container: #ffd4d2;
+  --win: #3ddc84;
+  --loss: #ff6b6b;
+  --open: #a8aba0;
+  --breakeven: #f5c451;
+  --win-surface: #0f2a1d;
+  --loss-surface: #2e1516;
+  --open-surface: #1e2023;
+  --breakeven-surface: #2b2312;
+  --win-border: #1f5738;
+  --loss-border: #5c2a2b;
+  --open-border: #383b3f;
+  --breakeven-border: #5c4a1e;
+  --ai-accent: #c4b5fd;
+  --shadow: #00000066;
+  --header-from: #1e2023;
+  --header-to: #0a0b0d;
+
+  /* Short aliases the components read. */
+  --bg: #0a0b0d;
+  --fg: #f2f0ea;
+  --fg-muted: #a8aba0;
+  --fg-subtle: #8b8e84;
+  --border: #2a2d31;
+  --border-strong: #8b8e84;
+  --brand-ink: #ccf21e;
+}

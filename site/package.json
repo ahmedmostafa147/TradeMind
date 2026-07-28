@@ -5,7 +5,10 @@
   "description": "Public site for TradePilot — landing page and legal pages.",
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "next build",
+    "theme": "node ../tool/gen-theme.mjs",
+    "theme:check": "node ../tool/gen-theme.mjs --check",
+    "//build": "theme:check gates the build so a deploy can never ship CSS tokens that no longer match design/palettes.json — the app and the site would drift apart silently otherwise.",
+    "build": "npm run theme:check && next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"

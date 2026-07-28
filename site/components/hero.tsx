@@ -24,7 +24,7 @@ export function Hero() {
     <section className="border-b border-border-default">
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:py-24">
         <div>
-          <p className="text-sm font-semibold text-fg-muted">
+          <p className="text-sm font-semibold text-brand-ink">
             دفتر صفقات البورصة المصرية
           </p>
 
@@ -38,21 +38,32 @@ export function Hero() {
             ترجعله بعد شهور تعرف منه غلطت فين — وتبطّل تكرّر نفس الغلطة.
           </p>
 
+          {/* The anchor leads, not the store button. Until the listing is live
+              the only thing here that actually does something is this link, and
+              the filled brand treatment belongs to whatever works. Once
+              site.playStoreUrl is set, DownloadButton becomes the filled brand
+              button and this should drop back to the outline style. */}
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <DownloadButton />
             <a
               href="#why"
-              className="inline-flex items-center justify-center rounded-md border border-border-strong px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-surface-high"
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90"
             >
               شوف المشكلة اللي بيحلّها
+              <ArrowIcon />
             </a>
+            <DownloadButton />
           </div>
 
-          <ul className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-fg-subtle">
+          <ul className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-fg-muted">
             {['شغّال من غير حساب', 'بياناتك على جهازك', 'مجاني بالكامل'].map(
               (item) => (
                 <li key={item} className="flex items-center gap-1.5">
-                  <CheckIcon />
+                  {/* Brand, not win-green. These are product claims, not a
+                      profitable trade, and green here would spend the one
+                      colour the data surfaces reserve for money. */}
+                  <span className="text-brand-ink">
+                    <CheckIcon />
+                  </span>
                   {item}
                 </li>
               )
@@ -71,6 +82,25 @@ export function Hero() {
         </div>
       </div>
     </section>
+  );
+}
+
+/** Points down, not sideways: the link scrolls to the next section. */
+function ArrowIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="size-4"
+      aria-hidden
+    >
+      <path d="M12 5v14" />
+      <path d="m6 13 6 6 6-6" />
+    </svg>
   );
 }
 

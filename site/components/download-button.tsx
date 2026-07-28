@@ -22,9 +22,14 @@ export function DownloadButton({
   if (!site.playStoreUrl) {
     return (
       <span
-        className={`${base} cursor-default border border-dashed border-border-strong text-fg-muted ${className}`}
+        className={`${base} cursor-default border border-border-default bg-surface-high text-fg-muted ${className}`}
         // Not aria-disabled on a non-interactive element — the text already
         // says it, and there is no control here to disable.
+        //
+        // Deliberately the QUIETEST thing on the row, not the loudest. While
+        // the app is unpublished this is an announcement, not an action, and
+        // painting it in the brand colour would put the page's whole visual
+        // emphasis on the one element that does nothing when clicked.
       >
         <ClockIcon />
         قريبًا على Google Play
