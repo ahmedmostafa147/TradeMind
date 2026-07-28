@@ -56,7 +56,7 @@
   --fg-subtle: #5e6250;
   --border: #c5c9ad;
   --border-strong: #5e6250;
-  --brand-ink: #3f4c00;
+  --brand-ink: #546500;
 }
 
 /* System preference, but only while the visitor has not chosen explicitly. */
@@ -109,7 +109,7 @@
     --fg-subtle: #8b8e84;
     --border: #2a2d31;
     --border-strong: #8b8e84;
-    --brand-ink: #ccf21e;
+    --brand-ink: #b2d400;
   }
 }
 
@@ -162,5 +162,5 @@
   --fg-subtle: #8b8e84;
   --border: #2a2d31;
   --border-strong: #8b8e84;
-  --brand-ink: #ccf21e;
+  --brand-ink: #b2d400;
 }

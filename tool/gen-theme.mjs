@@ -57,7 +57,13 @@ const CONTRAST_RULES = [
   ['outline', 'surface', 4.5], ['outline', 'background', 4.5],
   ['onBrand', 'brand', 4.5],
   ['onBrandContainer', 'brandContainer', 4.5],
+  // `accent` carries a double contract, so it is checked both ways: readable
+  // ON a surface (it is what brand-coloured text resolves to, and what
+  // Material's ColorScheme.primary maps to) AND able to host `onAccent`.
+  // Material uses `primary` as a fill and as a foreground interchangeably, so
+  // one of the brand tokens has to satisfy both — this is that token.
   ['onAccent', 'accent', 4.5],
+  ['accent', 'surface', 4.5], ['accent', 'background', 4.5],
   ['onInverseSurface', 'inverseSurface', 4.5],
   ['onError', 'error', 4.5],
   ['onErrorContainer', 'errorContainer', 4.5],
@@ -85,8 +91,10 @@ const CSS_ALIASES = {
   border: 'outlineVariant',
   'border-strong': 'outline',
   // Brand-coloured TEXT. Never `--brand`: that is a fill, and in a palette
-  // built on a light accent it is invisible as type.
-  'brand-ink': 'onBrandContainer',
+  // built on a light accent it is invisible as type. Same token the Flutter
+  // side maps to ColorScheme.primary, so the two surfaces agree on what
+  // "the brand colour, used as ink" means.
+  'brand-ink': 'accent',
 };
 
 // ---------------------------------------------------------------------------

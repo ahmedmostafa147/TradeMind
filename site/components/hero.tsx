@@ -1,4 +1,5 @@
 import { DownloadButton } from '@/components/download-button';
+import { ArrowDownIcon, CheckIcon } from '@/components/icons';
 import { TradeCardMock, type TradeMock } from '@/components/trade-card-mock';
 
 /**
@@ -45,11 +46,17 @@ export function Hero() {
               button and this should drop back to the outline style. */}
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <a
-              href="#why"
+              href="#tools"
               className="inline-flex items-center justify-center gap-2 rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90"
             >
-              شوف المشكلة اللي بيحلّها
-              <ArrowIcon />
+              شوف الاتنعشر أداة
+              <ArrowDownIcon className="size-4" />
+            </a>
+            <a
+              href="#why"
+              className="inline-flex items-center justify-center rounded-md border border-border-strong px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-surface-high"
+            >
+              المشكلة اللي بيحلّها
             </a>
             <DownloadButton />
           </div>
@@ -62,7 +69,7 @@ export function Hero() {
                       profitable trade, and green here would spend the one
                       colour the data surfaces reserve for money. */}
                   <span className="text-brand-ink">
-                    <CheckIcon />
+                    <CheckIcon className="size-3.5 shrink-0" />
                   </span>
                   {item}
                 </li>
@@ -82,41 +89,5 @@ export function Hero() {
         </div>
       </div>
     </section>
-  );
-}
-
-/** Points down, not sideways: the link scrolls to the next section. */
-function ArrowIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="size-4"
-      aria-hidden
-    >
-      <path d="M12 5v14" />
-      <path d="m6 13 6 6 6-6" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="size-3.5 shrink-0"
-      aria-hidden
-    >
-      <path d="m4 12.5 5 5 11-11" />
-    </svg>
   );
 }

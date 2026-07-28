@@ -3,7 +3,10 @@ import { Discipline } from '@/components/discipline';
 import { Faq, faq } from '@/components/faq';
 import { Features } from '@/components/features';
 import { Hero } from '@/components/hero';
+import { Pricing } from '@/components/pricing';
 import { Problem } from '@/components/problem';
+import { StatsStrip } from '@/components/stats-strip';
+import { Tools } from '@/components/tools';
 import { disclaimer, site } from '@/lib/site';
 
 /**
@@ -54,9 +57,12 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <Hero />
+      <StatsStrip />
       <Problem />
       <Features />
+      <Tools />
       <Discipline />
+      <Pricing />
       <Faq />
       <ClosingCta />
     </>

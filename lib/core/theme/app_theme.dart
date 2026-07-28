@@ -23,12 +23,26 @@ class AppTheme {
 
     final colorScheme = ColorScheme(
       brightness: brightness,
-      primary: p.brand,
-      onPrimary: p.onBrand,
+
+      // primary is [accent], NOT [brand].
+      //
+      // Material uses ColorScheme.primary both ways: as a fill (FilledButton,
+      // the Switch thumb, the focused input border) and as a foreground (the
+      // TextButton label, a tinted icon). A palette whose brand is a light,
+      // vivid colour cannot serve both — the acid lime is 1.15:1 as text on
+      // white, so every `colorScheme.primary` icon in the app would vanish.
+      //
+      // [accent] is the token that carries the double contract, and the
+      // generator enforces it: accent must clear 4.5:1 against the surface AND
+      // host onAccent. The loud lime stays [brand] and is applied only where
+      // the pairing is stated outright — the FAB, the filled button, the
+      // navigation indicator — each with onBrand on top of it.
+      primary: p.accent,
+      onPrimary: p.onAccent,
       primaryContainer: p.brandContainer,
       onPrimaryContainer: p.onBrandContainer,
-      secondary: p.accent,
-      onSecondary: p.onAccent,
+      secondary: p.brand,
+      onSecondary: p.onBrand,
       error: p.error,
       onError: p.onError,
       errorContainer: p.errorContainer,
@@ -78,8 +92,9 @@ class AppTheme {
         elevation: 4,
       ),
       filledButtonTheme: AppThemeComponents.filledButton(p),
+      // A label, so it takes the ink form rather than the fill.
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(foregroundColor: p.brand),
+        style: TextButton.styleFrom(foregroundColor: p.accent),
       ),
       outlinedButtonTheme: AppThemeComponents.outlinedButton(p),
       inputDecorationTheme: AppThemeComponents.inputDecoration(p),

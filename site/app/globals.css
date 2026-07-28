@@ -22,6 +22,11 @@
   --color-border-default: var(--border);
   --color-border-strong: var(--border-strong);
 
+  /* The charcoal block. Used for the one or two sections that need to cut
+     against the paper canvas — the reference design's main device. */
+  --color-inverse-surface: var(--inverse-surface);
+  --color-on-inverse-surface: var(--on-inverse-surface);
+
   /* Brand tier. Allowed on calls-to-action, links, focus rings and the header
      — never inside a trade card, a badge or a chart. Colour there means money,
      and a brand-coloured number would compete with the one signal the data

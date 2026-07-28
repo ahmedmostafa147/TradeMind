@@ -28,6 +28,18 @@ export const site = {
    */
   playStoreUrl: null as string | null,
 
+  /**
+   * Registered users, once there are any.
+   *
+   * Null until the number is real, and the social-proof line is hidden
+   * entirely while it is. A launch-day page claiming subscribers it does not
+   * have is a fabricated statistic on a public site — and it is the one claim
+   * a visitor can check against the Play listing's own install count.
+   *
+   * Set it to the real figure after launch and the line appears by itself.
+   */
+  userCount: null as number | null,
+
   contactEmail: 'ahmed14mostafa17@gmail.com',
 
   /**
@@ -53,9 +65,10 @@ export const site = {
 
 export const nav = [
   { href: '#why', label: 'المشكلة' },
-  { href: '#features', label: 'المميزات' },
-  { href: '#discipline', label: 'درجة الانضباط' },
-  { href: '#faq', label: 'أسئلة شائعة' },
+  { href: '#tools', label: 'الأدوات' },
+  { href: '#discipline', label: 'الانضباط' },
+  { href: '#pricing', label: 'السعر' },
+  { href: '#faq', label: 'أسئلة' },
 ] as const;
 
 /**

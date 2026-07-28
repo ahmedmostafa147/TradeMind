@@ -35,10 +35,13 @@ class AppThemeComponents {
         ),
       );
 
+  /// Its label sits on the page background, not on a brand fill, so it takes
+  /// [PaletteScheme.accent] — the ink form. [PaletteScheme.brand] here would be
+  /// lime type on white under the active palette.
   static OutlinedButtonThemeData outlinedButton(PaletteScheme p) =>
       OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: p.brand,
+          foregroundColor: p.accent,
           side: BorderSide(color: p.outlineVariant),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -60,9 +63,13 @@ class AppThemeComponents {
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: p.outlineVariant),
         ),
+        // A 1.5px hairline is the thinnest thing in the app that has to be
+        // noticed, so it takes the ink form too — a lime focus ring on a light
+        // field is invisible, and this is the affordance that tells a user
+        // which input they are typing into.
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: p.brand, width: 1.5),
+          borderSide: BorderSide(color: p.accent, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
