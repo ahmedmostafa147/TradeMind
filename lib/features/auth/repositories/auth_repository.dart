@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce/hive.dart';
 
 import '../../sync/services/firestore_sync_service.dart';
+import '../../sync/services/user_profile_service.dart';
 import '../models/user_account.dart';
 import '../services/auth_exception.dart';
 import '../services/firebase_auth_service.dart';
@@ -154,9 +157,22 @@ class AuthRepository extends Notifier<UserAccount> {
     state = UserAccount.guest;
   }
 
+  /// Persists the session, then records the profile the operator dashboard
+  /// lists from.
+  ///
+  /// Hooked here rather than inside each of signUp/login/loginWithGoogle
+  /// because this is the one funnel all three already pass through — a fourth
+  /// sign-in path added later gets the profile write for free, instead of
+  /// silently creating a user who never appears in any list.
+  ///
+  /// Deliberately not awaited: the write is best-effort telemetry for the
+  /// operator, and holding the UI on a Firestore round trip would make every
+  /// sign-in feel slower for something the user did not ask for.
+  /// UserProfileService swallows its own failures.
   Future<void> _persist(UserAccount account) async {
     await _box.put(_sessionKey, account.toMap());
     state = account;
+    unawaited(UserProfileService.upsert(account));
   }
 
   /// First non-blank of: the Firebase profile name, the name typed on the

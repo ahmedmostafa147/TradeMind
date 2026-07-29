@@ -1,31 +1,75 @@
 rules_version = '2';
 
-// Cloud Firestore access rules for the journal's backup.
-//
-// The app writes to exactly two paths, both under the signed-in user:
-//   users/{uid}/trades/{tradeId}
-//   users/{uid}/watchlist/{itemId}
-//
-// A project left in test mode allows any authenticated user — in practice
-// anyone at all, since sign-up is open — to read and write every other user's
-// trades. These rules close that: a request may only touch the subtree whose
-// uid matches the caller's own token.
+// Cloud Firestore access rules for Radar.
 //
 // Deploy with:  firebase deploy --only firestore:rules
+//
+// THE ADMIN MODEL
+// Admin is membership in the `admins` collection, and that collection is
+// writable by NOBODY through this API — `allow write: if false`, no exception.
+// The only way to create an admin is by hand in the Firebase Console.
+//
+// A boolean on the user's own profile would let any signed-up account promote
+// itself with a single write. This cannot, because the document that would
+// have to be created is unreachable from every client path.
+//
+// WHAT AN ADMIN CAN AND CANNOT SEE
+// An admin reads user PROFILES — email, display name, dates, and the activity
+// counters the app maintains. An admin cannot read anybody's trades or
+// watchlist.
+//
+// That is deliberate, and it is a promise the published privacy policy makes
+// in plain words: «قواعد الأمان على السيرفر بتمنع أي مستخدم تاني من قراءتها أو
+// تعديلها». Granting trade reads here would make that sentence false, and the
+// policy would have to be rewritten and re-disclosed before it could change.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // Declared inside the match block — a function at file scope, outside
     // `service`, is a syntax error the deploy rejects.
-    function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // The parent document itself is never written by the app; it exists only
-    // as a container. Denying it keeps the surface to what is actually used.
-    match /users/{userId} {
-      allow read, write: if false;
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
 
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // The admin roster. Console-only, by construction.
+    //
+    // Read is limited to your own document so a client can ask "am I an
+    // admin?" without being able to enumerate who else is.
+    match /admins/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    match /users/{userId} {
+      // Owner reads their own profile; an admin reads any, for the dashboard's
+      // user list. Nobody else, ever.
+      allow read: if isOwner(userId) || isAdmin();
+
+      // The owner writes their own profile, and the shape is pinned. Without a
+      // field whitelist a user could attach anything to a document the admin
+      // dashboard renders — including markup, or a forged activity counter.
+      allow create, update: if isOwner(userId)
+        && request.resource.data.keys().hasOnly([
+             'email', 'displayName', 'createdAt', 'lastSeenAt',
+             'platform', 'appVersion', 'tradeCount', 'watchlistCount'
+           ])
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 320
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 120;
+
+      allow delete: if isOwner(userId);
+
+      // Trades and watchlist stay owner-only. An admin is not an owner.
       match /trades/{tradeId} {
         allow read, write: if isOwner(userId);
       }
@@ -33,6 +77,21 @@ service cloud.firestore {
       match /watchlist/{itemId} {
         allow read, write: if isOwner(userId);
       }
+    }
+
+    // What the admin publishes and every signed-in user reads.
+    //
+    // Read requires a session rather than being public: this is a product
+    // surface, not a marketing page, and an open read would let anyone scrape
+    // the whole feed without ever installing anything.
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /signals/{signalId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     // Anything not matched above is denied, including any path a future

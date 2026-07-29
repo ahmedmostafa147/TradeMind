@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 
-import { SiteFooter } from '@/components/site-footer';
-import { SiteHeader } from '@/components/site-header';
 import { site } from '@/lib/site';
 import './globals.css';
 
@@ -105,15 +103,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="font-sans antialiased">
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:right-4 focus:z-50 focus:rounded-md focus:bg-brand focus:px-4 focus:py-2 focus:text-on-brand"
-        >
-          تخطَّ إلى المحتوى
-        </a>
-        <SiteHeader />
-        <main id="main">{children}</main>
-        <SiteFooter />
+        {children}
       </body>
     </html>
   );

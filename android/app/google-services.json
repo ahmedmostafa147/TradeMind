@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:680175215:android:7f0ad1b35c2fce3c394f9a",
+        "mobilesdk_app_id": "1:680175215:android:e961a41a6281b8d8394f9a",
         "android_client_info": {
-          "package_name": "com.trademind.app"
+          "package_name": "com.radar.eg"
         }
       },
       "oauth_client": [
