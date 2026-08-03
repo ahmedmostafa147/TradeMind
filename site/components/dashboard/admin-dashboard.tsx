@@ -9,6 +9,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
 } from 'firebase/firestore';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
@@ -205,18 +206,39 @@ function UsersPanel() {
   if (failed) return <ErrorNote>تعذّر تحميل المستخدمين.</ErrorNote>;
   if (rows === null) return <Loading />;
 
+  // Computed here rather than stored: any counter the clients maintain can
+  // drift, and these are cheap over a list the page already has in memory.
+  const now = Date.now();
+  const WEEK = 7 * 86_400_000;
+  const since = (date: Date | null, ms: number) =>
+    date !== null && now - date.getTime() <= ms;
+
+  const newThisWeek = rows.filter((r) => since(r.createdAt, WEEK)).length;
+  const activeThisWeek = rows.filter((r) => since(r.lastSeenAt, WEEK)).length;
+  const withTrades = rows.filter((r) => (r.tradeCount ?? 0) > 0).length;
+
   return (
     <>
-      <p className="text-sm text-fg-muted">
-        <span className="num text-2xl font-bold text-fg">{rows.length}</span>{' '}
-        مستخدم مسجّل
-      </p>
+      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Metric label="مستخدم مسجّل" value={rows.length} />
+        <Metric label="جديد آخر 7 أيام" value={newThisWeek} />
+        <Metric label="نشط آخر 7 أيام" value={activeThisWeek} />
+        <Metric
+          label="سجّل صفقة واحدة على الأقل"
+          value={withTrades}
+          note={
+            withTrades === 0 && rows.length > 0
+              ? 'العدّاد بيتحدّث لما المستخدم يفتح الدفتر على المتصفح'
+              : undefined
+          }
+        />
+      </dl>
 
       {/* Profiles only. The rules do not grant an admin read on anybody's
           trades — the count below is a counter the app maintains, not a
           window into the journal. The privacy policy says so in as many
           words, and changing that needs the policy changed first. */}
-      <p className="mt-2 text-xs text-fg-subtle">
+      <p className="mt-5 text-xs text-fg-subtle">
         بيانات الحسابات بس — صفقات المستخدمين نفسها مقفولة عليهم، وقواعد
         السيرفر مش بتدي الأدمن صلاحية قراءتها.
       </p>
@@ -350,24 +372,60 @@ function PostsPanel({
   const { items, failed, reload } = useCollection(name);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function startEdit(item: Post) {
+    setEditingId(item.id);
+    setTitle(item.title);
+    setBody(item.body);
+    setError(null);
+    // The form is above the list on a narrow screen, so without this the page
+    // appears not to have reacted to the click at all.
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setTitle('');
+    setBody('');
+    setError(null);
+  }
 
   async function publish() {
     if (!title.trim() || !body.trim()) return;
     setBusy(true);
     setError(null);
     try {
-      await addDoc(collection(firestore(), name), {
-        title: title.trim(),
-        body: body.trim(),
-        createdAt: serverTimestamp(),
-      });
-      setTitle('');
-      setBody('');
+      if (editingId === null) {
+        await addDoc(collection(firestore(), name), {
+          title: title.trim(),
+          body: body.trim(),
+          createdAt: serverTimestamp(),
+        });
+      } else {
+        // merge, and `createdAt` deliberately not resent: an edit must not
+        // repost the item. Overwriting it would jump a months-old announcement
+        // back to the top of every reader's feed for a fixed typo.
+        await setDoc(
+          doc(firestore(), name, editingId),
+          {
+            title: title.trim(),
+            body: body.trim(),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
+      cancelEdit();
       await reload();
     } catch {
-      setError('تعذّر النشر. اتأكد إن حسابك مصرّح له.');
+      setError(
+        editingId === null
+          ? 'تعذّر النشر. اتأكد إن حسابك مصرّح له.'
+          : 'تعذّر حفظ التعديل. اتأكد إن حسابك مصرّح له.'
+      );
     } finally {
       setBusy(false);
     }
@@ -388,9 +446,19 @@ function PostsPanel({
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-      <div className="rounded-lg border border-border-default bg-surface p-6">
-        <h2 className="font-bold">{heading}</h2>
-        <p className="mt-1 text-xs text-fg-muted">{hint}</p>
+      <div
+        className={`h-fit rounded-lg border bg-surface p-6 lg:sticky lg:top-6 ${
+          editingId === null ? 'border-border-default' : 'border-brand-ink'
+        }`}
+      >
+        <h2 className="font-bold">
+          {editingId === null ? heading : 'تعديل منشور'}
+        </h2>
+        <p className="mt-1 text-xs text-fg-muted">
+          {editingId === null
+            ? hint
+            : 'التعديل مش بيغيّر تاريخ النشر، فالمنشور مش هيرجع لأول القايمة تاني.'}
+        </p>
 
         <div className="mt-5 space-y-4">
           <div>
@@ -423,14 +491,25 @@ function PostsPanel({
             </p>
           )}
 
-          <button
-            type="button"
-            disabled={busy || !title.trim() || !body.trim()}
-            onClick={() => void publish()}
-            className="w-full rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {busy ? '...' : 'نشر'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={busy || !title.trim() || !body.trim()}
+              onClick={() => void publish()}
+              className="flex-1 rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {busy ? '...' : editingId === null ? 'نشر' : 'احفظ التعديل'}
+            </button>
+            {editingId !== null && (
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="rounded-md border border-border-strong px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-surface-high"
+              >
+                إلغاء
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -443,17 +522,28 @@ function PostsPanel({
         {items?.map((item) => (
           <article
             key={item.id}
-            className="mb-3 rounded-lg border border-border-default bg-surface p-5"
+            className={`mb-3 rounded-lg border bg-surface p-5 ${
+              editingId === item.id ? 'border-brand-ink' : 'border-border-default'
+            }`}
           >
             <div className="flex items-start justify-between gap-4">
               <h3 className="font-bold">{item.title}</h3>
-              <button
-                type="button"
-                onClick={() => void remove(item.id)}
-                className="shrink-0 text-xs font-semibold text-loss underline-offset-4 hover:underline"
-              >
-                حذف
-              </button>
+              <div className="flex shrink-0 gap-3">
+                <button
+                  type="button"
+                  onClick={() => startEdit(item)}
+                  className="text-xs font-semibold text-brand-ink underline-offset-4 hover:underline"
+                >
+                  تعديل
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void remove(item.id)}
+                  className="text-xs font-semibold text-loss underline-offset-4 hover:underline"
+                >
+                  حذف
+                </button>
+              </div>
             </div>
             <p className="mt-2 whitespace-pre-wrap text-sm text-fg-muted">
               {item.body}
@@ -491,6 +581,24 @@ function Td({
     <td dir={dir} className={`px-4 py-3 ${className}`}>
       {children}
     </td>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  note,
+}: {
+  label: string;
+  value: number;
+  note?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border-default bg-surface p-5">
+      <dt className="text-sm text-fg-muted">{label}</dt>
+      <dd className="num mt-1.5 text-2xl font-bold">{value}</dd>
+      {note && <p className="mt-1.5 text-xs text-fg-subtle">{note}</p>}
+    </div>
   );
 }
 

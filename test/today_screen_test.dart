@@ -128,9 +128,7 @@ void main() {
     expect(find.byIcon(Icons.task_alt_rounded), findsOneWidget);
   });
 
-  testWidgets('bottom navigation is three jobs, not five views', (
-    tester,
-  ) async {
+  testWidgets('every bottom destination is a distinct job', (tester) async {
     await pumpApp(tester);
 
     final labels = tester
@@ -138,11 +136,18 @@ void main() {
         .map((d) => d.label)
         .toList();
 
-    // Was five, of which «قرار اليوم», «سجل الصفقات» and «لوحة التحكم» were the
-    // same trades shown three ways — indistinguishable as siblings in a bar.
-    // They are tabs inside «صفقاتي» now, so each remaining destination is a
-    // genuinely different job.
-    expect(labels, ['صفقاتي', 'حاسبة الصفقة', 'الإعدادات']);
+    // THE RULE IS "ONE JOB EACH", NOT A HEADCOUNT.
+    //
+    // The bar was five, of which «قرار اليوم», «سجل الصفقات» and «لوحة التحكم»
+    // were the same trades shown three ways — indistinguishable as siblings in
+    // a bar. Those collapsed into tabs inside «صفقاتي», which left three.
+    //
+    // «المستجدات» then made it four, and that is fine under the same rule:
+    // reading what the operator published is not journaling a trade, not sizing
+    // one, and not changing a setting. What this test is defending is that no
+    // destination is another destination wearing a different label — so before
+    // adding a fifth, the question to answer is which of these jobs it is not.
+    expect(labels, ['صفقاتي', 'حاسبة الصفقة', 'المستجدات', 'الإعدادات']);
 
     expect(
       tester

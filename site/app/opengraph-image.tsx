@@ -32,10 +32,27 @@ function ArabicLine({
   text,
   style,
   gap = 18,
+  gaps,
 }: {
   text: string;
   style?: React.CSSProperties;
+  /** One correction for every join in the line. */
   gap?: number;
+  /**
+   * Per-join corrections, index i sitting between word i and word i+1.
+   *
+   * A single `gap` cannot straighten a line, and the reason is measurable:
+   * satori sizes each word box by the font's ADVANCE, which for a word ending
+   * in a swooping letter (ر, ه) runs far past the last inked pixel. Under IBM
+   * Plex Sans Arabic at 84px, one uniform -30 produced an 85px hole after
+   * «فاكر» and a 24px one after «اشتريت» in the same line — a 61px spread from
+   * an identical margin.
+   *
+   * So the correction belongs to the JOIN, not to the line. Values were set by
+   * measuring ink-to-ink distances in the generated PNG and solving for an even
+   * optical gap; re-measure after changing any word, size or font here.
+   */
+  gaps?: number[];
 }) {
   return (
     <div
@@ -66,7 +83,10 @@ function ArabicLine({
             // font size, so the correction is empirical and was set by
             // inspecting the generated PNG. Re-check the image after changing
             // any font size or string here; it will not be right by default.
-            marginLeft: index === text.split(' ').length - 1 ? 0 : `${gap}px`,
+            marginLeft:
+              index === text.split(' ').length - 1
+                ? 0
+                : `${gaps?.[index] ?? gap}px`,
           }}
         >
           {word}
@@ -81,9 +101,9 @@ export default async function OpengraphImage() {
   // the uncompressed originals stay in assets/ for this build step alone. They
   // live outside public/ so `output: export` does not also publish 480KB of
   // fonts nobody downloads.
-  const [cairo700, cairo400] = await Promise.all([
-    readFile(join(process.cwd(), 'assets/fonts/Cairo-700.ttf')),
-    readFile(join(process.cwd(), 'assets/fonts/Cairo-400.ttf')),
+  const [plex700, plex400] = await Promise.all([
+    readFile(join(process.cwd(), 'assets/fonts/IBMPlexSansArabic-700.ttf')),
+    readFile(join(process.cwd(), 'assets/fonts/IBMPlexSansArabic-400.ttf')),
   ]);
 
   return new ImageResponse(
@@ -102,7 +122,7 @@ export default async function OpengraphImage() {
           background: '#000000',
           color: '#ffffff',
           padding: '68px 72px',
-          fontFamily: 'Cairo',
+          fontFamily: 'IBMPlexSansArabic',
         }}
       >
         <div
@@ -140,17 +160,17 @@ export default async function OpengraphImage() {
               shift with any font or size change. */}
           <ArabicLine
             text="فاكر اشتريت السهم"
-            gap={-30}
+            gaps={[-87, -26]}
             style={{ fontSize: '84px', fontWeight: 700, lineHeight: 1.15 }}
           />
           <ArabicLine
             text="ده ليه؟"
-            gap={-30}
+            gaps={[-46]}
             style={{ fontSize: '84px', fontWeight: 700, lineHeight: 1.15 }}
           />
           <ArabicLine
             text="دفتر صفقات البورصة المصرية"
-            gap={-14}
+            gaps={[-24, -35, -33]}
             style={{
               fontSize: '33px',
               fontWeight: 400,
@@ -170,8 +190,23 @@ export default async function OpengraphImage() {
             color: '#a8a8a8',
           }}
         >
-          {['حاسبة مخاطرة', 'تحليل أداء', 'مجاني بالكامل'].map((item) => (
-            <ArabicLine key={item} text={item} gap={10} />
+          {/* Same measured-not-guessed treatment as the headline. «مجاني»
+              ends in ي, whose advance overshoots its ink far more than ة or ء,
+              so a shared gap put 45px inside that pair against 12px inside the
+              other two. `lead` then evens the space BETWEEN the three claims,
+              which the container's own 40px gap could not do for the same
+              reason. */}
+          {[
+            { text: 'حاسبة مخاطرة', gaps: [10], lead: -15 },
+            { text: 'تحليل أداء', gaps: [10], lead: 0 },
+            { text: 'مجاني بالكامل', gaps: [-23], lead: 0 },
+          ].map(({ text, gaps, lead }) => (
+            <ArabicLine
+              key={text}
+              text={text}
+              gaps={gaps}
+              style={{ marginLeft: `${lead}px` }}
+            />
           ))}
         </div>
       </div>
@@ -179,8 +214,8 @@ export default async function OpengraphImage() {
     {
       ...size,
       fonts: [
-        { name: 'Cairo', data: cairo700, weight: 700, style: 'normal' },
-        { name: 'Cairo', data: cairo400, weight: 400, style: 'normal' },
+        { name: 'IBMPlexSansArabic', data: plex700, weight: 700, style: 'normal' },
+        { name: 'IBMPlexSansArabic', data: plex400, weight: 400, style: 'normal' },
       ],
     }
   );

@@ -6,7 +6,7 @@ import 'palette_scheme.dart';
 class AppThemeComponents {
   const AppThemeComponents._();
 
-  static const String _fontFamily = 'Cairo';
+  static const String _fontFamily = 'IBMPlexSansArabic';
 
   static TextTheme makeTextTheme(TextTheme base, PaletteScheme p) {
     final custom = base.apply(fontFamily: _fontFamily);

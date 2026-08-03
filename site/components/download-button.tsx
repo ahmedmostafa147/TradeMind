@@ -8,6 +8,11 @@ import { site } from '@/lib/site';
  * as plain non-interactive text rather than a link. Shipping a button that
  * looks clickable and goes nowhere — or worse, to a Play 404 — is the single
  * fastest way to lose someone who arrived from a shared post.
+ *
+ * The waiting copy names THE ANDROID APP, not the product. «قريبًا على Google
+ * Play» on its own reads as "this thing does not exist yet" and quietly
+ * contradicts the two working sign-in buttons sitting beside it. Radar exists;
+ * it is the Android build that is pending.
  */
 export function DownloadButton({
   variant = 'primary',
@@ -32,7 +37,7 @@ export function DownloadButton({
         // emphasis on the one element that does nothing when clicked.
       >
         <ClockIcon />
-        قريبًا على Google Play
+        تطبيق أندرويد قريبًا على Google Play
       </span>
     );
   }

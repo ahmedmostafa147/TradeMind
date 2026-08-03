@@ -1,29 +1,70 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import {
+  EyeIcon,
+  EyeOffIcon,
+  LockIcon,
+  MailIcon,
+  UserIcon,
+} from '@/components/icons';
 import { authErrorMessage, useAuth } from '@/lib/auth-context';
 
 /**
- * The sign-in / sign-up form shared by both dashboards.
+ * The sign-in / sign-up / reset panel shared by both dashboards.
  *
- * One panel with a mode toggle rather than two routes: the two forms differ by
- * a single field, and a separate page would double the copy that has to stay
- * in step with the app's own auth screen.
+ * One panel with a mode switch rather than three routes: the forms differ by a
+ * field or two, and separate pages would triple the copy that has to stay in
+ * step with the app's own auth screen.
+ *
+ * Firebase's own minimum. Stated up front on the sign-up form rather than left
+ * for the server to reject after a round trip.
  */
-export function SignInPanel({ title, subtitle }: { title: string; subtitle: string }) {
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+const MIN_PASSWORD = 6;
 
-  const [mode, setMode] = useState<'in' | 'up'>('in');
+type Mode = 'in' | 'up' | 'reset';
+
+export function SignInPanel({ title, subtitle }: { title: string; subtitle: string }) {
+  const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
+
+  const [mode, setMode] = useState<Mode>('in');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  /**
+   * «ابدأ مجانًا» on the landing page should land on the sign-UP form, not on
+   * sign-in with an extra click in the way.
+   *
+   * Read from the hash in an effect rather than from useSearchParams: the site
+   * is a static export, so a query param would force this subtree into a
+   * Suspense boundary for a value that is only ever present on first paint.
+   * The hash is client-only by definition, which is exactly what this is.
+   */
+  useEffect(() => {
+    if (window.location.hash === '#signup') setMode('up');
+  }, []);
+
+  function switchTo(next: Mode) {
+    setMode(next);
+    setError(null);
+    setNotice(null);
+    // Never carry a typed password across a mode change — on the way to the
+    // reset form there is nothing to carry it to, and leaving it in state means
+    // it survives in memory for no reason.
+    setPassword('');
+    setShowPassword(false);
+  }
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
     setError(null);
+    setNotice(null);
     try {
       await action();
     } catch (e) {
@@ -36,27 +77,51 @@ export function SignInPanel({ title, subtitle }: { title: string; subtitle: stri
     }
   }
 
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (busy) return;
+
+    if (mode === 'reset') {
+      void run(async () => {
+        await resetPassword(email);
+        // Deliberately the same message whether or not the address has an
+        // account. Firebase does not say which, and neither should this — a
+        // form that distinguishes them is an account-enumeration oracle.
+        setNotice(
+          'لو فيه حساب بالبريد ده، هيوصله رابط لتغيير كلمة السر. بُص في الوارد وفي الـ Spam.'
+        );
+      });
+      return;
+    }
+
+    void run(() =>
+      mode === 'in' ? signIn(email, password) : signUp(name, email, password)
+    );
+  }
+
+  const heading =
+    mode === 'reset' ? 'نسيت كلمة السر؟' : title;
+
+  const sub =
+    mode === 'reset'
+      ? 'اكتب بريدك المسجّل وهنبعتلك رابط تعمل بيه كلمة سر جديدة.'
+      : mode === 'up'
+        ? 'اعمل حساب مجاني، وابدأ تسجّل صفقاتك من المتصفح ومن التطبيق بنفس الحساب.'
+        : subtitle;
+
   return (
     <div className="mx-auto w-full max-w-md">
-      <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-      <p className="mt-2 text-sm text-fg-muted">{subtitle}</p>
+      <h1 className="text-2xl font-bold tracking-tight">{heading}</h1>
+      <p className="mt-2 text-sm leading-relaxed text-fg-muted">{sub}</p>
 
-      <form
-        className="mt-8 space-y-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (busy) return;
-          void run(() =>
-            mode === 'in' ? signIn(email, password) : signUp(name, email, password)
-          );
-        }}
-      >
+      <form className="mt-8 space-y-4" onSubmit={submit}>
         {mode === 'up' && (
           <Field
             id="name"
             label="الاسم"
             type="text"
             autoComplete="name"
+            Icon={UserIcon}
             value={name}
             onChange={setName}
           />
@@ -68,21 +133,58 @@ export function SignInPanel({ title, subtitle }: { title: string; subtitle: stri
           type="email"
           autoComplete="email"
           dir="ltr"
+          Icon={MailIcon}
           value={email}
           onChange={setEmail}
           required
         />
 
-        <Field
-          id="password"
-          label="كلمة السر"
-          type="password"
-          autoComplete={mode === 'in' ? 'current-password' : 'new-password'}
-          dir="ltr"
-          value={password}
-          onChange={setPassword}
-          required
-        />
+        {mode !== 'reset' && (
+          <Field
+            id="password"
+            label="كلمة السر"
+            type={showPassword ? 'text' : 'password'}
+            autoComplete={mode === 'in' ? 'current-password' : 'new-password'}
+            dir="ltr"
+            Icon={LockIcon}
+            value={password}
+            onChange={setPassword}
+            required
+            minLength={mode === 'up' ? MIN_PASSWORD : undefined}
+            hint={
+              mode === 'up' ? `${MIN_PASSWORD} حروف على الأقل` : undefined
+            }
+            trailing={
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                // aria-pressed, not a label that flips: a screen reader should
+                // hear one control whose state changed, not two controls.
+                aria-pressed={showPassword}
+                aria-label="إظهار كلمة السر"
+                title={showPassword ? 'إخفاء كلمة السر' : 'إظهار كلمة السر'}
+                className="grid w-11 place-items-center text-fg-subtle transition-colors hover:text-fg"
+              >
+                {showPassword ? (
+                  <EyeOffIcon className="size-4" />
+                ) : (
+                  <EyeIcon className="size-4" />
+                )}
+              </button>
+            }
+            action={
+              mode === 'in' ? (
+                <button
+                  type="button"
+                  onClick={() => switchTo('reset')}
+                  className="text-xs font-semibold text-brand-ink underline-offset-4 hover:underline"
+                >
+                  نسيت كلمة السر؟
+                </button>
+              ) : undefined
+            }
+          />
+        )}
 
         {/* role=alert so a screen reader announces the failure instead of
             leaving the user to wonder why nothing happened. */}
@@ -95,44 +197,73 @@ export function SignInPanel({ title, subtitle }: { title: string; subtitle: stri
           </p>
         )}
 
+        {/* Not win-green: that colour is reserved for money everywhere else in
+            the product, and spending it on a form confirmation would blunt it
+            where it actually carries meaning. */}
+        {notice && (
+          <p
+            role="status"
+            className="rounded-md border border-border-strong bg-surface-high p-3 text-sm leading-relaxed"
+          >
+            {notice}
+          </p>
+        )}
+
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-60"
+          className="w-full rounded-md bg-brand px-5 py-3 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-60"
         >
-          {busy ? '...' : mode === 'in' ? 'تسجيل الدخول' : 'إنشاء حساب'}
+          {busy
+            ? '...'
+            : mode === 'in'
+              ? 'تسجيل الدخول'
+              : mode === 'up'
+                ? 'إنشاء حساب'
+                : 'ابعتلي الرابط'}
         </button>
       </form>
 
-      <div className="my-5 flex items-center gap-3">
-        <span className="h-px flex-1 bg-border-default" />
-        <span className="text-xs text-fg-subtle">أو</span>
-        <span className="h-px flex-1 bg-border-default" />
-      </div>
+      {mode === 'reset' ? (
+        <p className="mt-6 text-center text-sm text-fg-muted">
+          <button
+            type="button"
+            onClick={() => switchTo('in')}
+            className="font-semibold text-brand-ink underline-offset-4 hover:underline"
+          >
+            ارجع لتسجيل الدخول
+          </button>
+        </p>
+      ) : (
+        <>
+          <div className="my-5 flex items-center gap-3">
+            <span className="h-px flex-1 bg-border-default" />
+            <span className="text-xs text-fg-subtle">أو</span>
+            <span className="h-px flex-1 bg-border-default" />
+          </div>
 
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => void run(signInWithGoogle)}
-        className="flex w-full items-center justify-center gap-2 rounded-md border border-border-strong px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-surface-high disabled:opacity-60"
-      >
-        <GoogleMark />
-        المتابعة بحساب Google
-      </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void run(signInWithGoogle)}
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-border-strong px-5 py-3 text-sm font-semibold transition-colors hover:bg-surface-high disabled:opacity-60"
+          >
+            <GoogleMark />
+            المتابعة بحساب Google
+          </button>
 
-      <p className="mt-6 text-center text-sm text-fg-muted">
-        {mode === 'in' ? 'لسه معندكش حساب؟' : 'عندك حساب بالفعل؟'}{' '}
-        <button
-          type="button"
-          onClick={() => {
-            setMode(mode === 'in' ? 'up' : 'in');
-            setError(null);
-          }}
-          className="font-semibold text-brand-ink underline-offset-4 hover:underline"
-        >
-          {mode === 'in' ? 'اعمل واحد' : 'سجّل دخول'}
-        </button>
-      </p>
+          <p className="mt-6 text-center text-sm text-fg-muted">
+            {mode === 'in' ? 'لسه معندكش حساب؟' : 'عندك حساب بالفعل؟'}{' '}
+            <button
+              type="button"
+              onClick={() => switchTo(mode === 'in' ? 'up' : 'in')}
+              className="font-semibold text-brand-ink underline-offset-4 hover:underline"
+            >
+              {mode === 'in' ? 'اعمل واحد' : 'سجّل دخول'}
+            </button>
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -146,6 +277,11 @@ function Field({
   autoComplete,
   dir,
   required,
+  minLength,
+  hint,
+  Icon,
+  trailing,
+  action,
 }: {
   id: string;
   label: string;
@@ -155,22 +291,53 @@ function Field({
   autoComplete?: string;
   dir?: 'ltr';
   required?: boolean;
+  minLength?: number;
+  hint?: string;
+  Icon: (props: { className?: string }) => React.ReactElement;
+  /** A control inside the field, at the inline end — the reveal toggle. */
+  trailing?: React.ReactNode;
+  /** A link beside the label — «نسيت كلمة السر؟». */
+  action?: React.ReactNode;
 }) {
   return (
     <div>
-      <label htmlFor={id} className="text-sm font-semibold">
-        {label}
-      </label>
-      <input
-        id={id}
-        type={type}
-        dir={dir}
-        required={required}
-        autoComplete={autoComplete}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full rounded-md border border-border-default bg-surface-low px-3 py-2 text-start outline-none focus:border-brand-ink"
-      />
+      <div className="flex items-baseline justify-between gap-3">
+        <label htmlFor={id} className="text-sm font-semibold">
+          {label}
+        </label>
+        {action}
+      </div>
+
+      {/* focus-within on the wrapper, not :focus on the input: the border has
+          to light up even when the caret is in the input and the eye button is
+          the thing being hovered. */}
+      <div className="mt-2 flex items-center rounded-md border border-border-default bg-surface-low transition-colors focus-within:border-brand-ink">
+        <span
+          className="pointer-events-none grid w-11 shrink-0 place-items-center text-fg-subtle"
+          aria-hidden
+        >
+          <Icon className="size-4" />
+        </span>
+        <input
+          id={id}
+          type={type}
+          dir={dir}
+          required={required}
+          minLength={minLength}
+          autoComplete={autoComplete}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          aria-describedby={hint ? `${id}-hint` : undefined}
+          className="w-full bg-transparent py-3 pe-3 text-start outline-none"
+        />
+        {trailing}
+      </div>
+
+      {hint && (
+        <p id={`${id}-hint`} className="mt-1.5 text-xs text-fg-subtle">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

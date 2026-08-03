@@ -11,6 +11,7 @@ import {
   TagIcon,
   TimelineIcon,
 } from '@/components/icons';
+import { Card, IconChip, SectionHeader } from '@/components/section-header';
 
 /**
  * Everything the app actually does, one card each.
@@ -20,114 +21,139 @@ import {
  * partial, or coming soon; a marketing page that lists a feature the build
  * does not have is the fastest way to earn a one-star review that is entirely
  * deserved.
+ *
+ * GROUPED BY WHEN YOU USE THEM, not dumped in one wall.
+ * Twelve identical cards in a flat grid is a list the eye slides off — there is
+ * no entry point and no reason for any card to come before another. The three
+ * stages are also the section's own argument: the product claims to act BEFORE
+ * the trade as well as after it, and a reader can now see that claim in the
+ * shape of the section instead of having to take the headline's word for it.
  */
-const tools = [
+const groups = [
   {
-    Icon: CalculatorIcon,
-    title: 'حاسبة حجم المركز',
-    body: 'رأس مالك ونسبة المخاطرة بيحدّدوا أقصى عدد أسهم مسموح. أي كمية أعلى بتتعلّم بالأحمر لحظيًا.',
-    featured: true,
+    stage: 'قبل ما تشتري',
+    note: 'القرار بيتاخد هنا، مش بعدين',
+    tools: [
+      {
+        Icon: CalculatorIcon,
+        title: 'حاسبة حجم المركز',
+        body: 'رأس مالك ونسبة المخاطرة بيحدّدوا أقصى عدد أسهم مسموح. أي كمية أعلى بتتعلّم بالأحمر لحظيًا.',
+        featured: true,
+      },
+      {
+        Icon: ChecklistIcon,
+        title: 'تشيك ليست ما قبل الصفقة',
+        body: 'ستة بنود لازم تعدّيها: الاتجاه، الدعم والمقاومة، الحجم، المخاطرة، حجم المركز، الأخبار.',
+      },
+      {
+        Icon: EyeIcon,
+        title: 'قائمة مراقبة',
+        body: 'أسهم بتراقبها بسعر شراء مستهدف واستوب وأولوية، جاهزة تتحوّل لصفقة.',
+      },
+      {
+        Icon: SparkIcon,
+        title: 'قراءة التوصية من صورة',
+        body: 'ترفع صورة توصية، والتطبيق يستخرج منها الأسعار. بمفتاحك انت، ومقفولة من غيره.',
+      },
+    ],
   },
   {
-    Icon: GaugeIcon,
-    title: 'درجة الانضباط',
-    body: 'من 0 لـ 100 على خمس نقاط. بتقيس التزامك بالخطة، مش نتيجة الصفقة.',
+    stage: 'وانت ماسك الصفقة',
+    note: 'اللي بيحصل بين الدخول والخروج',
+    tools: [
+      {
+        Icon: CalendarIcon,
+        title: 'قرار اليوم',
+        body: 'شاشة بتقولك النهاردة عندك إيه: إيه اللي وصل لسعره، وإيه اللي محتاج قرار.',
+      },
+      {
+        Icon: ChartIcon,
+        title: 'أسعار الإغلاق',
+        body: 'آخر إغلاق للسهم من البورصة المصرية، وربح وخسارة غير محققة للمراكز المفتوحة.',
+      },
+      {
+        Icon: TimelineIcon,
+        title: 'تايم لاين لكل صفقة',
+        body: 'ملاحظات بتاريخها على طول عمر الصفقة — «حرّكت الاستوب»، «خرجت نص الكمية».',
+      },
+      {
+        Icon: ImageIcon,
+        title: 'صور الشارت',
+        body: 'ترفق لقطات بالصفقة، بتتنسخ لمجلد التطبيق ومبتترفعش لأي مكان.',
+      },
+    ],
   },
   {
-    Icon: ChecklistIcon,
-    title: 'تشيك ليست ما قبل الصفقة',
-    body: 'ستة بنود لازم تعدّيها: الاتجاه، الدعم والمقاومة، الحجم، المخاطرة، حجم المركز، الأخبار.',
-  },
-  {
-    Icon: ChartIcon,
-    title: 'منحنى رأس المال',
-    body: 'رأس مالك بيتحرك إزاي مع الوقت، نقطة لكل صفقة مقفولة.',
-  },
-  {
-    Icon: TagIcon,
-    title: 'أداء حسب التصنيف والمصدر',
-    body: 'بريك أوت ولا سوينج بيكسب أكتر؟ ومين رشّح لك الصفقة، وتوصياته بتكسب فعلًا ولا لأ.',
-  },
-  {
-    Icon: EyeIcon,
-    title: 'قائمة مراقبة',
-    body: 'أسهم بتراقبها بسعر شراء مستهدف واستوب وأولوية، جاهزة تتحوّل لصفقة.',
-  },
-  {
-    Icon: CalendarIcon,
-    title: 'قرار اليوم',
-    body: 'شاشة بتقولك النهاردة عندك إيه: إيه اللي وصل لسعره، وإيه اللي محتاج قرار.',
-  },
-  {
-    Icon: TimelineIcon,
-    title: 'تايم لاين لكل صفقة',
-    body: 'ملاحظات بتاريخها على طول عمر الصفقة — «حرّكت الاستوب»، «خرجت نص الكمية».',
-  },
-  {
-    Icon: ImageIcon,
-    title: 'صور الشارت',
-    body: 'ترفق لقطات بالصفقة، بتتنسخ لمجلد التطبيق ومبتترفعش لأي مكان.',
-  },
-  {
-    Icon: ChartIcon,
-    title: 'أسعار الإغلاق',
-    body: 'آخر إغلاق للسهم من البورصة المصرية، وربح وخسارة غير محققة للمراكز المفتوحة.',
-  },
-  {
-    Icon: SparkIcon,
-    title: 'قراءة التوصية من صورة',
-    body: 'ترفع صورة توصية، والتطبيق يستخرج منها الأسعار. بمفتاحك انت، ومقفولة من غيره.',
-  },
-  {
-    Icon: CloudIcon,
-    title: 'صفقاتك بترجعلك',
-    body: 'محفوظة على جهازك وعلى حسابك. غيّرت التليفون؟ سجّل دخول ودفترك يرجع زي ما هو.',
+    stage: 'بعد ما تقفل',
+    note: 'الجزء اللي بيخلّيك تتعلّم',
+    tools: [
+      {
+        Icon: GaugeIcon,
+        title: 'درجة الانضباط',
+        body: 'من 0 لـ 100 على خمس نقاط. بتقيس التزامك بالخطة، مش نتيجة الصفقة.',
+      },
+      {
+        Icon: ChartIcon,
+        title: 'منحنى رأس المال',
+        body: 'رأس مالك بيتحرك إزاي مع الوقت، نقطة لكل صفقة مقفولة.',
+      },
+      {
+        Icon: TagIcon,
+        title: 'أداء حسب التصنيف والمصدر',
+        body: 'بريك أوت ولا سوينج بيكسب أكتر؟ ومين رشّح لك الصفقة، وتوصياته بتكسب فعلًا ولا لأ.',
+      },
+      {
+        Icon: CloudIcon,
+        title: 'صفقاتك بترجعلك',
+        body: 'محفوظة على جهازك وعلى حسابك. غيّرت التليفون؟ سجّل دخول ودفترك يرجع زي ما هو.',
+      },
+    ],
   },
 ];
 
 export function Tools() {
   return (
     <section id="tools" className="border-b border-border-default scroll-mt-20">
-      <div className="mx-auto max-w-6xl px-5 py-16 lg:py-24">
-        <div className="max-w-3xl">
-          <p className="text-sm font-semibold text-brand-ink">الأدوات</p>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-            اتنعشر أداة، كلها بتخدم سؤال واحد.
-          </h2>
-          <p className="mt-5 text-lg text-fg-muted">
-            «الصفقة دي كانت قرار صح ولا لأ؟» — كل حاجة في التطبيق موجودة عشان
-            تجاوب على ده، قبل الصفقة وبعدها.
-          </p>
-        </div>
+      <div className="mx-auto max-w-6xl px-5 py-20 lg:py-28">
+        <SectionHeader
+          eyebrow="الأدوات"
+          title="12 أداة، كلها بتخدم سؤال واحد."
+          lead="«الصفقة دي كانت قرار صح ولا لأ؟» — كل حاجة في التطبيق موجودة عشان تجاوب على ده، قبل الصفقة وبعدها."
+        />
 
-        {/* One-pixel gaps over a border-coloured background: the cards read as
-            a single ruled grid rather than twelve floating boxes, which is what
-            keeps a list this long from looking like a feature dump. */}
-        <ul className="mt-12 grid gap-px overflow-hidden rounded-lg border border-border-default bg-border-default sm:grid-cols-2 lg:grid-cols-3">
-          {/* No row/col span on the featured card. Twelve items divide evenly
-              into both the 2- and 3-column layouts; a spanning cell needs
-              thirteen and leaves a hole in the last row with the grid's own
-              background showing through. The lime chip carries the emphasis
-              instead, and costs no cells. */}
-          {tools.map(({ Icon, title, body, featured }) => (
-            <li
-              key={title}
-              className="group bg-surface p-6 transition-colors hover:bg-surface-low"
-            >
-              <span
-                className={`inline-grid size-10 place-items-center rounded-md ${
-                  featured
-                    ? 'bg-brand text-on-brand'
-                    : 'bg-surface-high text-fg-muted transition-colors group-hover:text-brand-ink'
-                }`}
-              >
-                <Icon />
-              </span>
-              <h3 className="mt-4 font-bold">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-fg-muted">{body}</p>
-            </li>
+        <div className="mt-16 space-y-14">
+          {groups.map(({ stage, note, tools }) => (
+            <div key={stage}>
+              {/* A rule that runs off both ends of the label, so the stage
+                  reads as a divider in a sequence rather than as a third
+                  heading level competing with the section title. */}
+              <div className="flex items-center gap-4">
+                <h3 className="shrink-0 text-lg font-bold">{stage}</h3>
+                <span className="text-sm text-fg-subtle">{note}</span>
+                <span
+                  className="h-px flex-1 bg-border-default"
+                  aria-hidden
+                />
+              </div>
+
+              <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {tools.map(({ Icon, title, body, featured }) => (
+                  <li key={title}>
+                    <Card className="h-full">
+                      <IconChip featured={featured}>
+                        <Icon />
+                      </IconChip>
+                      <h4 className="mt-4 font-bold">{title}</h4>
+                      <p className="mt-2 text-sm leading-relaxed text-fg-muted">
+                        {body}
+                      </p>
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
     </section>
   );

@@ -64,16 +64,18 @@ flutter:
   assets:
     - assets/logo.png
 
-  # Cairo is bundled rather than pulled through google_fonts, which downloads
-  # at runtime — that would break the app's offline guarantee and leave the
-  # first launch without a font until it had network. Instanced from the
-  # upstream variable font at three weights; OFL licence ships alongside.
+  # IBM Plex Sans Arabic is bundled rather than pulled through google_fonts,
+  # which downloads at runtime — that would break the app's offline guarantee
+  # and leave the first launch without a font until it had network. Three static
+  # weights from the upstream family; OFL licence ships alongside.
   fonts:
-    - family: Cairo
+    # Same three weights the site loads from the same TTFs (site/app/layout.tsx),
+    # so type on the phone and type in the browser are identical.
+    - family: IBMPlexSansArabic
       fonts:
-        - asset: assets/fonts/Cairo-400.ttf
+        - asset: assets/fonts/IBMPlexSansArabic-400.ttf
           weight: 400
-        - asset: assets/fonts/Cairo-600.ttf
+        - asset: assets/fonts/IBMPlexSansArabic-600.ttf
           weight: 600
-        - asset: assets/fonts/Cairo-700.ttf
+        - asset: assets/fonts/IBMPlexSansArabic-700.ttf
           weight: 700

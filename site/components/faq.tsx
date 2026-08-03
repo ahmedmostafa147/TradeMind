@@ -1,3 +1,5 @@
+import { SectionHeader } from '@/components/section-header';
+
 /**
  * Native <details>/<summary>, not a JS accordion: it is keyboard accessible,
  * screen-reader correct, findable by the browser's own in-page search, and
@@ -41,18 +43,23 @@ export const faq = [
 export function Faq() {
   return (
     <section id="faq" className="border-b border-border-default scroll-mt-20">
-      <div className="mx-auto max-w-3xl px-5 py-16 lg:py-24">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          أسئلة شائعة
-        </h2>
+      <div className="mx-auto max-w-3xl px-5 py-20 lg:py-28">
+        <SectionHeader eyebrow="أسئلة" title="أسئلة شائعة" />
 
-        <div className="mt-10 divide-y divide-border-default border-y border-border-default">
+        {/* Each question is its own card rather than a row between hairlines.
+            A ruled list of eight makes the open one look like every closed one;
+            a card that lifts and brightens when it opens shows which question
+            is being answered without the reader having to find the boundary. */}
+        <div className="mt-12 space-y-3">
           {faq.map((item) => (
-            <details key={item.q} className="group py-5">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold [&::-webkit-details-marker]:hidden">
+            <details
+              key={item.q}
+              className="group rounded-lg border border-border-default bg-surface transition-colors open:bg-surface-low hover:border-border-strong"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold [&::-webkit-details-marker]:hidden">
                 {item.q}
                 <span
-                  className="grid size-6 shrink-0 place-items-center rounded-full border border-border-default text-fg-muted transition-transform group-open:rotate-45"
+                  className="grid size-7 shrink-0 place-items-center rounded-full border border-border-default bg-surface text-fg-muted transition-transform duration-200 group-open:rotate-45"
                   aria-hidden
                 >
                   <svg
@@ -61,13 +68,15 @@ export function Faq() {
                     stroke="currentColor"
                     strokeWidth="2.4"
                     strokeLinecap="round"
-                    className="size-3"
+                    className="size-3.5"
                   >
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 </span>
               </summary>
-              <p className="mt-3 pe-10 text-fg-muted">{item.a}</p>
+              <p className="border-t border-border-default px-5 py-4 leading-relaxed text-fg-muted">
+                {item.a}
+              </p>
             </details>
           ))}
         </div>

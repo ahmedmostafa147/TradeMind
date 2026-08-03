@@ -1,7 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { DownloadButton } from '@/components/download-button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { nav, site } from '@/lib/site';
 
@@ -49,7 +48,22 @@ export function SiteHeader() {
 
         <div className="me-auto flex items-center gap-2">
           <ThemeToggle />
-          <DownloadButton className="hidden sm:inline-flex" />
+          {/* The web journal is the one surface that works today, and until
+              this link existed the landing page never pointed at it — a visitor
+              could read the whole page without learning the product was
+              reachable from the browser they were already in. */}
+          <Link
+            href="/dashboard"
+            className="rounded-md px-3 py-2 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
+          >
+            سجّل دخول
+          </Link>
+          <Link
+            href="/dashboard#signup"
+            className="hidden rounded-md bg-brand px-4 py-2 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90 sm:inline-flex"
+          >
+            ابدأ مجانًا
+          </Link>
         </div>
       </div>
     </header>

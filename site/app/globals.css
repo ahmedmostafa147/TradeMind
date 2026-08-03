@@ -54,7 +54,7 @@
   --color-breakeven-surface: var(--breakeven-surface);
   --color-breakeven-border: var(--breakeven-border);
 
-  --font-sans: var(--font-cairo), system-ui, 'Segoe UI', Tahoma, sans-serif;
+  --font-sans: var(--font-plex-arabic), system-ui, 'Segoe UI', Tahoma, sans-serif;
 
   /* Corner radii are a hierarchy, not one value applied everywhere: chips and
      inputs sit tighter than cards, cards tighter than sheets. */

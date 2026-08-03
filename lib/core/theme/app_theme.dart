@@ -9,7 +9,7 @@ import 'result_colors.dart';
 class AppTheme {
   const AppTheme._();
 
-  static const String _fontFamily = 'Cairo';
+  static const String _fontFamily = 'IBMPlexSansArabic';
 
   static ThemeData light() => _buildTheme(Brightness.light);
   static ThemeData dark() => _buildTheme(Brightness.dark);

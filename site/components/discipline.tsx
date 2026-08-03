@@ -1,3 +1,4 @@
+import { SectionHeader } from '@/components/section-header';
 import { TradeCardMock, type TradeMock } from '@/components/trade-card-mock';
 
 /**
@@ -51,22 +52,23 @@ const overRiskTrade: TradeMock = {
 export function Discipline() {
   return (
     <section id="discipline" className="border-b border-border-default scroll-mt-20">
-      <div className="mx-auto max-w-6xl px-5 py-16 lg:py-24">
-        <div className="max-w-3xl">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            التطبيق بيقيس التزامك، مش حظك.
-          </h2>
-          <p className="mt-6 text-lg text-fg-muted">
-            كل صفقة بتاخد درجة من 0 لـ 100 على خمس نقاط، كل واحدة بـ{' '}
-            <span className="num">20</span>. الدرجة دي مالهاش علاقة بالربح
-            والخسارة: صفقة خسرانة اتعملت بالأصول بتاخد{' '}
-            <span className="num">100</span>، وصفقة كسبانة اتاخدت بمزاج بتاخد{' '}
-            <span className="num">20</span>. وده المقصود — الدرجة بتقيس الشغل
-            اللي انت بتتحكم فيه.
-          </p>
-        </div>
+      <div className="mx-auto max-w-6xl px-5 py-20 lg:py-28">
+        <SectionHeader
+          eyebrow="الانضباط"
+          title="التطبيق بيقيس التزامك، مش حظك."
+          lead={
+            <>
+              كل صفقة بتاخد درجة من 0 لـ 100 على خمس نقاط، كل واحدة بـ{' '}
+              <span className="num">20</span>. الدرجة دي مالهاش علاقة بالربح
+              والخسارة: صفقة خسرانة اتعملت بالأصول بتاخد{' '}
+              <span className="num">100</span>، وصفقة كسبانة اتاخدت بمزاج بتاخد{' '}
+              <span className="num">20</span>. وده المقصود — الدرجة بتقيس الشغل
+              اللي انت بتتحكم فيه.
+            </>
+          }
+        />
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-2">
+        <div className="mt-14 grid gap-5 lg:grid-cols-2">
           <div className="rounded-lg border border-border-default bg-surface p-6">
             <div className="flex items-end justify-between gap-4 border-b border-border-default pb-5">
               <div>

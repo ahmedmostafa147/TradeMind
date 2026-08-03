@@ -1,6 +1,12 @@
+import Link from 'next/link';
+
 import { DownloadButton } from '@/components/download-button';
-import { ArrowDownIcon, CheckIcon } from '@/components/icons';
+import { CheckIcon } from '@/components/icons';
+import { StockChart } from '@/components/stock-chart';
 import { TradeCardMock, type TradeMock } from '@/components/trade-card-mock';
+
+/** Declared here so the chart takes a plain number rather than the card's nullable field. */
+const heroTakeProfit = 88.0;
 
 /**
  * A closed winner, shown at the app's own default settings so the risk percent
@@ -15,77 +21,119 @@ const heroTrade: TradeMock = {
   entryDate: new Date(2026, 2, 5),
   entryPrice: 78.4,
   stopPrice: 74.5,
-  takeProfitPrice: 88.0,
+  takeProfitPrice: heroTakeProfit,
   quantity: 300,
   exitPrice: 86.2,
 };
 
+/**
+ * The closes behind the chart. Index 3 is the entry and index 17 the exit, so
+ * both markers land on the trade's own prices rather than near them.
+ *
+ * The dip at index 5 (75.90) matters: it is the trade going against the
+ * position without touching the stop at 74.50, which is the entire reason a
+ * stop is placed before the entry instead of decided in the moment.
+ */
+const closes = [
+  76.1, 75.4, 76.8, 78.4, 77.2, 75.9, 76.6, 78.1, 79.5, 80.2, 79.1, 81.4, 82.9,
+  82.1, 83.6, 85.0, 84.4, 86.2,
+];
+
+const promises = ['مجاني بالكامل', 'بياناتك محفوظة ليك', 'من غير إعلانات'];
+
 export function Hero() {
   return (
     <section className="border-b border-border-default">
-      <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:py-24">
-        <div>
-          <p className="text-sm font-semibold text-brand-ink">
-            دفتر صفقات البورصة المصرية
-          </p>
+      <div className="mx-auto max-w-3xl px-5 pt-16 text-center lg:pt-24">
+        <p className="text-sm font-semibold text-brand-ink">
+          دفتر صفقات البورصة المصرية
+        </p>
 
-          <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-            فاكر اشتريت السهم ده ليه؟
-          </h1>
+        <h1 className="mt-5 text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+          فاكر اشتريت السهم ده ليه؟
+        </h1>
 
-          <p className="mt-6 max-w-xl text-lg text-fg-muted">
-            أغلب الخسائر مش سببها صفقة وحشة، سببها إنك مش فاكر ليه دخلت أصلًا.
-            رادار بيخلّي لكل صفقة سبب مكتوب، وحجم محسوب قبل ما تشتري، وسجل
-            ترجعله بعد شهور تعرف منه غلطت فين — وتبطّل تكرّر نفس الغلطة.
-          </p>
+        <p className="mx-auto mt-6 max-w-2xl text-lg text-fg-muted">
+          أغلب الخسائر مش سببها صفقة وحشة، سببها إنك مش فاكر ليه دخلت أصلًا.
+          رادار بيخلّي لكل صفقة سبب مكتوب، وحجم محسوب قبل ما تشتري، وسجل ترجعله
+          بعد شهور تعرف منه غلطت فين — وتبطّل تكرّر نفس الغلطة.
+        </p>
 
-          {/* The anchor leads, not the store button. Until the listing is live
-              the only thing here that actually does something is this link, and
-              the filled brand treatment belongs to whatever works. Once
-              site.playStoreUrl is set, DownloadButton becomes the filled brand
-              button and this should drop back to the outline style. */}
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <a
-              href="#tools"
-              className="inline-flex items-center justify-center gap-2 rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90"
-            >
-              شوف الاتنعشر أداة
-              <ArrowDownIcon className="size-4" />
-            </a>
-            <a
-              href="#why"
-              className="inline-flex items-center justify-center rounded-md border border-border-strong px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-surface-high"
-            >
-              المشكلة اللي بيحلّها
-            </a>
-            <DownloadButton />
-          </div>
-
-          <ul className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-fg-muted">
-            {['مجاني بالكامل', 'بياناتك محفوظة ليك', 'من غير إعلانات'].map(
-              (item) => (
-                <li key={item} className="flex items-center gap-1.5">
-                  {/* Brand, not win-green. These are product claims, not a
-                      profitable trade, and green here would spend the one
-                      colour the data surfaces reserve for money. */}
-                  <span className="text-brand-ink">
-                    <CheckIcon className="size-3.5 shrink-0" />
-                  </span>
-                  {item}
-                </li>
-              )
-            )}
-          </ul>
+        {/* The two account actions lead, because they are the two things on
+            this page that actually work today: the web journal is live and the
+            Play listing is not. DownloadButton renders itself as «قريبًا» while
+            site.playStoreUrl is null, so it sits third deliberately. */}
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href="/dashboard#signup"
+            className="inline-flex items-center justify-center rounded-md bg-brand px-6 py-3 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90"
+          >
+            ابدأ مجانًا
+          </Link>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center justify-center rounded-md border border-border-strong px-6 py-3 text-sm font-semibold transition-colors hover:bg-surface-high"
+          >
+            سجّل دخولك
+          </Link>
+          <DownloadButton />
         </div>
 
-        {/* Decorative in the accessibility sense: the card repeats information
-            the surrounding copy already carries, and reading five derived
-            figures aloud would be noise rather than content. */}
-        <div className="relative" aria-hidden>
-          <TradeCardMock trade={heroTrade} capital={100000} maxRiskPercent={0.02} />
-          <p className="mt-3 text-center text-xs text-fg-subtle">
-            صف صفقة حقيقي من التطبيق — الأرقام كلها محسوبة من الخطة نفسها
-          </p>
+        {/* Says what the browser CAN do, not what it is "just as good as".
+            The web dashboard reads the journal; it does not write to it yet —
+            customer-dashboard.tsx has no create or edit path. Claiming parity
+            with the app here would be a promise the build cannot keep, and the
+            first visitor to sign up and look for an "add trade" button would
+            find out inside ten seconds. */}
+        <p className="mt-5 text-sm text-fg-muted">
+          مش مستني التطبيق — سجّل دخول دلوقتي وتابع دفترك من أي متصفح.
+        </p>
+
+        <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-fg-muted">
+          {promises.map((item) => (
+            <li key={item} className="flex items-center gap-1.5">
+              {/* Brand, not win-green. These are product claims, not a
+                  profitable trade, and green here would spend the one colour
+                  the data surfaces reserve for money. */}
+              <span className="text-brand-ink">
+                <CheckIcon className="size-3.5 shrink-0" />
+              </span>
+              {item}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* One framed block, not two floating visuals: the chart and the row
+          below it are the same trade, and separating them into sibling cards
+          would ask the reader to work out that they belong together. */}
+      <div className="mx-auto max-w-5xl px-5 pb-16 pt-14 lg:pb-24">
+        <div className="rounded-lg border border-border-default bg-surface-low p-5 sm:p-7">
+          <StockChart
+            ticker={heroTrade.ticker}
+            closes={closes}
+            entryIndex={3}
+            exitIndex={17}
+            entryPrice={heroTrade.entryPrice}
+            stopPrice={heroTrade.stopPrice}
+            takeProfitPrice={heroTakeProfit}
+          />
+
+          <div className="mt-7 border-t border-border-default pt-7">
+            <p className="mb-4 text-center text-xs font-semibold text-fg-muted">
+              نفس الصفقة، زي ما بتتسجّل في التطبيق
+            </p>
+            {/* Decorative in the accessibility sense: the card repeats
+                information the chart's own label already carries, and reading
+                five derived figures aloud would be noise rather than content. */}
+            <div className="mx-auto max-w-xl" aria-hidden>
+              <TradeCardMock
+                trade={heroTrade}
+                capital={100000}
+                maxRiskPercent={0.02}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -34,6 +34,17 @@ export type Trade = {
   completedChecklistItems: string[];
   source: string | null;
   takeProfitPrice: number | null;
+  /**
+   * READ-ONLY here, and never written back.
+   *
+   * These are absolute paths into the phone's documents directory — worthless
+   * to a browser, which cannot open one. They are decoded anyway because the
+   * discipline score awards 20 points for "a chart screenshot is attached", and
+   * without the count this surface would score every trade 20 points below what
+   * the app scores it. {@link encodeTrade} omits the field so merge preserves
+   * whatever the phone put there.
+   */
+  screenshotPaths: string[];
 };
 
 const STATUSES: TradeStatus[] = ['planned', 'open', 'closed', 'cancelled'];
@@ -86,7 +97,62 @@ export function decodeTrade(data: Record<string, unknown>): Trade | null {
     completedChecklistItems: toStringList(data.completedChecklistItems),
     source: typeof data.source === 'string' ? data.source : null,
     takeProfitPrice: toNumber(data.takeProfitPrice),
+    screenshotPaths: toStringList(data.screenshotPaths),
   };
+}
+
+/**
+ * The inverse of {@link decodeTrade}, matching SyncCodec.tradeToMap field for
+ * field so a trade written here is indistinguishable from one the app wrote.
+ *
+ * THREE RULES THAT ARE NOT NEGOTIABLE, because the app reads these documents:
+ *
+ *   1. Dates are ISO-8601 STRINGS, never Firestore Timestamps. The app's codec
+ *      does `value is String ? DateTime.tryParse(value) : null` — hand it a
+ *      Timestamp and the date silently becomes null, which for `entryDate`
+ *      means every trade written from the web jumps to "now" on the phone.
+ *   2. `status` is the RESOLVED name, so a record round-trips as what it
+ *      behaves as rather than as an absent field.
+ *   3. `screenshotPaths` and `timeline` are omitted, never written empty. They
+ *      hold device-local data the browser cannot produce, and every write goes
+ *      out with merge:true — so omitting preserves whatever the phone put
+ *      there, while writing `[]` would erase a user's chart screenshots from
+ *      the web without ever showing them.
+ */
+export function encodeTrade(trade: Trade): Record<string, unknown> {
+  return {
+    id: trade.id,
+    entryDate: trade.entryDate.toISOString(),
+    ticker: trade.ticker,
+    reason: trade.reason,
+    entryPrice: trade.entryPrice,
+    stopPrice: trade.stopPrice,
+    quantity: trade.quantity,
+    exitPrice: trade.exitPrice,
+    exitDate: trade.exitDate ? trade.exitDate.toISOString() : null,
+    notes: trade.notes,
+    status: trade.status,
+    tags: trade.tags,
+    isFavorite: trade.isFavorite,
+    completedChecklistItems: trade.completedChecklistItems,
+    source: trade.source,
+    takeProfitPrice: trade.takeProfitPrice,
+  };
+}
+
+/**
+ * A fresh trade id.
+ *
+ * `crypto.randomUUID` needs a secure context, which every page here is (the
+ * site is HTTPS-only and localhost counts) — but the fallback keeps a trade
+ * from being unsavable on an older browser rather than throwing at the moment
+ * the user hits save.
+ */
+export function newTradeId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  return `t-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export type TradeResult = 'win' | 'loss' | 'breakeven' | 'open';

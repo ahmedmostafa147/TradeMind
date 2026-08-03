@@ -4,6 +4,7 @@ import {
   GoogleAuthProvider,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -44,6 +45,14 @@ type AuthActions = {
   signUp: (name: string, email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  /**
+   * Sends the reset link.
+   *
+   * Until this existed a user who forgot their password had no way back into
+   * their own journal from the web at all — the panel offered sign-in, sign-up
+   * and Google, and nothing else.
+   */
+  resetPassword: (email: string) => Promise<void>;
 };
 
 const AuthContext = createContext<(AuthState & AuthActions) | null>(null);
@@ -113,6 +122,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signOut(firebaseAuth());
   }, []);
 
+  const resetPassword = useCallback(async (email: string) => {
+    await sendPasswordResetEmail(firebaseAuth(), email.trim());
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -123,8 +136,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signUp,
       signInWithGoogle,
       logout,
+      resetPassword,
     }),
-    [user, loading, isAdmin, adminChecked, signIn, signUp, signInWithGoogle, logout]
+    [
+      user,
+      loading,
+      isAdmin,
+      adminChecked,
+      signIn,
+      signUp,
+      signInWithGoogle,
+      logout,
+      resetPassword,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -156,6 +180,20 @@ export function authErrorMessage(error: unknown): string {
       return 'البريد ده مسجّل بالفعل. جرّب تسجيل الدخول.';
     case 'auth/weak-password':
       return 'كلمة السر ضعيفة — خليها 6 حروف على الأقل.';
+    case 'auth/missing-email':
+      return 'اكتب البريد الإلكتروني الأول.';
+    // Raised when an address was created through Google and has no password to
+    // sign in with. Telling the user to "try again" here would be a dead end.
+    case 'auth/account-exists-with-different-credential':
+      return 'البريد ده متسجّل بحساب Google. استخدم زرار «المتابعة بحساب Google».';
+    // The popup flow is the one place a browser setting, not the user, is at
+    // fault — so it gets its own message instead of the generic one.
+    case 'auth/popup-blocked':
+      return 'المتصفح منع النافذة المنبثقة. اسمح بيها وجرّب تاني.';
+    case 'auth/unauthorized-domain':
+      return 'الدومين ده مش مصرّح له في إعدادات Firebase.';
+    case 'auth/operation-not-allowed':
+      return 'طريقة الدخول دي مش مفعّلة في إعدادات المشروع.';
     case 'auth/too-many-requests':
       return 'محاولات كتير. استنى شوية وجرّب تاني.';
     case 'auth/popup-closed-by-user':

@@ -135,6 +135,14 @@ class AuthRepository extends Notifier<UserAccount> {
   /// the data and strand it on the server permanently. If the data delete
   /// throws, the account survives and the user can retry.
   ///
+  /// "Cloud data" is BOTH halves: the `trades` and `watchlist` subcollections,
+  /// and the `users/{uid}` profile document that holds the email, the display
+  /// name and the activity counters. The profile used to be left behind — the
+  /// account vanished, the journal vanished, and a document with the user's
+  /// email stayed in Firestore forever, still listed in the operator's
+  /// dashboard. That contradicted section 6 of the published privacy policy,
+  /// the site's own /delete page, and Play's account-deletion requirement.
+  ///
   /// [wipeLocalJournal] clears the on-device boxes as well. It is the caller's
   /// explicit choice, defaulted off: the local journal is not part of the
   /// account, may predate it, and is the user's only copy once the cloud one
@@ -146,6 +154,7 @@ class AuthRepository extends Notifier<UserAccount> {
     final userId = state.id;
 
     await FirestoreSyncService.deleteAllData(userId);
+    await UserProfileService.delete(userId);
     await FirebaseAuthService.deleteAccount();
 
     // Only after the identity is actually gone — an early wipe would destroy

@@ -5,22 +5,40 @@ import { site } from '@/lib/site';
 import './globals.css';
 
 /**
- * Cairo is self-hosted rather than pulled from Google Fonts, for the same
- * reason pubspec.yaml bundles it instead of using google_fonts: a runtime font
- * download is a third-party request on every visit, and the first paint would
- * land without a font until it resolved. `display: swap` keeps text readable
- * while the face loads instead of blocking on it.
+ * IBM Plex Sans Arabic, self-hosted rather than pulled from Google Fonts, for
+ * the same reason pubspec.yaml bundles it instead of using google_fonts: a
+ * runtime font download is a third-party request on every visit, and the first
+ * paint would land without a font until it resolved. It is also what the CSP in
+ * firebase.json requires — `font-src 'self'` rejects a Google Fonts CDN
+ * outright. `display: swap` keeps text readable while the face loads instead of
+ * blocking on it.
+ *
+ * The app bundles the same three weights from the same TTFs (pubspec.yaml), so
+ * a screenshot of the phone and a screenshot of the browser set type
+ * identically — the same reason design/palettes.json feeds both.
  */
-const cairo = localFont({
+const plex = localFont({
   src: [
-    { path: '../assets/fonts/Cairo-400.woff2', weight: '400', style: 'normal' },
-    { path: '../assets/fonts/Cairo-600.woff2', weight: '600', style: 'normal' },
-    { path: '../assets/fonts/Cairo-700.woff2', weight: '700', style: 'normal' },
+    {
+      path: '../assets/fonts/IBMPlexSansArabic-400.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../assets/fonts/IBMPlexSansArabic-600.woff2',
+      weight: '600',
+      style: 'normal',
+    },
+    {
+      path: '../assets/fonts/IBMPlexSansArabic-700.woff2',
+      weight: '700',
+      style: 'normal',
+    },
   ],
-  variable: '--font-cairo',
+  variable: '--font-plex-arabic',
   display: 'swap',
   // Arabic text falls back to the system UI font, whose metrics differ enough
-  // from Cairo's that an unadjusted swap visibly reflows the page.
+  // from Plex's that an unadjusted swap visibly reflows the page.
   adjustFontFallback: false,
   fallback: ['system-ui', 'Segoe UI', 'Tahoma', 'sans-serif'],
 });
@@ -98,7 +116,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ar" dir="rtl" className={cairo.variable} suppressHydrationWarning>
+    <html lang="ar" dir="rtl" className={plex.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

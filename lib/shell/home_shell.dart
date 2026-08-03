@@ -3,11 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../calculator/calculator_screen.dart';
 import '../features/sync/providers/sync_provider.dart';
+import '../features/updates/providers/posts_providers.dart';
+import '../features/updates/screens/updates_screen.dart';
 import '../settings/settings_screen.dart';
 import 'trades_hub_screen.dart';
 
-/// Three destinations, each a different job: look at my trades, plan a new
-/// one, change my settings.
+/// Four destinations, each a different job: look at my trades, plan a new one,
+/// read what was published, change my settings.
+///
+/// «المستجدات» is the fourth and it earns the slot on the same test as the
+/// others — it is a different JOB, not the same trades shown another way, which
+/// is exactly what got three of the original five merged into [TradesHubScreen]
+/// below. It is also the only way anybody sees an announcement: the admin
+/// console has published to `announcements` and `signals` since it was built,
+/// and until this screen existed nothing anywhere read either collection.
 ///
 /// It was five, and three of those five — «قرار اليوم», «سجل الصفقات» and
 /// «لوحة التحكم» — were the same trades shown three ways. Sitting side by side
@@ -37,6 +46,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     // no trade was ever uploaded.
     ref.watch(syncControllerProvider);
 
+    final unseen = ref.watch(unseenPostsProvider);
+
     return Scaffold(
       // IndexedStack, not a rebuild-on-switch: it preserves scroll position and
       // half-typed calculator input across tab changes.
@@ -45,24 +56,37 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         children: const [
           TradesHubScreen(),
           CalculatorScreen(),
+          UpdatesScreen(),
           SettingsScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),
             selectedIcon: Icon(Icons.receipt_long),
             label: 'صفقاتي',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.calculate_outlined),
             selectedIcon: Icon(Icons.calculate),
             label: 'حاسبة الصفقة',
           ),
           NavigationDestination(
+            // The count rides on the unselected icon only. Once the tab is
+            // open the screen marks everything seen, so a badge over the
+            // selected icon would be stating something already false.
+            icon: Badge(
+              isLabelVisible: unseen > 0,
+              label: Text('$unseen'),
+              child: const Icon(Icons.campaign_outlined),
+            ),
+            selectedIcon: const Icon(Icons.campaign),
+            label: 'المستجدات',
+          ),
+          const NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
             label: 'الإعدادات',

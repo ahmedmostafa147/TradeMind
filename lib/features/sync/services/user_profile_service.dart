@@ -64,6 +64,24 @@ class UserProfileService {
     }
   }
 
+  /// Erases the profile document.
+  ///
+  /// **This one THROWS on failure**, unlike every other method here, and the
+  /// difference is deliberate. Everywhere else a swallowed error costs the
+  /// operator a counter. Here it would leave a user who asked to be forgotten
+  /// with their email, display name and activity history still on the server —
+  /// while the app told them the account was gone, and after the identity that
+  /// was the only credential able to reach the document had been deleted. There
+  /// is no path back from that: `users/{uid}` is readable and writable only by
+  /// its owner, and its owner no longer exists.
+  ///
+  /// [AuthRepository.deleteAccount] therefore calls this BEFORE deleting the
+  /// identity, and a throw keeps the account alive so the user can retry.
+  static Future<void> delete(String userId) async {
+    if (_rejects(userId)) return;
+    await _doc(userId).delete();
+  }
+
   /// Updates the activity counters the dashboard sorts and filters on.
   ///
   /// Counts, never content. This is what lets the operator tell an active user

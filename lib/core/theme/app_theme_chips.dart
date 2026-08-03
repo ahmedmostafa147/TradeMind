@@ -6,7 +6,7 @@ import 'palette_scheme.dart';
 class AppThemeChips {
   const AppThemeChips._();
 
-  static const String _fontFamily = 'Cairo';
+  static const String _fontFamily = 'IBMPlexSansArabic';
 
   static ChipThemeData chip(PaletteScheme p) => ChipThemeData(
         backgroundColor: p.surfaceLow,

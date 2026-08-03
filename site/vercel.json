@@ -18,9 +18,9 @@
           "value": "max-age=63072000; includeSubDomains; preload"
         },
         {
-          "//": "frame-ancestors replaces X-Frame-Options; script-src allows inline because the theme script must run before first paint to prevent a white flash, and the JSON-LD block is inline by definition. There is no user input, no query-param rendering and no third-party script on this site, so the inline allowance costs nothing real.",
+          "//": "frame-ancestors replaces X-Frame-Options; script-src allows inline because the theme script must run before first paint to prevent a white flash, and the JSON-LD block is inline by definition. THE GOOGLE HOSTS ARE NOT OPTIONAL: this policy was 'self' everywhere and it silently broke the whole dashboard — connect-src governs the identitytoolkit/securetoken/firestore endpoints, frame-src governs the __/auth/handler iframe signInWithPopup opens, and script-src governs apis.google.com. Sign-in failed with a generic 'try again' and no clue, because a CSP block surfaces as an opaque auth error. Each allowance is pinned to an exact Google host rather than widened to https:. If sign-in or data loading ever breaks again, read the browser console for a CSP violation first.",
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com; frame-src https://*.firebaseapp.com https://accounts.google.com; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
         }
       ]
     },

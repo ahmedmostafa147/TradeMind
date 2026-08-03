@@ -1,5 +1,6 @@
 import { DownloadButton } from '@/components/download-button';
 import { BanIcon, CheckIcon, ShieldIcon } from '@/components/icons';
+import { SectionHeader } from '@/components/section-header';
 
 /**
  * There is one tier, and it costs nothing.
@@ -12,7 +13,7 @@ import { BanIcon, CheckIcon, ShieldIcon } from '@/components/icons';
  * marketing.
  */
 const included = [
-  'كل الأدوات الاتنعشر، من غير استثناء',
+  'كل الـ 12 أداة، من غير استثناء',
   'عدد صفقات غير محدود',
   'كل التحليلات ومنحنى رأس المال',
   'النسخة الاحتياطية السحابية',
@@ -28,19 +29,14 @@ const never = [
 export function Pricing() {
   return (
     <section id="pricing" className="border-b border-border-default scroll-mt-20">
-      <div className="mx-auto max-w-6xl px-5 py-16 lg:py-24">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold text-brand-ink">السعر</p>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-balance sm:text-4xl">
-            مفيش باقات. فيه نسخة واحدة، وهي مجانية.
-          </h2>
-          <p className="mt-5 text-lg text-fg-muted">
-            مش نسخة تجريبية بتخلص، ومش نسخة ناقصة عشان تدفع للكاملة. اللي بتحمّله
-            هو التطبيق كامل.
-          </p>
-        </div>
+      <div className="mx-auto max-w-6xl px-5 py-20 lg:py-28">
+        <SectionHeader
+          eyebrow="السعر"
+          title="مفيش باقات. فيه نسخة واحدة، وهي مجانية."
+          lead="مش نسخة تجريبية بتخلص، ومش نسخة ناقصة عشان تدفع للكاملة. اللي بتحمّله هو التطبيق كامل."
+        />
 
-        <div className="mx-auto mt-12 grid max-w-4xl gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="mx-auto mt-14 grid max-w-4xl gap-5 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="rounded-lg bg-inverse-surface p-8 text-on-inverse-surface">
             <p className="text-sm font-semibold opacity-70">النسخة الكاملة</p>
 

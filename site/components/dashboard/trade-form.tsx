@@ -1,0 +1,556 @@
+'use client';
+
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+import { CHECKLIST } from '@/lib/checklist';
+import { money, percent, quantity as fmtQuantity } from '@/lib/format';
+import {
+  exceedsRiskLimit,
+  maxLossPerTrade,
+  parseNumber,
+  safeDiv,
+  suggestedQuantity,
+} from '@/lib/risk-math';
+import { newTradeId, type Trade, type TradeStatus } from '@/lib/trade';
+
+/**
+ * The add / edit trade form.
+ *
+ * It carries the position-size calculator inline rather than linking to the one
+ * on the landing page, because the product's whole claim is that size is
+ * decided BEFORE the trade — a calculator you have to leave the form to reach
+ * is a calculator most people will skip.
+ *
+ * Capital is asked for here and NOT persisted. The app keeps it in local Hive
+ * settings and never syncs it, so there is nothing to read; inventing a second
+ * stored value on the web would give a user two capitals that disagree. It
+ * drives the suggestion and the risk percent for the length of this form and
+ * then goes away, which is honest and still useful.
+ */
+
+const STATUS_LABELS: Record<TradeStatus, string> = {
+  planned: 'مخططة',
+  open: 'مفتوحة',
+  closed: 'مغلقة',
+  cancelled: 'ملغاة',
+};
+
+const RISK_PRESETS = [0.01, 0.015, 0.02, 0.03];
+
+/** `<input type="date">` wants YYYY-MM-DD in LOCAL time, not an ISO instant. */
+function toDateInput(date: Date): string {
+  const y = String(date.getFullYear()).padStart(4, '0');
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Parses that same local YYYY-MM-DD back to a Date at local midnight.
+ *
+ * `new Date('2026-03-05')` parses as UTC midnight, which in Egypt (UTC+2/+3)
+ * renders as the 5th but in any negative offset renders as the 4th — a trade
+ * silently dated a day early. Splitting the parts avoids the whole class.
+ */
+function fromDateInput(value: string): Date | null {
+  const parts = value.split('-').map(Number);
+  if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return null;
+  const [y, m, d] = parts;
+  const date = new Date(y, m - 1, d);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export type TradeDraft = Omit<Trade, 'id'> & { id: string };
+
+export function TradeForm({
+  initial,
+  isEdit = initial !== null,
+  onCancel,
+  onSave,
+}: {
+  /** Null for a blank trade, or a seed — a watchlist item converted to a
+   *  planned trade arrives here pre-filled but is still a NEW record. */
+  initial: Trade | null;
+  /** Separate from `initial != null` precisely because of that seed case: the
+   *  save button must not say «احفظ التعديل» for a trade that does not exist
+   *  yet. */
+  isEdit?: boolean;
+  onCancel: () => void;
+  onSave: (trade: TradeDraft) => Promise<void>;
+}) {
+  const [ticker, setTicker] = useState(initial?.ticker ?? '');
+  const [entryDate, setEntryDate] = useState(
+    toDateInput(initial?.entryDate ?? new Date())
+  );
+  const [entryPrice, setEntryPrice] = useState(
+    initial ? String(initial.entryPrice) : ''
+  );
+  const [stopPrice, setStopPrice] = useState(
+    initial ? String(initial.stopPrice) : ''
+  );
+  const [takeProfit, setTakeProfit] = useState(
+    initial?.takeProfitPrice != null ? String(initial.takeProfitPrice) : ''
+  );
+  const [qty, setQty] = useState(initial ? String(initial.quantity) : '');
+  const [status, setStatus] = useState<TradeStatus>(initial?.status ?? 'planned');
+  const [exitPrice, setExitPrice] = useState(
+    initial?.exitPrice != null ? String(initial.exitPrice) : ''
+  );
+  const [exitDate, setExitDate] = useState(
+    initial?.exitDate ? toDateInput(initial.exitDate) : toDateInput(new Date())
+  );
+  const [reason, setReason] = useState(initial?.reason ?? '');
+  const [notes, setNotes] = useState(initial?.notes ?? '');
+  const [source, setSource] = useState(initial?.source ?? '');
+  const [tags, setTags] = useState((initial?.tags ?? []).join('، '));
+  const [checked, setChecked] = useState<string[]>(
+    initial?.completedChecklistItems ?? []
+  );
+
+  const [capital, setCapital] = useState('100000');
+  const [maxRisk, setMaxRisk] = useState(0.02);
+
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const firstFieldRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    firstFieldRef.current?.focus();
+  }, []);
+
+  const calc = useMemo(() => {
+    const c = parseNumber(capital) ?? 0;
+    const e = parseNumber(entryPrice) ?? 0;
+    const s = parseNumber(stopPrice) ?? 0;
+    const q = parseNumber(qty) ?? 0;
+
+    const budget = maxLossPerTrade(c, maxRisk);
+    const suggested = suggestedQuantity(budget, e, s);
+
+    const riskEgp = q > 0 && e > s ? (e - s) * q : null;
+    const riskPct = riskEgp === null ? null : safeDiv(riskEgp, c);
+
+    return {
+      suggested,
+      riskEgp,
+      riskPct,
+      positionValue: q > 0 && e > 0 ? e * q : null,
+      // The ONLY comparison of a risk ratio against the limit — never inline.
+      over: riskPct !== null && exceedsRiskLimit(riskPct, maxRisk),
+      invertedStop: e > 0 && s > 0 && s >= e,
+    };
+  }, [capital, entryPrice, stopPrice, qty, maxRisk]);
+
+  const needsExit = status === 'closed';
+
+  function toggleCheck(id: string) {
+    setChecked((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (busy) return;
+
+    const e = parseNumber(entryPrice);
+    const s = parseNumber(stopPrice);
+    const q = parseNumber(qty);
+    const date = fromDateInput(entryDate);
+
+    if (!ticker.trim()) return setError('اكتب رمز السهم.');
+    if (!date) return setError('تاريخ الدخول مش مظبوط.');
+    if (e === null || e <= 0) return setError('سعر الدخول لازم يكون أكبر من صفر.');
+    if (s === null || s <= 0) return setError('الاستوب لازم يكون أكبر من صفر.');
+    if (s >= e) return setError('الاستوب لازم يكون أقل من سعر الدخول.');
+    if (q === null || q <= 0) return setError('الكمية لازم تكون أكبر من صفر.');
+
+    // The app's Trade asserts exitPrice and exitDate are set together, and its
+    // codec normalises a half-written pair back to "still open". Letting a
+    // closed trade save with only one of them would hand the phone a record it
+    // silently reopens.
+    let exit: number | null = null;
+    let exitOn: Date | null = null;
+    if (needsExit) {
+      exit = parseNumber(exitPrice);
+      exitOn = fromDateInput(exitDate);
+      if (exit === null || exit <= 0)
+        return setError('صفقة مغلقة لازم يكون ليها سعر خروج.');
+      if (!exitOn) return setError('تاريخ الخروج مش مظبوط.');
+      if (exitOn < date) return setError('تاريخ الخروج مش ممكن يكون قبل الدخول.');
+    }
+
+    setError(null);
+    setBusy(true);
+    try {
+      await onSave({
+        id: initial?.id ?? newTradeId(),
+        entryDate: date,
+        ticker: ticker.trim().toUpperCase(),
+        reason: reason.trim(),
+        entryPrice: e,
+        stopPrice: s,
+        quantity: Math.floor(q),
+        exitPrice: exit,
+        exitDate: exitOn,
+        notes: notes.trim() || null,
+        status,
+        tags: tags
+          .split(/[،,]/)
+          .map((t) => t.trim())
+          .filter(Boolean),
+        isFavorite: initial?.isFavorite ?? false,
+        completedChecklistItems: checked,
+        source: source.trim() || null,
+        takeProfitPrice: parseNumber(takeProfit),
+        // Carried through untouched. encodeTrade omits the field entirely, so
+        // merge preserves whatever the phone attached — this value is only
+        // here so the discipline score can count it.
+        screenshotPaths: initial?.screenshotPaths ?? [],
+      });
+    } catch {
+      setError('تعذّر الحفظ. اتأكد من الاتصال وجرّب تاني.');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="رمز السهم" htmlFor="tf-ticker">
+          <input
+            ref={firstFieldRef}
+            id="tf-ticker"
+            value={ticker}
+            onChange={(e) => setTicker(e.target.value)}
+            dir="ltr"
+            placeholder="COMI"
+            className={inputCls}
+            required
+          />
+        </Field>
+
+        <Field label="تاريخ الدخول" htmlFor="tf-date">
+          <input
+            id="tf-date"
+            type="date"
+            value={entryDate}
+            onChange={(e) => setEntryDate(e.target.value)}
+            dir="ltr"
+            className={inputCls}
+            required
+          />
+        </Field>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Field label="سعر الدخول" htmlFor="tf-entry" suffix="ج.م">
+          <input
+            id="tf-entry"
+            inputMode="decimal"
+            value={entryPrice}
+            onChange={(e) => setEntryPrice(e.target.value)}
+            dir="ltr"
+            className={inputCls}
+            required
+          />
+        </Field>
+        <Field label="الاستوب" htmlFor="tf-stop" suffix="ج.م">
+          <input
+            id="tf-stop"
+            inputMode="decimal"
+            value={stopPrice}
+            onChange={(e) => setStopPrice(e.target.value)}
+            dir="ltr"
+            className={inputCls}
+            required
+          />
+        </Field>
+        <Field label="الهدف (اختياري)" htmlFor="tf-tp" suffix="ج.م">
+          <input
+            id="tf-tp"
+            inputMode="decimal"
+            value={takeProfit}
+            onChange={(e) => setTakeProfit(e.target.value)}
+            dir="ltr"
+            className={inputCls}
+          />
+        </Field>
+      </div>
+
+      {calc.invertedStop && (
+        <p role="alert" className="text-sm font-semibold text-loss">
+          الاستوب لازم يكون أقل من سعر الدخول.
+        </p>
+      )}
+
+      {/* The calculator, inline. Same functions the app runs, both epsilons. */}
+      <fieldset className="rounded-lg border border-border-default bg-surface-low p-5">
+        <legend className="px-2 text-sm font-bold">حاسبة الحجم</legend>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="رأس المال" htmlFor="tf-capital" suffix="ج.م">
+            <input
+              id="tf-capital"
+              inputMode="decimal"
+              value={capital}
+              onChange={(e) => setCapital(e.target.value)}
+              dir="ltr"
+              className={inputCls}
+            />
+          </Field>
+
+          <div>
+            <span className="text-sm font-semibold">أقصى مخاطرة</span>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {RISK_PRESETS.map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setMaxRisk(preset)}
+                  aria-pressed={maxRisk === preset}
+                  className={`num rounded-md border px-3 py-1.5 text-sm font-semibold transition-colors ${
+                    maxRisk === preset
+                      ? 'border-transparent bg-brand text-on-brand'
+                      : 'border-border-default text-fg-muted hover:bg-surface-high'
+                  }`}
+                >
+                  {(preset * 100).toFixed(preset === 0.015 ? 1 : 0)}%
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-4 text-xs text-fg-subtle">
+          رأس المال هنا بيحسب المقترح والنسبة بس، ومش بيتحفظ — هو عايش في إعدادات
+          التطبيق على تليفونك.
+        </p>
+
+        <div className="mt-5 flex flex-wrap items-end justify-between gap-4 border-t border-border-default pt-5">
+          <div>
+            <p className="text-sm text-fg-muted">الكمية المقترحة</p>
+            <p className="num mt-1 text-3xl font-bold">
+              {calc.suggested === null ? '—' : fmtQuantity(calc.suggested)}
+            </p>
+          </div>
+          {calc.suggested !== null && calc.suggested > 0 && (
+            <button
+              type="button"
+              onClick={() => setQty(String(calc.suggested))}
+              className="rounded-md border border-border-strong px-4 py-2 text-sm font-semibold transition-colors hover:bg-surface-high"
+            >
+              استخدم المقترح
+            </button>
+          )}
+        </div>
+      </fieldset>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="عدد الأسهم" htmlFor="tf-qty">
+          <input
+            id="tf-qty"
+            inputMode="numeric"
+            value={qty}
+            onChange={(e) => setQty(e.target.value)}
+            dir="ltr"
+            className={inputCls}
+            required
+          />
+        </Field>
+
+        <Field label="الحالة" htmlFor="tf-status">
+          <select
+            id="tf-status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as TradeStatus)}
+            className={inputCls}
+          >
+            {(Object.keys(STATUS_LABELS) as TradeStatus[]).map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABELS[s]}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      <dl className="grid gap-3 rounded-lg border border-border-default bg-surface p-5 sm:grid-cols-3">
+        <Metric label="المبلغ المعرّض للخطر" value={money(calc.riskEgp)} tone={calc.over} />
+        <Metric label="نسبة المخاطرة" value={percent(calc.riskPct)} tone={calc.over} />
+        <Metric label="قيمة المركز" value={money(calc.positionValue)} />
+      </dl>
+
+      {calc.over && (
+        <p
+          role="status"
+          className="rounded-md border border-loss-border bg-loss-surface p-3 text-sm font-semibold text-loss"
+        >
+          المخاطرة أعلى من الحد اللي اخترته ({percent(maxRisk)}). التطبيق هيعلّم
+          الصفقة دي بالأحمر.
+        </p>
+      )}
+
+      {needsExit && (
+        <div className="grid gap-4 rounded-lg border border-border-default bg-surface-low p-5 sm:grid-cols-2">
+          <Field label="سعر الخروج" htmlFor="tf-exit" suffix="ج.م">
+            <input
+              id="tf-exit"
+              inputMode="decimal"
+              value={exitPrice}
+              onChange={(e) => setExitPrice(e.target.value)}
+              dir="ltr"
+              className={inputCls}
+              required
+            />
+          </Field>
+          <Field label="تاريخ الخروج" htmlFor="tf-exitdate">
+            <input
+              id="tf-exitdate"
+              type="date"
+              value={exitDate}
+              onChange={(e) => setExitDate(e.target.value)}
+              dir="ltr"
+              className={inputCls}
+              required
+            />
+          </Field>
+        </div>
+      )}
+
+      <Field label="سبب الدخول" htmlFor="tf-reason">
+        <textarea
+          id="tf-reason"
+          rows={3}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="ليه بتدخل الصفقة دي؟ ده اللي هترجعله بعد شهور."
+          className={inputCls}
+        />
+      </Field>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="التصنيفات (بفاصلة)" htmlFor="tf-tags">
+          <input
+            id="tf-tags"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder="بريك أوت، سوينج"
+            className={inputCls}
+          />
+        </Field>
+        <Field label="المصدر (اختياري)" htmlFor="tf-source">
+          <input
+            id="tf-source"
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            placeholder="مين رشّح لك الصفقة"
+            className={inputCls}
+          />
+        </Field>
+      </div>
+
+      <fieldset className="rounded-lg border border-border-default p-5">
+        <legend className="px-2 text-sm font-bold">
+          تشيك ليست ما قبل الصفقة
+          <span className="num ms-2 font-normal text-fg-subtle">
+            {checked.length}/{CHECKLIST.length}
+          </span>
+        </legend>
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {CHECKLIST.map((item) => (
+            <li key={item.id}>
+              <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={checked.includes(item.id)}
+                  onChange={() => toggleCheck(item.id)}
+                  className="size-4 accent-[var(--brand-ink)]"
+                />
+                {item.label}
+              </label>
+            </li>
+          ))}
+        </ul>
+      </fieldset>
+
+      <Field label="ملاحظات (اختياري)" htmlFor="tf-notes">
+        <textarea
+          id="tf-notes"
+          rows={2}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className={inputCls}
+        />
+      </Field>
+
+      {error && (
+        <p
+          role="alert"
+          className="rounded-md border border-loss-border bg-loss-surface p-3 text-sm font-semibold text-loss"
+        >
+          {error}
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-3 border-t border-border-default pt-5">
+        <button
+          type="submit"
+          disabled={busy}
+          className="rounded-md bg-brand px-6 py-3 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-60"
+        >
+          {busy ? '...' : isEdit ? 'احفظ التعديل' : 'احفظ الصفقة'}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-md border border-border-strong px-6 py-3 text-sm font-semibold transition-colors hover:bg-surface-high"
+        >
+          إلغاء
+        </button>
+      </div>
+    </form>
+  );
+}
+
+const inputCls =
+  'mt-2 w-full rounded-md border border-border-default bg-surface-low px-3 py-2.5 text-start outline-none transition-colors focus:border-brand-ink';
+
+function Field({
+  label,
+  htmlFor,
+  suffix,
+  children,
+}: {
+  label: string;
+  htmlFor: string;
+  suffix?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label htmlFor={htmlFor} className="text-sm font-semibold">
+        {label}
+        {suffix && <span className="ms-1 text-xs text-fg-subtle">({suffix})</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: boolean;
+}) {
+  return (
+    <div>
+      <dt className="text-xs text-fg-muted">{label}</dt>
+      <dd className={`num mt-1 font-bold ${tone ? 'text-loss' : ''}`}>{value}</dd>
+    </div>
+  );
+}
