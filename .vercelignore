@@ -1,0 +1,35 @@
+# The site deploys from the REPOSITORY ROOT even though its Root Directory is
+# `site`, because `npm run build` runs theme:check first and that reads
+# design/palettes.json through tool/gen-theme.mjs — both one level above `site`.
+# Everything listed here is Flutter source or build output the web build never
+# reads.
+#
+# Every pattern is ROOT-ANCHORED with a leading slash. Without it, gitignore
+# syntax matches at any depth: a bare `assets/` would also drop site/assets/,
+# which holds the three woff2 faces next/font inlines and the three TTFs satori
+# needs for the share card. The build would succeed and the site would render in
+# a fallback font.
+/build/
+/.dart_tool/
+/android/
+/ios/
+/linux/
+/macos/
+/windows/
+/web/
+/test/
+/assets/
+
+# NOT /lib/. `theme:check` compares the GENERATED Dart palette against
+# design/palettes.json, and that file lives at
+# lib/core/theme/palettes/generated_palettes.dart. Excluding the directory made
+# the check report it as stale on the build machine — correctly, since a missing
+# file is not an up-to-date one — and the deploy failed with a message about
+# uncommitted theme changes that were not actually uncommitted. 812 KB of Dart
+# source is a cheap price for the guard that keeps the app and the site from
+# drifting apart.
+/.git/
+node_modules/
+/site/.next/
+/site/out/
+/site/.vercel/

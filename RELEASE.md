@@ -84,23 +84,33 @@ firebase deploy --only firestore:rules
 المشروع فيه موقع في `site/` (Next.js). هو اللي بينشر سياسة الخصوصية وصفحة حذف
 الحساب، ودول **شرطين إجباريين** للنشر.
 
-الموقع على **Vercel**، وبينشر لوحده مع كل `git push` على `main`. مفيش أمر
-بتنشر بيه من الجهاز، وFirebase Hosting اتشال (بلوك `hosting` مامتش موجود في
-`firebase.json` — لو رجع، أي `firebase deploy` هينشر نسخة تانية قديمة من
-الصفحات القانونية على `.web.app`).
+الموقع نازل على **Vercel** — مشروع `radar`، على
+<https://radar-one-phi.vercel.app>. وFirebase Hosting اتشال (بلوك `hosting`
+مابقاش موجود في `firebase.json` — لو رجع، أي `firebase deploy` هينشر نسخة تانية
+قديمة من الصفحات القانونية على `.web.app`).
 
-إعدادات مشروع Vercel اللي لازم تكون مظبوطة:
+النشر **بأمر من الجهاز**، مش تلقائي: المستودع لسه مش موصول بمشروع Vercel،
+فالـ push لوحده مبينشرش.
+
+```bash
+npx vercel deploy --prod    # من جذر الريبو، مش من site/
+```
+
+إعدادات المشروع اللي مظبوطة خلاص:
 
 | الإعداد | القيمة |
 |---|---|
 | Root Directory | `site` |
-| Include files outside root | مفعّلة (الافتراضي) — البناء بيقرا `design/palettes.json` من جذر الريبو |
-| `NEXT_PUBLIC_SITE_URL` | الدومين النهائي |
+| `NEXT_PUBLIC_SITE_URL` | `https://radar-one-phi.vercel.app` |
+
+الأمر بيتشغّل من **جذر الريبو** لأن `npm run build` بيبدأ بـ`theme:check`،
+وده بيقرا `design/palettes.json` عن طريق `tool/gen-theme.mjs` — الاتنين بره
+`site/`. اللي بيترفع محدّد في `.vercelignore`.
 
 للبناء محليًا للتجربة بس:
 
 ```bash
-cd site && npm install && NEXT_PUBLIC_SITE_URL=https://your-domain.com npm run build
+cd site && npm install && NEXT_PUBLIC_SITE_URL=https://radar-one-phi.vercel.app npm run build
 ```
 
 **والدومين لازم يتضاف في Firebase Console → Authentication → Settings →
@@ -111,8 +121,8 @@ Authorized domains**، وإلا تسجيل الدخول من الموقع بير
 
 | | |
 |---|---|
-| Privacy policy | `https://your-domain.com/privacy/` |
-| Account deletion | `https://your-domain.com/delete/` |
+| Privacy policy | `https://radar-one-phi.vercel.app/privacy/` |
+| Account deletion | `https://radar-one-phi.vercel.app/delete/` |
 
 الشرطة المايلة في الآخر مقصودة — `trailingSlash: true` في `next.config.ts`،
 والرابط من غيرها بيعمل تحويلة زيادة.
@@ -128,10 +138,10 @@ Authorized domains**، وإلا تسجيل الدخول من الموقع بير
 
 - **Privacy policy** — إجباري. التطبيق بيجمع إيميل عن طريق Firebase Auth، فلازم
   رابط سياسة خصوصية شغّال على الإنترنت. بعد نشر الموقع، الرابط هو
-  `https://your-domain.com/privacy/`.
+  `https://radar-one-phi.vercel.app/privacy/`.
 - **Account deletion URL** — إجباري كمان لأي تطبيق بيعمل حسابات، ولازم يكون
   مفتوح من غير ما المستخدم ينزّل التطبيق أو يسجّل دخول:
-  `https://your-domain.com/delete/`.
+  `https://radar-one-phi.vercel.app/delete/`.
 - **Data safety form** — قول إن التطبيق بيجمع: الإيميل (للحساب)، وبيانات
   الصفقات (للنسخ الاحتياطي). كله متربط بالمستخدم، ومتشفّر أثناء النقل، والمستخدم
   يقدر يمسحه.

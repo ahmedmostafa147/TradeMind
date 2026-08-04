@@ -41,6 +41,89 @@ const nextConfig: NextConfig = {
   // every internal link already carry the trailing slash, and changing the
   // shape of a URL is a redirect chain nobody asked for.
   trailingSlash: true,
+
+  /**
+   * Security headers.
+   *
+   * WHY HERE AND NOT IN vercel.json
+   * They lived there, annotated, until the first real deploy rejected the file:
+   * Vercel validates vercel.json against a strict schema and a `"//"` comment
+   * key inside a header entry is an outright error — `headers[0].headers[4]
+   * should NOT have additional property "//"`. The choice was to delete the
+   * reasoning or move the headers somewhere that allows comments. The reasoning
+   * is the more valuable half (see the CSP note below — it documents an outage),
+   * so the headers moved. This is also the more portable home: it travels with
+   * the app to any host that runs Next, and there is now exactly one place to
+   * look instead of one per host.
+   */
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+          },
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=63072000; includeSubDomains; preload',
+          },
+          {
+            // `frame-ancestors` replaces X-Frame-Options. `script-src` allows
+            // inline because two inline scripts must run before first paint —
+            // the theme script, and the beforeinstallprompt capture — and the
+            // JSON-LD block is inline by definition.
+            //
+            // THE GOOGLE HOSTS ARE NOT OPTIONAL. This policy was 'self'
+            // everywhere once and it silently broke the whole dashboard:
+            // connect-src governs the identitytoolkit/securetoken/firestore
+            // endpoints, frame-src governs the __/auth/handler iframe that
+            // signInWithPopup opens, and script-src governs apis.google.com.
+            // Sign-in failed with a generic «جرّب تاني» and no clue, because a
+            // CSP block surfaces as an opaque auth error. Each allowance is
+            // pinned to an exact Google host rather than widened to https:.
+            // If sign-in or data loading ever breaks again, read the browser
+            // console for a CSP violation FIRST.
+            //
+            // worker-src and manifest-src are stated explicitly for the PWA.
+            // Both would otherwise inherit — worker-src from script-src, which
+            // carries 'unsafe-inline' and two Google hosts that have no
+            // business registering a service worker, and manifest-src from
+            // default-src. Naming them keeps the worker and the manifest
+            // same-origin without widening anything.
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com",
+              "worker-src 'self'",
+              "manifest-src 'self'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data:",
+              "font-src 'self'",
+              "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com",
+              'frame-src https://*.firebaseapp.com https://accounts.google.com',
+              "base-uri 'self'",
+              "form-action 'none'",
+              "frame-ancestors 'none'",
+              'upgrade-insecure-requests',
+            ].join('; '),
+          },
+        ],
+      },
+      {
+        // The service worker must not be cached, or a fix to the caching policy
+        // itself cannot reach the browsers running the broken one — the file
+        // that decides what is stale would be the stale thing.
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

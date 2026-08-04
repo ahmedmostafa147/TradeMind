@@ -47,3 +47,8 @@ app.*.map.json
 
 # Firebase CLI deploy cache — local, regenerated on every deploy.
 .firebase/
+
+# Vercel CLI link + pulled env. Deploys run from the repository root (see
+# .vercelignore), so this lands here as well as in site/. Never commit it:
+# `vercel pull` writes .env.production.local into it.
+/.vercel

@@ -14,7 +14,7 @@
 |---|---|
 | الفرع | `main` — كل الشغل اتدمج فيه، ومفيش فروع تانية |
 | الاختبارات | `flutter analyze` نضيف · `tsc` نضيف |
-| النشر | الموقع على **Vercel** (نشر تلقائي مع كل push على `main`) · قواعد Firestore منشورة · التطبيق لسه مانزلش على Play |
+| النشر | **الموقع نازل** على <https://radar-one-phi.vercel.app> (مشروع Vercel `radar`) · قواعد Firestore منشورة · التطبيق لسه مانزلش على Play |
 | مشروع Firebase | `trademind-6222c` (اسم العرض Radar) — مربوط في `.firebaserc` فمش محتاج `--project`. بقى للـ Auth وFirestore بس |
 
 الاسم اتغيّر من TradePilot لـ **Radar** في كوميت `f776f16`. اسم الحزمة الداخلي في
@@ -230,9 +230,23 @@ Vercel.
 
 ### النشر
 
-مفيش أمر. النشر بيحصل لوحده مع كل `git push` على `main` من ربط المستودع
-بمشروع Vercel. إعدادات المشروع المطلوبة (Root Directory = `site`، ومتغيّر
-`NEXT_PUBLIC_SITE_URL`) موصوفة في `site/README.md`.
+النشر دلوقتي **بالـ CLI**، مش من ربط Git — المستودع لسه مش موصول بمشروع
+Vercel، فالـ push لوحده مبينشرش:
+
+```bash
+npx vercel deploy --prod
+```
+
+**من جذر الريبو، مش من `site/`.** السبب إن `npm run build` بيشغّل `theme:check`
+وده بيقرا `design/palettes.json` عن طريق `tool/gen-theme.mjs` — الاتنين مستوى
+فوق `site/`. الرفع بيتحكم فيه `.vercelignore` في الجذر، والمشروع على Vercel
+متظبّط عليه **Root Directory = `site`**.
+
+`--prebuilt` **مبيشتغلش من ويندوز**: البناء بيطلّع symlinks في
+`.vercel/output/functions/*.segments/` والرافع مش بيقدر يحلّها، فبيقع بـ
+`ENOENT ... __PAGE__.segment.rsc.func`. سيب Vercel يبني على سيرفره.
+
+لما تربط المستودع من Vercel → Settings → Git، الأمر ده بيبقى مش لازم.
 
 قواعد Firestore لسه بتتنشر بإيدك، وده الاستخدام الوحيد الباقي لـ`firebase.json`:
 
