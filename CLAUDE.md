@@ -230,23 +230,26 @@ Vercel.
 
 ### النشر
 
-النشر دلوقتي **بالـ CLI**، مش من ربط Git — المستودع لسه مش موصول بمشروع
-Vercel، فالـ push لوحده مبينشرش:
+**مفيش أمر.** المستودع موصول بمشروع Vercel `radar`، فأي `git push` على `main`
+بينشر لوحده.
+
+تلات إعدادات على المشروع هما اللي بيخلّوه يشتغل، ولو واحد اتغيّر البناء بيقع:
+
+| الإعداد | القيمة | ليه |
+|---|---|---|
+| Root Directory | `site` | من غيرها هيدوّر على `package.json` في الجذر ويلاقي مشروع Flutter |
+| **Include source files outside the Root Directory** | **مفعّلة** | `npm run build` بيبدأ بـ`theme:check`، وده بيقرا `design/palettes.json` ويقارن بـ`lib/core/theme/palettes/generated_palettes.dart` — الاتنين بره `site/`. تقفلها، البناء يقع عند `readFileSync` |
+| `NEXT_PUBLIC_SITE_URL` | `https://radar-one-phi.vercel.app` | canonical والسايت ماب وصورة المشاركة |
+
+للنشر بإيدك (لو عايز تتخطّى Git):
 
 ```bash
-npx vercel deploy --prod
+npx vercel deploy --prod    # من جذر الريبو، مش من site/ — لنفس سبب الجدول فوق
 ```
 
-**من جذر الريبو، مش من `site/`.** السبب إن `npm run build` بيشغّل `theme:check`
-وده بيقرا `design/palettes.json` عن طريق `tool/gen-theme.mjs` — الاتنين مستوى
-فوق `site/`. الرفع بيتحكم فيه `.vercelignore` في الجذر، والمشروع على Vercel
-متظبّط عليه **Root Directory = `site`**.
-
-`--prebuilt` **مبيشتغلش من ويندوز**: البناء بيطلّع symlinks في
+و`--prebuilt` **مبيشتغلش من ويندوز**: البناء بيطلّع symlinks في
 `.vercel/output/functions/*.segments/` والرافع مش بيقدر يحلّها، فبيقع بـ
 `ENOENT ... __PAGE__.segment.rsc.func`. سيب Vercel يبني على سيرفره.
-
-لما تربط المستودع من Vercel → Settings → Git، الأمر ده بيبقى مش لازم.
 
 قواعد Firestore لسه بتتنشر بإيدك، وده الاستخدام الوحيد الباقي لـ`firebase.json`:
 

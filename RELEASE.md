@@ -89,23 +89,23 @@ firebase deploy --only firestore:rules
 مابقاش موجود في `firebase.json` — لو رجع، أي `firebase deploy` هينشر نسخة تانية
 قديمة من الصفحات القانونية على `.web.app`).
 
-النشر **بأمر من الجهاز**، مش تلقائي: المستودع لسه مش موصول بمشروع Vercel،
-فالـ push لوحده مبينشرش.
-
-```bash
-npx vercel deploy --prod    # من جذر الريبو، مش من site/
-```
+النشر **تلقائي**: المستودع موصول بمشروع Vercel، وأي `git push` على `main`
+بينشر لوحده. مفيش أمر.
 
 إعدادات المشروع اللي مظبوطة خلاص:
 
 | الإعداد | القيمة |
 |---|---|
 | Root Directory | `site` |
+| Include source files outside the Root Directory | **مفعّلة** |
 | `NEXT_PUBLIC_SITE_URL` | `https://radar-one-phi.vercel.app` |
 
-الأمر بيتشغّل من **جذر الريبو** لأن `npm run build` بيبدأ بـ`theme:check`،
-وده بيقرا `design/palettes.json` عن طريق `tool/gen-theme.mjs` — الاتنين بره
-`site/`. اللي بيترفع محدّد في `.vercelignore`.
+التالتة مش تفصيلة: `npm run build` بيبدأ بـ`theme:check`، وده بيقرا
+`design/palettes.json` ويقارنه بـ`lib/core/theme/palettes/generated_palettes.dart`
+— الاتنين بره `site/`. لو الإعداد ده اتقفل، البناء بيقع.
+
+وللنشر بإيدك من غير Git: `npx vercel deploy --prod` **من جذر الريبو**، لنفس
+السبب. اللي بيترفع ساعتها محدّد في `.vercelignore`.
 
 للبناء محليًا للتجربة بس:
 
