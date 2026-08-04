@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/widgets/app_logo_title.dart';
 import 'widgets/smart_trade_builder.dart';
 
 /// The trade calculator. One builder now covers both flows — stop as a
@@ -12,7 +11,7 @@ class CalculatorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const AppLogoTitle(title: 'حاسبة الصفقة')),
+      appBar: AppBar(title: const Text('حاسبة الصفقة')),
       body: const SingleChildScrollView(
         padding: EdgeInsets.all(16),
         child: SmartTradeBuilder(),

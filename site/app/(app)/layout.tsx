@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { InstallButton } from '@/components/pwa';
 import { site } from '@/lib/site';
 
 /**
@@ -33,6 +34,10 @@ export default function AppLayout({
           >
             {site.name}
           </Link>
+          {/* The journal is the surface worth installing — it is what
+              `start_url` opens — so the offer belongs here as much as on the
+              landing page. Renders nothing unless the browser offered it. */}
+          <InstallButton className="ms-auto" />
         </div>
       </header>
 

@@ -1,6 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// `hide Settings` because cloud_firestore exports a `Settings` of its own — the
+// SDK's cache/host configuration — and this file means the app's risk rule.
+import 'package:cloud_firestore/cloud_firestore.dart' hide Settings;
 import 'package:firebase_core/firebase_core.dart';
 
+import '../../../settings/settings.dart';
 import '../../../trades/trade.dart';
 import '../../../watchlist/watchlist_item.dart';
 import 'sync_codec.dart';
@@ -27,6 +30,16 @@ class FirestoreSyncService {
 
   static CollectionReference<Map<String, dynamic>> _watchlist(String userId) =>
       _db.collection('users').doc(userId).collection('watchlist');
+
+  /// A subcollection holding exactly one document, rather than three fields on
+  /// the profile — the profile is the one document an admin may read, and
+  /// capital is a user's portfolio size. See the note in firestore.rules.
+  static CollectionReference<Map<String, dynamic>> _settings(String userId) =>
+      _db.collection('users').doc(userId).collection('settings');
+
+  /// The single settings document's id. Fixed, so the write is an idempotent
+  /// overwrite instead of accumulating one document per save.
+  static const String _riskSettingsDoc = 'risk';
 
   // ---------------------------------------------------------------------------
   // Upload
@@ -78,6 +91,22 @@ class FirestoreSyncService {
     } catch (_) {}
   }
 
+  /// Uploads the risk rule. Best-effort like the rest of the upload path.
+  ///
+  /// `merge: false` — the whole document is three values written together, and
+  /// merging would leave a field the rules have since tightened sitting in a
+  /// document the next write believes it replaced.
+  static Future<void> pushRiskSettings(String userId, Settings settings) async {
+    if (_rejects(userId)) return;
+    try {
+      await _settings(userId)
+          .doc(_riskSettingsDoc)
+          .set(SyncCodec.riskSettingsToMap(settings));
+    } catch (_) {
+      // The local Hive copy stays authoritative for this device either way.
+    }
+  }
+
   static Future<void> deleteTrade(String userId, String tradeId) async {
     if (_rejects(userId)) return;
     try {
@@ -106,7 +135,15 @@ class FirestoreSyncService {
   static Future<void> deleteAllData(String userId) async {
     if (_rejects(userId)) return;
 
-    for (final collection in [_trades(userId), _watchlist(userId)]) {
+    // `settings` is in this list because the privacy policy promises the whole
+    // account goes, and capital is personal financial data. Leaving it behind
+    // would strand a document nobody can ever reach again — its only reader is
+    // an owner who is about to stop existing.
+    for (final collection in [
+      _trades(userId),
+      _watchlist(userId),
+      _settings(userId),
+    ]) {
       final snapshot = await collection.get();
       const chunkSize = 400;
       for (var i = 0; i < snapshot.docs.length; i += chunkSize) {
@@ -146,6 +183,27 @@ class FirestoreSyncService {
       ];
     } catch (_) {
       return const [];
+    }
+  }
+
+  /// The account's risk rule, applied onto [current].
+  ///
+  /// Returns [current] untouched when there is nothing stored yet — an account
+  /// that predates this feature, or a read that failed. Never the class
+  /// defaults: resetting a configured capital to 17,000 because a request timed
+  /// out would change every discipline score on the device.
+  static Future<Settings> pullRiskSettings(
+    String userId, {
+    required Settings current,
+  }) async {
+    if (_rejects(userId)) return current;
+    try {
+      final snapshot = await _settings(userId).doc(_riskSettingsDoc).get();
+      final data = snapshot.data();
+      if (data == null) return current;
+      return SyncCodec.riskSettingsFromMap(data, onto: current);
+    } catch (_) {
+      return current;
     }
   }
 

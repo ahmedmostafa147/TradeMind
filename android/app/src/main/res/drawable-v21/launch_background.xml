@@ -1,12 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="?android:colorBackground" />
+<!--
+  The pre-Android-12 splash.
 
-    <!-- You can insert your own image assets here -->
-    <!-- <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@mipmap/launch_image" />
-    </item> -->
+  Android 12 and up ignore this entirely and use the windowSplashScreen* items
+  in styles.xml instead; this is the fallback for everything older, which is
+  still most EGX users' phones. Both paths are handed the same mark and the
+  same background so they cannot drift apart.
+
+  `<item>` with gravity and an explicit size, NOT `<bitmap>`: splash_logo is a
+  VECTOR, and <bitmap> only accepts a raster — pointing it at a vector fails to
+  inflate at launch, which is the one moment there is no UI left to report it.
+  Item gravity and sizing need API 23; minSdk here is 24, so every device that
+  can install this app supports them.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splash_background" />
+    <item
+        android:drawable="@drawable/splash_logo"
+        android:gravity="center"
+        android:width="160dp"
+        android:height="160dp" />
 </layer-list>

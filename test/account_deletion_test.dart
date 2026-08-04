@@ -102,6 +102,36 @@ void main() {
     );
   });
 
+  test('deleteAllData covers every collection under users/{uid}', () {
+    final service = File(
+      'lib/features/sync/services/firestore_sync_service.dart',
+    ).readAsStringSync();
+
+    final start = service.indexOf('static Future<void> deleteAllData(');
+    expect(start, isNot(-1), reason: 'deleteAllData is missing.');
+    final body = service.substring(start, service.indexOf('\n  }', start));
+
+    // The loop this asserts on is the ONLY thing standing between a user who
+    // asked to be forgotten and a document that outlives them. Every reference
+    // helper defined on the class is a collection under users/{uid}; each one
+    // must appear here. `settings` was added after this file was written and is
+    // the reason the test is not just about trades and watchlist: it holds
+    // capital, which is personal financial data the privacy policy §6 promises
+    // goes with the account.
+    for (final collection in ['_trades(', '_watchlist(', '_settings(']) {
+      expect(
+        body,
+        contains(collection),
+        reason:
+            '$collection is not in deleteAllData. Whatever it holds would '
+            'survive the account and then be unreachable forever — the rules '
+            'grant these paths to their owner alone, and the owner is deleted '
+            'moments later. If a new subcollection is added to this service, '
+            'it belongs in that list and in this test.',
+      );
+    }
+  });
+
   test('UserProfileService.delete does not swallow its errors', () {
     final service = File(
       'lib/features/sync/services/user_profile_service.dart',

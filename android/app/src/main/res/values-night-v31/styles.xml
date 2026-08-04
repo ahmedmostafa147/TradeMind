@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ splash.
+
+  From API 31 the system draws the launch screen itself and IGNORES
+  android:windowBackground entirely — so without this file the app would fall
+  back to the platform default (the launcher icon on a plain window colour) and
+  every splash change made in drawable/launch_background.xml would silently have
+  no effect on a modern phone. That is exactly the failure this file exists to
+  prevent, and it is invisible unless you test on API 31+.
+
+  Identical in light and dark: the splash is charcoal either way. See
+  values/colors.xml for why.
+-->
+<resources>
+    <style name="LaunchTheme" parent="@android:style/Theme.DeviceDefault.DayNight">
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <!-- Hands over to the app's own window theme the moment Flutter is
+             ready, so the charcoal does not linger behind a light-theme UI. -->
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/splash_background</item>
+    </style>
+
+    <style name="NormalTheme" parent="@android:style/Theme.DeviceDefault.DayNight">
+        <item name="android:windowBackground">?android:colorBackground</item>
+    </style>
+</resources>

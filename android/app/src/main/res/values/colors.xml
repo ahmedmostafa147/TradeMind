@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The launch colours.
+
+  Charcoal in BOTH themes, unlike everything else in this app. The splash is
+  gone in under a second and its only job is to not flash — a white light-mode
+  splash handing over to a white app is invisible, but a white splash handing
+  over to a dark app (or the reverse) is the flicker every launch-screen exists
+  to prevent. One dark field reads as intentional under either setting, and the
+  lime mark needs a dark ground to sit on at all: brand is a background colour
+  in this palette (1.15:1 on white) and only works as ink against this.
+
+  #121417 is the dark theme's own `surface`, generated from design/palettes.json.
+  If that value changes, change it here — the generator does not reach into
+  Android resources.
+-->
+<resources>
+    <color name="splash_background">#121417</color>
+	<color name="ic_launcher_background">#0A0B0D</color>
+</resources>

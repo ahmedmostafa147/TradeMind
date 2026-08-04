@@ -47,6 +47,10 @@ void main() {
       Hive.registerAdapter(WatchlistItemAdapter());
     }
     settingsBox = await Hive.openBox(kSettingsBox);
+    // Past the intro. Every test in this file exercises the app a returning
+    // user sees, and OnboardingGate sits in front of AuthGate — without this
+    // flag `pumpApp` lands on slide one and every finder below misses.
+    await settingsBox.put(kOnboardingSeenKey, true);
     tradesBox = await Hive.openBox<Trade>(kTradesBox);
     watchlistBox = await Hive.openBox<WatchlistItem>(kWatchlistBox);
     authBox = await Hive.openBox(kAuthBox);

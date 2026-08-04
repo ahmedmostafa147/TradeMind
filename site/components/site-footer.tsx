@@ -51,7 +51,23 @@ export function SiteFooter() {
           </nav>
         </div>
 
-        <p className="mt-8 text-xs text-fg-subtle">
+        {/* The install instructions live here, in static text, rather than
+            behind a button. `beforeinstallprompt` is a Chromium-only event —
+            iOS Safari never fires it, and installing there is a Share-sheet
+            item no website is allowed to open. A button that could not do
+            anything for iPhone users would be worse than a sentence that
+            tells them exactly which menu to tap. */}
+        <p className="mt-8 max-w-3xl text-xs leading-relaxed text-fg-subtle">
+          <strong className="font-semibold text-fg-muted">
+            تحب تثبّته كتطبيق؟{' '}
+          </strong>
+          على أندرويد وويندوز وماك هيظهرلك زرار «ثبّت التطبيق» فوق، أو أيقونة
+          تثبيت في شريط عنوان المتصفح. على آيفون وآيباد: من Safari اضغط زرار
+          المشاركة ← «أضف إلى الشاشة الرئيسية». في الحالتين بيفتح في نافذته
+          لوحده، والصفحات اللي فتحتها قبل كده بتشتغل من غير نت.
+        </p>
+
+        <p className="mt-6 text-xs text-fg-subtle">
           © <span className="num">2026</span> {site.name} — جميع الحقوق محفوظة.
         </p>
       </div>

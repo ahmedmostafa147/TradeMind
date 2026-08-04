@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { TimelineEditor } from '@/components/dashboard/timeline-editor';
 import { CHECKLIST } from '@/lib/checklist';
 import { money, percent, quantity as fmtQuantity } from '@/lib/format';
 import {
@@ -11,7 +12,12 @@ import {
   safeDiv,
   suggestedQuantity,
 } from '@/lib/risk-math';
-import { newTradeId, type Trade, type TradeStatus } from '@/lib/trade';
+import {
+  newTradeId,
+  type TimelineEntry,
+  type Trade,
+  type TradeStatus,
+} from '@/lib/trade';
 
 /**
  * The add / edit trade form.
@@ -21,11 +27,15 @@ import { newTradeId, type Trade, type TradeStatus } from '@/lib/trade';
  * decided BEFORE the trade — a calculator you have to leave the form to reach
  * is a calculator most people will skip.
  *
- * Capital is asked for here and NOT persisted. The app keeps it in local Hive
- * settings and never syncs it, so there is nothing to read; inventing a second
- * stored value on the web would give a user two capitals that disagree. It
- * drives the suggestion and the risk percent for the length of this form and
- * then goes away, which is honest and still useful.
+ * CAPITAL IS SEEDED FROM THE ACCOUNT AND NOT WRITTEN BACK. It used to open at a
+ * hardcoded 100,000 with a note saying the real number lived on the phone and
+ * could not be read — which meant the suggested quantity was computed against a
+ * portfolio the user did not have. The account carries the rule now
+ * (`users/{uid}/settings/risk`), so the form starts from it. Editing the field
+ * here stays a what-if for this one form: it changes the suggestion in front of
+ * you and nothing else, and the account's value is changed in the bar above the
+ * journal. That is deliberate — sizing a trade against "what if I had double"
+ * should not silently rewrite the rule every other figure is scored against.
  */
 
 const STATUS_LABELS: Record<TradeStatus, string> = {
@@ -65,6 +75,8 @@ export type TradeDraft = Omit<Trade, 'id'> & { id: string };
 export function TradeForm({
   initial,
   isEdit = initial !== null,
+  accountCapital,
+  accountMaxRisk,
   onCancel,
   onSave,
 }: {
@@ -75,6 +87,10 @@ export function TradeForm({
    *  save button must not say «احفظ التعديل» for a trade that does not exist
    *  yet. */
   isEdit?: boolean;
+  /** The account's risk rule, used to seed the calculator. See the note above:
+   *  the fields below are a what-if and never write back. */
+  accountCapital: number;
+  accountMaxRisk: number;
   onCancel: () => void;
   onSave: (trade: TradeDraft) => Promise<void>;
 }) {
@@ -106,9 +122,15 @@ export function TradeForm({
   const [checked, setChecked] = useState<string[]>(
     initial?.completedChecklistItems ?? []
   );
+  // Seeded from the stored trade, and written back COMPLETE — Firestore
+  // replaces an array field rather than merging into it, so an edit that
+  // started from a partial list would delete the rest of the log.
+  const [timeline, setTimeline] = useState<TimelineEntry[]>(
+    initial?.timeline ?? []
+  );
 
-  const [capital, setCapital] = useState('100000');
-  const [maxRisk, setMaxRisk] = useState(0.02);
+  const [capital, setCapital] = useState(String(accountCapital));
+  const [maxRisk, setMaxRisk] = useState(accountMaxRisk);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -203,6 +225,7 @@ export function TradeForm({
         completedChecklistItems: checked,
         source: source.trim() || null,
         takeProfitPrice: parseNumber(takeProfit),
+        timeline,
         // Carried through untouched. encodeTrade omits the field entirely, so
         // merge preserves whatever the phone attached — this value is only
         // here so the discipline score can count it.
@@ -323,8 +346,9 @@ export function TradeForm({
         </div>
 
         <p className="mt-4 text-xs text-fg-subtle">
-          رأس المال هنا بيحسب المقترح والنسبة بس، ومش بيتحفظ — هو عايش في إعدادات
-          التطبيق على تليفونك.
+          الأرقام دي جاية من إعدادات حسابك. تغييرها هنا بيحسب المقترح والنسبة في
+          الفورم ده بس ومش بيتحفظ — عشان تغيّر القاعدة نفسها، عدّلها من فوق
+          الجورنال.
         </p>
 
         <div className="mt-5 flex flex-wrap items-end justify-between gap-4 border-t border-border-default pt-5">
@@ -473,6 +497,28 @@ export function TradeForm({
           ))}
         </ul>
       </fieldset>
+
+      <TimelineEditor entries={timeline} onChange={setTimeline} />
+
+      {/* Said out loud rather than left as a missing button. The discipline
+          score has a 20-point component for "a chart screenshot is attached",
+          and a browser cannot earn it: the app stores images as files in the
+          phone's own storage and uploads only their paths, which are
+          meaningless here. Without this line the score just looks broken. */}
+      <p className="rounded-md border border-border-default bg-surface-low p-3 text-xs leading-relaxed text-fg-subtle">
+        صور الشارت بتتضاف من التطبيق على التليفون بس — متخزّنة على جهازك ومش
+        بترفع على السيرفر، فمش بتظهر ولا بتتضاف من المتصفح.
+        {initial && initial.screenshotPaths.length > 0 && (
+          <>
+            {' '}
+            الصفقة دي عليها{' '}
+            <span className="num font-bold">
+              {initial.screenshotPaths.length}
+            </span>{' '}
+            صورة على تليفونك، وهتفضل زي ما هي بعد الحفظ من هنا.
+          </>
+        )}
+      </p>
 
       <Field label="ملاحظات (اختياري)" htmlFor="tf-notes">
         <textarea

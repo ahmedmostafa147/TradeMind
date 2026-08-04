@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme.dart';
 import 'features/auth/screens/auth_screen.dart';
+import 'features/onboarding/providers/onboarding_providers.dart';
+import 'features/onboarding/screens/onboarding_screen.dart';
 import 'settings/settings_providers.dart';
 import 'shell/home_shell.dart';
 
@@ -32,10 +34,29 @@ class EgxJournalApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
 
-      // First run lands on the auth screen; once the user signs in or chooses
-      // to stay a guest, the gate lets the journal through on every launch.
-      home: const AuthGate(child: HomeShell()),
+      // Intro, then auth, then the journal.
+      //
+      // The tour comes BEFORE sign-in deliberately: it is the answer to "why
+      // should I make an account for this?", and putting it after the gate
+      // would only ever be read by people who had already decided.
+      home: const OnboardingGate(child: AuthGate(child: HomeShell())),
     );
+  }
+}
+
+/// Shows the intro once, then gets out of the way forever.
+///
+/// A gate rather than a route push: the flag lives in a provider, so finishing
+/// the tour swaps the subtree with no navigator involved and no back gesture
+/// that could return the user to slide four from the journal.
+class OnboardingGate extends ConsumerWidget {
+  final Widget child;
+
+  const OnboardingGate({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref.watch(onboardingSeenProvider) ? child : const OnboardingScreen();
   }
 }
 

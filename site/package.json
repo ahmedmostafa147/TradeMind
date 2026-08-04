@@ -1,12 +1,15 @@
 {
-  "name": "tradepilot-site",
+  "name": "radar-site",
   "version": "1.0.0",
   "private": true,
-  "description": "Public site for TradePilot — landing page and legal pages.",
+  "description": "Public site for Radar — landing page, legal pages and the dashboard.",
   "scripts": {
     "dev": "next dev --port 3000",
     "theme": "node ../tool/gen-theme.mjs",
     "theme:check": "node ../tool/gen-theme.mjs --check",
+    "//icons": "Regenerates the PWA icon set from assets/logo.png. Deliberately NOT wired into `build` the way theme:check is: the generator needs sharp, which it reaches through an explicit path into this node_modules, and a resolution difference on the deploy host would turn a cosmetic staleness check into a failed production build. The icons only change when the logo does.",
+    "icons": "node ../tool/gen-pwa-icons.mjs",
+    "icons:check": "node ../tool/gen-pwa-icons.mjs --check",
     "//build": "theme:check gates the build so a deploy can never ship CSS tokens that no longer match design/palettes.json — the app and the site would drift apart silently otherwise.",
     "build": "npm run theme:check && next build",
     "start": "next start",

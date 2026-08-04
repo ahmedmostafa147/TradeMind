@@ -6,6 +6,15 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "site", "run", "dev"],
       "port": 3000
+    },
+    {
+      "//": "The PWA cannot be verified against `dev`. The service worker refuses to register outside production (components/pwa.tsx), and install criteria need the real built output. Run `npm --prefix site run build` first, then start this. localhost counts as a secure context, so Chrome evaluates installability exactly as it would on HTTPS. What this does NOT reproduce is site/vercel.json — `next start` applies no headers, so the CSP's worker-src has to be checked on the deployed site.",
+      "name": "site-prod",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "site", "run", "start"],
+      "//autoPort": "`next start` takes its port from PORT, and nothing here needs 3000 specifically — no OAuth callback, no webhook. The manifest's start_url is relative, so installability is unaffected by which port it lands on.",
+      "autoPort": true,
+      "port": 3000
     }
   ]
 }

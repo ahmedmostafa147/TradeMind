@@ -17,6 +17,17 @@
 
 export type TradeStatus = 'planned' | 'open' | 'closed' | 'cancelled';
 
+/**
+ * One dated note on a trade's life — «حرّكت الاستوب»، «خرجت نص الكمية».
+ *
+ * Mirrors lib/trades/timeline_entry.dart. The single `notes` field is separate
+ * and stays: it is the lesson, this is the log.
+ */
+export type TimelineEntry = {
+  date: Date;
+  text: string;
+};
+
 export type Trade = {
   id: string;
   entryDate: Date;
@@ -34,6 +45,16 @@ export type Trade = {
   completedChecklistItems: string[];
   source: string | null;
   takeProfitPrice: number | null;
+  /**
+   * Dated notes across the trade's life. Read AND written now — the form has a
+   * timeline editor, and {@link encodeTrade} sends the whole array.
+   *
+   * It has to be the whole array: the write is `merge: true`, and Firestore
+   * replaces an array field wholesale rather than merging its items. So every
+   * edit must start from the stored list. The form is seeded from the loaded
+   * trade for exactly this reason.
+   */
+  timeline: TimelineEntry[];
   /**
    * READ-ONLY here, and never written back.
    *
@@ -61,6 +82,25 @@ function toDate(value: unknown): Date | null {
 
 function toStringList(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String) : [];
+}
+
+/**
+ * Mirrors the app's codec: entries that are not objects are skipped, a missing
+ * or unparseable date falls back to now, and missing text to an empty string —
+ * one malformed entry must not cost the whole timeline.
+ */
+function toTimeline(value: unknown): TimelineEntry[] {
+  if (!Array.isArray(value)) return [];
+  const entries: TimelineEntry[] = [];
+  for (const raw of value) {
+    if (typeof raw !== 'object' || raw === null) continue;
+    const item = raw as Record<string, unknown>;
+    entries.push({
+      date: toDate(item.date) ?? new Date(),
+      text: typeof item.text === 'string' ? item.text : '',
+    });
+  }
+  return entries;
 }
 
 /** Returns null for a document too malformed to be a trade at all. */
@@ -97,6 +137,7 @@ export function decodeTrade(data: Record<string, unknown>): Trade | null {
     completedChecklistItems: toStringList(data.completedChecklistItems),
     source: typeof data.source === 'string' ? data.source : null,
     takeProfitPrice: toNumber(data.takeProfitPrice),
+    timeline: toTimeline(data.timeline),
     screenshotPaths: toStringList(data.screenshotPaths),
   };
 }
@@ -113,11 +154,19 @@ export function decodeTrade(data: Record<string, unknown>): Trade | null {
  *      means every trade written from the web jumps to "now" on the phone.
  *   2. `status` is the RESOLVED name, so a record round-trips as what it
  *      behaves as rather than as an absent field.
- *   3. `screenshotPaths` and `timeline` are omitted, never written empty. They
- *      hold device-local data the browser cannot produce, and every write goes
- *      out with merge:true — so omitting preserves whatever the phone put
- *      there, while writing `[]` would erase a user's chart screenshots from
- *      the web without ever showing them.
+ *   3. `screenshotPaths` is omitted, never written empty. It holds absolute
+ *      paths into the phone's own storage — data the browser cannot produce or
+ *      display — and every write goes out with merge:true, so omitting it
+ *      preserves whatever the phone put there. Writing `[]` would erase a
+ *      user's chart screenshots from a surface that never showed them.
+ *
+ *      `timeline` USED TO BE in that sentence and no longer is. It was omitted
+ *      for the same reason, but the cost was real: «قرار اليوم» computes "last
+ *      touch" from the newest timeline entry, so with the field permanently
+ *      absent every trade's last touch was its entry date and «محتاجة ملاحظة»
+ *      fired on trades the phone considered handled. The form edits the list
+ *      now, so it is written — as the COMPLETE array, because Firestore
+ *      replaces an array field rather than merging into it.
  */
 export function encodeTrade(trade: Trade): Record<string, unknown> {
   return {
@@ -135,6 +184,12 @@ export function encodeTrade(trade: Trade): Record<string, unknown> {
     tags: trade.tags,
     isFavorite: trade.isFavorite,
     completedChecklistItems: trade.completedChecklistItems,
+    // Same shape SyncCodec.tradeToMap writes: a list of {date, text} with the
+    // date as an ISO string, for the reason rule 1 gives.
+    timeline: trade.timeline.map((entry) => ({
+      date: entry.date.toISOString(),
+      text: entry.text,
+    })),
     source: trade.source,
     takeProfitPrice: trade.takeProfitPrice,
   };

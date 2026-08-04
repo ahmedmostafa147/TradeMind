@@ -1,3 +1,4 @@
+import '../../../settings/settings.dart';
 import '../../../trades/timeline_entry.dart';
 import '../../../trades/trade.dart';
 import '../../../trades/trade_status.dart';
@@ -120,6 +121,51 @@ class SyncCodec {
         dateAdded: _toDate(map['dateAdded']) ?? DateTime.now(),
         source: map['source'] as String?,
       );
+
+  // ---------------------------------------------------------------------------
+  // Risk settings
+  //
+  // Only the three values that change what a NUMBER means travel: capital, the
+  // per-trade risk ceiling, and the waiting threshold. The rest of [Settings] is
+  // device preference — whether to show the checklist, whether to confirm a
+  // delete — and syncing those would push one device's habits onto another.
+  // ---------------------------------------------------------------------------
+
+  static Map<String, dynamic> riskSettingsToMap(Settings s) => {
+    'capital': s.capital,
+    'maxRiskPercent': s.maxRiskPercent,
+    'waitingThresholdDays': s.waitingThresholdDays,
+  };
+
+  /// Applies a remote settings document onto [onto], field by field.
+  ///
+  /// Returns [onto] unchanged for anything missing or unusable rather than
+  /// falling back to the class defaults: a half-written document must not
+  /// silently reset a capital the user actually configured. The bounds match
+  /// the ones firestore.rules enforces on write, because a document written
+  /// before those rules existed is not covered by them.
+  static Settings riskSettingsFromMap(
+    Map<String, dynamic> map, {
+    required Settings onto,
+  }) {
+    final capital = _toDouble(map['capital']);
+    final maxRisk = _toDouble(map['maxRiskPercent']);
+    // A whole number can arrive as either `int` or `double` depending on which
+    // SDK wrote it, so it is read as `num` and rounded rather than cast.
+    final waiting = _toDouble(map['waitingThresholdDays']);
+
+    return onto.copyWith(
+      capital: (capital != null && capital.isFinite && capital > 0)
+          ? capital
+          : null,
+      maxRiskPercent: (maxRisk != null && maxRisk.isFinite && maxRisk > 0 && maxRisk <= 1)
+          ? maxRisk
+          : null,
+      waitingThresholdDays: (waiting != null && waiting.isFinite && waiting >= 1)
+          ? waiting.round()
+          : null,
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // Coercion helpers

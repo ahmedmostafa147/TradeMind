@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../settings/settings_providers.dart';
 import '../../../trades/trade.dart';
 import '../../../trades/trades_providers.dart';
 import '../../../watchlist/watchlist_item.dart';
@@ -52,6 +53,7 @@ class SyncStatus {
 /// server win would mean a failed or partial read could wipe real work.
 class SyncController extends Notifier<SyncStatus> {
   Timer? _debounce;
+  Timer? _settingsDebounce;
 
   /// Long enough to coalesce a burst of edits, short enough that closing the
   /// app right after a change still catches it.
@@ -61,7 +63,10 @@ class SyncController extends Notifier<SyncStatus> {
   SyncStatus build() {
     final user = ref.watch(authProvider);
 
-    ref.onDispose(() => _debounce?.cancel());
+    ref.onDispose(() {
+      _debounce?.cancel();
+      _settingsDebounce?.cancel();
+    });
 
     if (!user.isLoggedIn || user.id == 'guest') {
       return const SyncStatus();
@@ -72,6 +77,12 @@ class SyncController extends Notifier<SyncStatus> {
     // re-running build().
     ref.listen(tradesProvider, (_, _) => _scheduleUpload());
     ref.listen(watchlistProvider, (_, _) => _scheduleUpload());
+    // A SEPARATE debounce, not _scheduleUpload. Routing settings through the
+    // journal upload would make dragging the capital slider rewrite every trade
+    // document the user owns — `uploadNow` pushes whole collections, so that is
+    // one batched write per trade for a change to a three-field document that
+    // no trade contains. Its own timer keeps the cost proportional.
+    ref.listen(settingsProvider, (_, _) => _scheduleSettingsUpload());
 
     // Kicked off after build() returns: mutating state during build throws.
     Future.microtask(() => restore());
@@ -91,6 +102,15 @@ class SyncController extends Notifier<SyncStatus> {
     try {
       final remoteTrades = await FirestoreSyncService.pullTrades(userId);
       final remoteWatchlist = await FirestoreSyncService.pullWatchlist(userId);
+
+      // Settings first: every figure the restored trades produce is computed
+      // against capital, so adopting it after the trades would render one
+      // screenful of numbers under the old rule before they resettled.
+      final remoteSettings = await FirestoreSyncService.pullRiskSettings(
+        userId,
+        current: ref.read(settingsProvider),
+      );
+      await ref.read(settingsProvider.notifier).adoptRemote(remoteSettings);
 
       final tradesNotifier = ref.read(tradesProvider.notifier);
       final localTradeIds = {
@@ -135,6 +155,18 @@ class SyncController extends Notifier<SyncStatus> {
     _debounce = Timer(_debounceDelay, uploadNow);
   }
 
+  void _scheduleSettingsUpload() {
+    _settingsDebounce?.cancel();
+    _settingsDebounce = Timer(_debounceDelay, () async {
+      final userId = _userId;
+      if (userId.isEmpty || userId == 'guest') return;
+      await FirestoreSyncService.pushRiskSettings(
+        userId,
+        ref.read(settingsProvider),
+      );
+    });
+  }
+
   /// Pushes the whole journal. Whole-collection rather than per-record because
   /// the notifiers publish a new list on every change without saying which
   /// record moved; the batched write keeps that to one request.
@@ -148,6 +180,10 @@ class SyncController extends Notifier<SyncStatus> {
       await FirestoreSyncService.pushWatchlist(
         userId,
         ref.read(watchlistProvider),
+      );
+      await FirestoreSyncService.pushRiskSettings(
+        userId,
+        ref.read(settingsProvider),
       );
       state = state.copyWith(
         state: SyncState.done,

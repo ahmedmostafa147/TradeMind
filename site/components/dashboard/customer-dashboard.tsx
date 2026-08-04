@@ -28,7 +28,7 @@ import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { checklistCompletion } from '@/lib/checklist';
 import { firestore } from '@/lib/firebase';
 import { dateLabel, money, percent, rMultiple, signedMoney } from '@/lib/format';
-import { useLocalSettings } from '@/lib/local-settings';
+import { useAccountSettings, type SettingsSource } from '@/lib/account-settings';
 import { decodePost, sortPosts, type Post } from '@/lib/posts';
 import { parseNumber } from '@/lib/risk-math';
 import {
@@ -84,7 +84,7 @@ type View = { kind: 'list' } | { kind: 'new'; seed?: Trade } | { kind: 'edit'; t
 
 function Journal() {
   const { user, logout, isAdmin } = useAuth();
-  const { settings, update } = useLocalSettings();
+  const { settings, update, source: settingsSource } = useAccountSettings(user);
 
   const [trades, setTrades] = useState<Trade[] | null>(null);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
@@ -251,8 +251,18 @@ function Journal() {
         </p>
         <div className="mt-8">
           <TradeForm
+            // Same reason as the settings panel's key: the form seeds its
+            // calculator from these once, in useState, and they arrive from the
+            // account asynchronously. Opening the form in the first moments
+            // after load would otherwise size the position against the 17,000
+            // default. Remounting cannot interrupt anyone — this view and the
+            // settings bar are never on screen together, so the only time these
+            // values change while the form exists is that initial read.
+            key={`${settings.capital}-${settings.maxRiskPercent}`}
             initial={view.kind === 'edit' ? view.trade : (view.seed ?? null)}
             isEdit={view.kind === 'edit'}
+            accountCapital={settings.capital}
+            accountMaxRisk={settings.maxRiskPercent}
             onCancel={() => setView({ kind: 'list' })}
             onSave={saveTrade}
           />
@@ -307,7 +317,11 @@ function Journal() {
         </div>
       </header>
 
-      <SettingsBar settings={settings} onChange={update} />
+      <SettingsBar
+        settings={settings}
+        onChange={update}
+        source={settingsSource}
+      />
 
       {failed && (
         <p
@@ -410,19 +424,24 @@ function Journal() {
 }
 
 /**
- * Capital and the risk limit, stated as BROWSER-LOCAL right where they are set.
+ * Capital and the risk limit — the account's, and labelled with where the
+ * numbers on screen actually came from.
  *
- * The app never uploads these, so there is nothing to read from the account.
- * Without them the discipline score cannot verify "risk within limit" and every
- * trade silently loses 20 points, and no over-risk warning can ever fire — so
- * the honest fix is to ask for them and say plainly where they live.
+ * These are stored on the account now (`users/{uid}/settings/risk`) and the app
+ * reads and writes the same document, so a change here reaches the phone and a
+ * change on the phone reaches here. The label still matters: until the read
+ * lands, or when it fails offline, what is displayed is this browser's cached
+ * copy — and presenting a cache as the account's rule is the exact thing that
+ * made the old browser-only version misleading.
  */
 function SettingsBar({
   settings,
   onChange,
+  source,
 }: {
-  settings: ReturnType<typeof useLocalSettings>['settings'];
+  settings: ReturnType<typeof useAccountSettings>['settings'];
   onChange: (next: Partial<typeof settings>) => void;
+  source: SettingsSource;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -436,6 +455,9 @@ function SettingsBar({
           <span className="num font-bold text-fg">
             {percent(settings.maxRiskPercent)}
           </span>
+          {source === 'local' && (
+            <span className="text-fg-subtle"> · نسخة محفوظة على المتصفح</span>
+          )}
         </p>
         <button
           type="button"
@@ -448,7 +470,18 @@ function SettingsBar({
       </div>
 
       {open && (
-        <div className="mt-4 grid gap-4 border-t border-border-default pt-4 sm:grid-cols-3">
+        <div
+          // KEYED ON THE VALUES, because the inputs below are uncontrolled.
+          // `defaultValue` is read once, when an input mounts — and these values
+          // now arrive asynchronously from the account. Without this, a panel
+          // opened before the read lands keeps showing the 17,000 default while
+          // the summary line above it already shows the real figure, and the
+          // first blur would write the stale number back to the account. The key
+          // changes only when the values do, which after a user edit means
+          // remounting with what they just committed.
+          key={`${settings.capital}-${settings.maxRiskPercent}-${settings.waitingThresholdDays}`}
+          className="mt-4 grid gap-4 border-t border-border-default pt-4 sm:grid-cols-3"
+        >
           <label className="text-sm font-semibold">
             رأس المال (ج.م)
             <input
@@ -491,10 +524,20 @@ function SettingsBar({
           </label>
 
           <p className="text-xs leading-relaxed text-fg-subtle sm:col-span-3">
-            القيم دي متخزّنة <strong>على المتصفح ده بس</strong> ومش بتتزامن مع
-            التطبيق — التطبيق بيحتفظ بيها في إعداداته المحلية ومش بيرفعها. لو
-            حطيت رقم مختلف عن اللي على تليفونك، درجة الانضباط ونسبة المخاطرة
-            هيختلفوا بين الاتنين.
+            {source === 'local' ? (
+              <>
+                دي <strong>نسخة محفوظة على المتصفح ده</strong> — لسه ماقدرناش
+                نقرا إعدادات حسابك (يمكن مفيش نت، أو الحساب لسه ماحفظش إعداداته).
+                أي تعديل تعمله هنا هيتحفظ على حسابك أول ما الاتصال يرجع، ويوصل
+                لتطبيق التليفون.
+              </>
+            ) : (
+              <>
+                القيم دي <strong>محفوظة على حسابك</strong> وبتتزامن مع التطبيق —
+                تغيّرها هنا تلاقيها على تليفونك، والعكس. محدش غيرك يقدر يقراها:
+                قواعد السيرفر بتحطّها في مكان الأدمن نفسه مش بيوصله.
+              </>
+            )}
           </p>
         </div>
       )}
@@ -869,9 +912,16 @@ function TradesTable({
  */
 function DisciplineBadge({ score }: { score: ReturnType<typeof riskScoreOf> }) {
   const earned = SCORE_COMPONENTS.filter((c) => score[c.key]);
-  const title = SCORE_COMPONENTS.map(
-    (c) => `${score[c.key] ? '✓' : '✗'} ${c.label}`
-  ).join('\n');
+  const title = [
+    ...SCORE_COMPONENTS.map((c) => `${score[c.key] ? '✓' : '✗'} ${c.label}`),
+    // The one component this surface cannot earn. Chart images are files in
+    // the phone's own storage and only their paths are synced, so a trade
+    // logged entirely from the browser is capped at 80 — which reads as a bug
+    // unless the reason is stated where the score is.
+    ...(score.hasScreenshots
+      ? []
+      : ['', 'الصور بتتضاف من التطبيق على التليفون بس.']),
+  ].join('\n');
 
   return (
     <span className="flex items-center gap-2" title={title}>

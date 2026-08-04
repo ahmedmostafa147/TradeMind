@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
+import { InstallButton } from '@/components/pwa';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { nav, site } from '@/lib/site';
 
@@ -47,6 +48,9 @@ export function SiteHeader() {
         </nav>
 
         <div className="me-auto flex items-center gap-2">
+          {/* Renders nothing until the browser actually offers an install —
+              which is most visits, and on iOS always. See components/pwa.tsx. */}
+          <InstallButton className="hidden sm:inline-flex" />
           <ThemeToggle />
           {/* The web journal is the one surface that works today, and until
               this link existed the landing page never pointed at it — a visitor

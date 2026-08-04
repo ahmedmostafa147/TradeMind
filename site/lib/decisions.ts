@@ -5,11 +5,11 @@
  * Dart version injects it: the day-threshold rules are only testable when the
  * date is an argument.
  *
- * The web has no timeline data — the trade form does not write one and
- * decodeTrade does not read one — so "last touch" falls back to the entry date
- * everywhere here. That is exactly what the Dart version does for a trade with
- * an empty timeline, so the rule is the same rule; it just fires on more trades
- * until the browser can add timeline entries too.
+ * "Last touch" is the newest timeline entry, falling back to the entry date —
+ * the same rule as the Dart version, on the same data. It used to be the entry
+ * date unconditionally, because the browser neither read nor wrote a timeline,
+ * which meant «محتاجة ملاحظة» fired on every open position older than a week
+ * even when the phone had logged an update that morning.
  */
 
 import { exceedsRiskLimit, safeDiv } from '@/lib/risk-math';
@@ -61,7 +61,21 @@ function daysBetween(from: Date, to: Date): number {
   return days < 0 ? 0 : days;
 }
 
-const hasLesson = (trade: Trade) => (trade.notes ?? '').trim().length > 0;
+/** Matches DailyDecisions._hasLesson: a written lesson OR any timeline entry.
+ *  A trade whose life is logged has been reviewed, whether or not the single
+ *  `notes` field was used for it. */
+const hasLesson = (trade: Trade) =>
+  (trade.notes ?? '').trim().length > 0 || trade.timeline.length > 0;
+
+/** The newest timeline entry, or the entry date when there are none — a port of
+ *  DailyDecisions._lastTouch. */
+function lastTouch(trade: Trade): Date {
+  let latest = trade.entryDate;
+  for (const entry of trade.timeline) {
+    if (entry.date.getTime() > latest.getTime()) latest = entry.date;
+  }
+  return latest;
+}
 
 export function decisionsOf(
   trades: Trade[],
@@ -100,8 +114,7 @@ export function decisionsOf(
       trade,
       metrics,
       daysSinceEntry,
-      // No timeline on the web, so last touch is the entry date.
-      daysSinceUpdate: daysSinceEntry,
+      daysSinceUpdate: daysBetween(lastTouch(trade), day),
       overRisk: isOverRisk,
     };
 

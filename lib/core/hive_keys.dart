@@ -22,6 +22,12 @@ const String kDefaultStopLossKey = 'defaultStopLossPercent'; // double
 /// `--dart-define` so the key can be set without rebuilding the app.
 const String kGeminiKeyKey = 'geminiApiKey'; // String
 
+/// Whether the intro has been seen. Absent means "never ran", which is what
+/// makes the tour show exactly once — on a fresh install and never again, not
+/// even after a sign-out. It lives in SETTINGS and not in the auth box on
+/// purpose: signing out is not a reason to be taught the app a second time.
+const String kOnboardingSeenKey = 'onboardingSeen'; // bool
+
 /// Box of trades, keyed by Trade.id (the uuid) so update and delete are O(1)
 /// and idempotent.
 const String kTradesBox = 'trades';

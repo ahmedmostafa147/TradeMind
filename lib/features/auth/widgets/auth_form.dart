@@ -239,20 +239,62 @@ class _AuthFormState extends ConsumerState<AuthForm> {
           label: const Text('المتابعة بحساب جوجل'),
         ),
 
-        const SizedBox(height: 4),
-        TextButton(
-          onPressed: _loading
-              ? null
-              : () => setState(() {
-                  _isSignUp = !_isSignUp;
-                  // The old error belongs to the other mode's rules.
-                  _error = null;
-                }),
-          child: Text(
-            _isSignUp
-                ? 'لديك حساب بالفعل؟ سجل الدخول'
-                : 'ليس لديك حساب؟ أنشئ حساباً جديداً',
-            style: theme.textTheme.bodyMedium,
+        const SizedBox(height: 16),
+        // The switch is a PANEL, not a line of text.
+        //
+        // It used to be a bare TextButton in body colour, sitting under a
+        // Google button that outranked it visually — so the single most
+        // important action for a first-time visitor, the one that creates the
+        // account the whole app now requires, was the quietest thing on the
+        // screen. It gets its own tinted field and a coloured verb here.
+        //
+        // The tint is `secondaryContainer`, not the brand: the brand fill
+        // belongs to the primary button directly above, and repeating it would
+        // give the screen two things claiming to be the main action.
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.secondaryContainer,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  _isSignUp ? 'لديك حساب بالفعل؟' : 'ليس لديك حساب؟',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: _loading
+                    ? null
+                    : () => setState(() {
+                        _isSignUp = !_isSignUp;
+                        // The old error belongs to the other mode's rules.
+                        _error = null;
+                      }),
+                style: TextButton.styleFrom(
+                  // The palette's readable ink. `primary` is the lime fill and
+                  // measures 1.15:1 as text — the generator's contrast gate
+                  // exists to catch exactly this, and ColorScheme.primary is
+                  // bound to `accent` for the same reason.
+                  foregroundColor: theme.colorScheme.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 40),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  _isSignUp ? 'سجّل الدخول' : 'أنشئ حساباً جديداً',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
 

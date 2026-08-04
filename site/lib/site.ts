@@ -67,8 +67,12 @@ export const site = {
     ''
   ),
 
-  /** Kept in sync with the «آخر تحديث» line inside the privacy policy. */
-  legalUpdatedAt: '27 يوليو 2026',
+  /** Kept in sync with the «آخر تحديث» line inside the privacy policy. Bumped
+   *  when the policy's substance changes, not when its wording is tidied — the
+   *  4 أغسطس revision added risk settings to the stored-data table, because
+   *  capital stopped being device-only and started syncing through the
+   *  account. */
+  legalUpdatedAt: '4 أغسطس 2026',
 } as const;
 
 export const nav = [

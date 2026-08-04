@@ -81,25 +81,31 @@ firebase deploy --only firestore:rules
 
 ## 3.5. الموقع — بيوفّر الرابطين اللي Play بيطلبهم
 
-المشروع فيه موقع في `site/` (Next.js، تصدير ثابت). هو اللي بينشر سياسة
-الخصوصية وصفحة حذف الحساب، ودول **شرطين إجباريين** للنشر.
+المشروع فيه موقع في `site/` (Next.js). هو اللي بينشر سياسة الخصوصية وصفحة حذف
+الحساب، ودول **شرطين إجباريين** للنشر.
+
+الموقع على **Vercel**، وبينشر لوحده مع كل `git push` على `main`. مفيش أمر
+بتنشر بيه من الجهاز، وFirebase Hosting اتشال (بلوك `hosting` مامتش موجود في
+`firebase.json` — لو رجع، أي `firebase deploy` هينشر نسخة تانية قديمة من
+الصفحات القانونية على `.web.app`).
+
+إعدادات مشروع Vercel اللي لازم تكون مظبوطة:
+
+| الإعداد | القيمة |
+|---|---|
+| Root Directory | `site` |
+| Include files outside root | مفعّلة (الافتراضي) — البناء بيقرا `design/palettes.json` من جذر الريبو |
+| `NEXT_PUBLIC_SITE_URL` | الدومين النهائي |
+
+للبناء محليًا للتجربة بس:
 
 ```bash
-cd site
-npm install
-NEXT_PUBLIC_SITE_URL=https://your-domain.com npm run build
-cd ..
-firebase deploy --only hosting
+cd site && npm install && NEXT_PUBLIC_SITE_URL=https://your-domain.com npm run build
 ```
 
-استضافة Firebase متظبّطة في `firebase.json` على `site/out` — نفس المشروع اللي
-فيه Firestore، فمش محتاج حساب جديد. بعد أول نشر، اربط الدومين من
-Firebase Console → Hosting → Add custom domain.
-
-**أو على Vercel** لو أسهل ليك: الإعداد جاهز في `site/vercel.json`. المهم في
-إعدادات المشروع تحط **Root Directory = `site`** (وإلا هيدوّر على `package.json`
-في الجذر ويلاقي مشروع Flutter)، وتضيف `NEXT_PUBLIC_SITE_URL` في
-Environment Variables.
+**والدومين لازم يتضاف في Firebase Console → Authentication → Settings →
+Authorized domains**، وإلا تسجيل الدخول من الموقع بيرجع
+`auth/unauthorized-domain`.
 
 بعد النشر، الرابطين اللي هتحطهم في Play Console:
 

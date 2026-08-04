@@ -70,6 +70,29 @@ class SettingsNotifier extends Notifier<Settings> {
     return fallback;
   }
 
+  /// Takes the account's risk rule and makes it this device's.
+  ///
+  /// Called by [SyncController.restore] right after sign-in, and only with a
+  /// value that already fell back to the current settings for anything the
+  /// server did not have — so an account with nothing stored leaves this a
+  /// no-op rather than resetting the device to the class defaults.
+  ///
+  /// Remote wins here, unlike the journal, where restore is additive and the
+  /// server is never an authority. A trade is a record and losing one is data
+  /// loss; capital is a single current value, and the alternative to letting it
+  /// converge is what this whole change exists to fix — two numbers for one
+  /// account, and no way to tell which is right.
+  Future<void> adoptRemote(Settings remote) async {
+    await _box.put(kCapitalKey, remote.capital);
+    await _box.put(kMaxRiskKey, remote.maxRiskPercent);
+    await _box.put(kWaitingThresholdKey, remote.waitingThresholdDays);
+    state = state.copyWith(
+      capital: remote.capital,
+      maxRiskPercent: remote.maxRiskPercent,
+      waitingThresholdDays: remote.waitingThresholdDays,
+    );
+  }
+
   Future<void> setCapital(double value) async {
     if (!value.isFinite || value <= 0) return;
     await _box.put(kCapitalKey, value);

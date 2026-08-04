@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/calc/risk_math.dart';
 import '../core/formatters.dart';
-import '../core/widgets/app_logo_title.dart';
 import '../features/auth/widgets/delete_account_tile.dart';
 import '../features/auth/widgets/user_profile_tile.dart';
 import 'settings_providers.dart';
@@ -85,7 +84,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         : null;
 
     return Scaffold(
-      appBar: AppBar(title: const AppLogoTitle(title: 'الإعدادات')),
+      appBar: AppBar(title: const Text('الإعدادات')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -134,6 +133,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const GeminiKeyTile(),
           const Divider(),
           const BehaviourTiles(),
+          const Divider(),
+          const ReplayIntroTile(),
           // Last, and only for a signed-in user: destructive and irreversible,
           // so it sits below everything rather than next to a toggle.
           const SizedBox(height: 24),

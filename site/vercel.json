@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run build",
-  "outputDirectory": "out",
+  "//": "The Vercel project's Root Directory is `site`, so this file sits at the root of the build. `npm run build` runs the theme check first, and that reads design/palettes.json from the REPOSITORY root — one level above this directory. It works because 'Include source files outside of the Root Directory' is on by default; if it is ever turned off the build fails loudly at readFileSync rather than shipping stale tokens. There is no `outputDirectory` any more: the site is a real Next build now, not an `out/` export.",
   "framework": "nextjs",
+  "buildCommand": "npm run build",
   "headers": [
     {
       "source": "/(.*)",
@@ -18,22 +18,14 @@
           "value": "max-age=63072000; includeSubDomains; preload"
         },
         {
-          "//": "frame-ancestors replaces X-Frame-Options; script-src allows inline because the theme script must run before first paint to prevent a white flash, and the JSON-LD block is inline by definition. THE GOOGLE HOSTS ARE NOT OPTIONAL: this policy was 'self' everywhere and it silently broke the whole dashboard — connect-src governs the identitytoolkit/securetoken/firestore endpoints, frame-src governs the __/auth/handler iframe signInWithPopup opens, and script-src governs apis.google.com. Sign-in failed with a generic 'try again' and no clue, because a CSP block surfaces as an opaque auth error. Each allowance is pinned to an exact Google host rather than widened to https:. If sign-in or data loading ever breaks again, read the browser console for a CSP violation first.",
+          "//": "frame-ancestors replaces X-Frame-Options; script-src allows inline because the theme script must run before first paint to prevent a white flash, and the JSON-LD block is inline by definition. THE GOOGLE HOSTS ARE NOT OPTIONAL: this policy was 'self' everywhere and it silently broke the whole dashboard — connect-src governs the identitytoolkit/securetoken/firestore endpoints, frame-src governs the __/auth/handler iframe signInWithPopup opens, and script-src governs apis.google.com. Sign-in failed with a generic 'try again' and no clue, because a CSP block surfaces as an opaque auth error. Each allowance is pinned to an exact Google host rather than widened to https:. If sign-in or data loading ever breaks again, read the browser console for a CSP violation first. worker-src and manifest-src are stated explicitly for the PWA: both would otherwise inherit — worker-src from script-src, which carries 'unsafe-inline' and two Google hosts that have no business registering a service worker, and manifest-src from default-src. Naming them keeps the service worker and the manifest to same-origin without widening anything.",
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com; frame-src https://*.firebaseapp.com https://accounts.google.com; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com; worker-src 'self'; manifest-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com; frame-src https://*.firebaseapp.com https://accounts.google.com; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
         }
       ]
     },
     {
-      "//": "Next emits the share card as an extensionless file named `opengraph-image`. Static hosting types files by extension, so without this it goes out as application/octet-stream and social scrapers drop the card — og:image:type in the HTML does not override the real header.",
-      "source": "/opengraph-image",
-      "headers": [
-        { "key": "Content-Type", "value": "image/png" },
-        { "key": "Cache-Control", "value": "public, max-age=3600" }
-      ]
-    },
-    {
-      "//": "Content-hashed filenames — safe to cache forever. Fonts are hashed by next/font, so they fall under this too.",
+      "//": "Content-hashed filenames — safe to cache forever. Fonts are hashed by next/font, so they fall under this too. Vercel applies the same rule to a Next build by itself; it is written out so the intent survives a framework-detection change.",
       "source": "/_next/static/(.*)",
       "headers": [
         {

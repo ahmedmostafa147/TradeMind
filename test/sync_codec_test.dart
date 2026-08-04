@@ -1,4 +1,5 @@
 import 'package:egx_trade_journal/features/sync/services/sync_codec.dart';
+import 'package:egx_trade_journal/settings/settings.dart';
 import 'package:egx_trade_journal/trades/timeline_entry.dart';
 import 'package:egx_trade_journal/trades/trade.dart';
 import 'package:egx_trade_journal/trades/trade_status.dart';
@@ -166,6 +167,81 @@ void main() {
         ),
       )..['priority'] = 'not-a-priority';
       expect(SyncCodec.watchlistFromMap(map).priority, WatchPriority.medium);
+    });
+  });
+
+  /// The risk rule is the one thing both surfaces divide by. A value that
+  /// decodes wrong here does not throw — it silently rescores every trade in
+  /// the journal, which is why the fallback behaviour is pinned this hard.
+  group('risk settings', () {
+    const configured = Settings(
+      capital: 250000,
+      maxRiskPercent: 0.015,
+      waitingThresholdDays: 45,
+      // Device preferences. They must survive a remote read untouched, because
+      // the remote document does not carry them at all.
+      enableChecklist: false,
+      enableConfirmations: false,
+      defaultTakeProfitPercent: 0.08,
+      defaultStopLossPercent: 0.03,
+    );
+
+    test('round-trips the three synced values', () {
+      final back = SyncCodec.riskSettingsFromMap(
+        SyncCodec.riskSettingsToMap(configured),
+        onto: const Settings(),
+      );
+
+      expect(back.capital, 250000);
+      expect(back.maxRiskPercent, 0.015);
+      expect(back.waitingThresholdDays, 45);
+    });
+
+    test('leaves device-only preferences alone', () {
+      final back = SyncCodec.riskSettingsFromMap(
+        SyncCodec.riskSettingsToMap(const Settings()),
+        onto: configured,
+      );
+
+      expect(back.enableChecklist, isFalse);
+      expect(back.enableConfirmations, isFalse);
+      expect(back.defaultTakeProfitPercent, 0.08);
+      expect(back.defaultStopLossPercent, 0.03);
+    });
+
+    test('an empty document changes nothing', () {
+      final back = SyncCodec.riskSettingsFromMap(const {}, onto: configured);
+
+      expect(back.capital, configured.capital);
+      expect(back.maxRiskPercent, configured.maxRiskPercent);
+      expect(back.waitingThresholdDays, configured.waitingThresholdDays);
+    });
+
+    test('a bad value keeps the current one instead of the class default', () {
+      // The distinction that matters: falling back to Settings.defaultCapital
+      // here would reset a configured 250,000 to 17,000 because one field of a
+      // half-written document was garbage.
+      final back = SyncCodec.riskSettingsFromMap(const {
+        'capital': 0,
+        'maxRiskPercent': 4,
+        'waitingThresholdDays': -3,
+      }, onto: configured);
+
+      expect(back.capital, 250000);
+      expect(back.maxRiskPercent, 0.015);
+      expect(back.waitingThresholdDays, 45);
+    });
+
+    test('accepts a whole number written as either int or double', () {
+      // firestore.rules deliberately says `is number`, not `is int`, because
+      // the two SDKs disagree about how a whole number serialises. The reader
+      // has to cope with both or that tolerance buys nothing.
+      for (final raw in <Object>[30, 30.0]) {
+        final back = SyncCodec.riskSettingsFromMap({
+          'waitingThresholdDays': raw,
+        }, onto: configured);
+        expect(back.waitingThresholdDays, 30, reason: 'from ${raw.runtimeType}');
+      }
     });
   });
 }

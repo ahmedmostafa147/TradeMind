@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 
+import { ServiceWorkerRegistrar } from '@/components/pwa';
 import { site } from '@/lib/site';
 import './globals.css';
 
@@ -9,7 +10,7 @@ import './globals.css';
  * the same reason pubspec.yaml bundles it instead of using google_fonts: a
  * runtime font download is a third-party request on every visit, and the first
  * paint would land without a font until it resolved. It is also what the CSP in
- * firebase.json requires — `font-src 'self'` rejects a Google Fonts CDN
+ * site/vercel.json requires — `font-src 'self'` rejects a Google Fonts CDN
  * outright. `display: swap` keeps text readable while the face loads instead of
  * blocking on it.
  *
@@ -77,18 +78,51 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   category: 'finance',
+
+  // iOS ignores the web app manifest completely. Standalone launch, the status
+  // bar style and the home-screen title all come from these meta tags instead,
+  // so «أضف إلى الشاشة الرئيسية» on an iPhone opens a real app window rather
+  // than a Safari tab with the chrome still attached.
+  appleWebApp: {
+    capable: true,
+    title: site.name,
+    // `black-translucent` lets the page paint under the status bar, which is
+    // right for a dark app and wrong for a light one — and the site has both
+    // themes. `default` keeps the bar readable either way.
+    statusBarStyle: 'default',
+  },
+  other: {
+    // Windows/Edge reads this for the installed app's tile.
+    'msapplication-TileColor': '#0a0b0d',
+    // Emitted by hand because Next's `appleWebApp.capable` produces only the
+    // standardised `mobile-web-app-capable`, and iOS Safari reads the
+    // apple-prefixed name. Without this tag «أضف إلى الشاشة الرئيسية» still
+    // adds an icon, but tapping it opens a Safari tab with the address bar
+    // attached instead of a standalone window — which is the entire difference
+    // between "installed" and "bookmarked" on an iPhone.
+    'apple-mobile-web-app-capable': 'yes',
+  },
 };
 
 export const viewport: Viewport = {
   // Both entries are required: a browser picks the one matching the visitor's
   // system theme, which is what colours the mobile address bar to match the
   // page instead of leaving a light strip above a black page.
+  //
+  // These are the real `--background` tokens from app/tokens.css, not
+  // approximations of them. They used to be #f5f5f5 and #000000, which were
+  // close enough to look deliberate and still left a visible seam between the
+  // address bar and the page. The dark value is also the manifest's
+  // `background_color`, so the install splash and the app window agree.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f5f5f5' },
-    { media: '(prefers-color-scheme: dark)', color: '#000000' },
+    { media: '(prefers-color-scheme: light)', color: '#fafaed' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a0b0d' },
   ],
   width: 'device-width',
   initialScale: 1,
+  // The installed window has no browser UI to fall back on, so the page has to
+  // paint into the notch/home-indicator area itself.
+  viewportFit: 'cover',
 };
 
 /**
@@ -110,6 +144,40 @@ const themeScript = `
 })();
 `;
 
+/**
+ * Catches `beforeinstallprompt` before React exists.
+ *
+ * THE RACE THIS CLOSES
+ * Chrome fires the event as soon as it finishes evaluating installability,
+ * which is not synchronised with hydration — on a slow device it can land
+ * before <InstallButton>'s effect has attached its listener. The event is not
+ * replayed and there is no way to ask for it again, so the prompt is simply
+ * gone for that page view and the button never renders. That failure looks
+ * EXACTLY like a broken manifest or an unregistered worker, which is what
+ * makes it expensive: every obvious suspect is innocent.
+ *
+ * Inline and synchronous in <head>, for the same reason the theme script is:
+ * anything deferred is already too late. The listener stashes the event and
+ * announces it on a custom event, so a component mounting either before or
+ * after the browser decides ends up in the same state.
+ */
+const installCaptureScript = `
+(function () {
+  window.__radarInstallPrompt = null;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    // Suppresses Chrome's own mini-infobar. Doing it here rather than in React
+    // is the point — by the time a component could call it, it is too late.
+    e.preventDefault();
+    window.__radarInstallPrompt = e;
+    window.dispatchEvent(new Event('radar:installable'));
+  });
+  window.addEventListener('appinstalled', function () {
+    window.__radarInstallPrompt = null;
+    window.dispatchEvent(new Event('radar:installed'));
+  });
+})();
+`;
+
 export default function RootLayout({
   children,
 }: {
@@ -119,9 +187,11 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" className={plex.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: installCaptureScript }} />
       </head>
       <body className="font-sans antialiased">
         {children}
+        <ServiceWorkerRegistrar />
       </body>
     </html>
   );

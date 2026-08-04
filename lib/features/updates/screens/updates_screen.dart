@@ -10,6 +10,20 @@ import '../providers/posts_providers.dart';
 /// Announcements and trade ideas arrive in one stream, marked rather than split
 /// into two tabs: they are published in one order and should be read in it, and
 /// a second tab would hide today's idea behind a click for no gain.
+/// Marking-as-seen is the SHELL's job, not this screen's — see
+/// `HomeShell._select`.
+///
+/// It used to happen here, in initState. That looked right and was not: the
+/// shell holds its four screens in an IndexedStack, which builds every child
+/// the moment the app opens. So this screen mounted at launch whatever tab the
+/// user was on, and marked the feed read before anybody had looked at it — the
+/// badge could never appear for a post that arrived while the app was closed,
+/// which is the only kind of post a badge is for.
+///
+/// It also hung every widget test that pumps the app. The mark writes to Hive,
+/// and an un-awaited disk write left pending under the test binding's clock
+/// means `pumpAndSettle` never settles; three tests sat there until the
+/// ten-minute timeout killed them.
 class UpdatesScreen extends ConsumerStatefulWidget {
   const UpdatesScreen({super.key});
 
@@ -18,17 +32,6 @@ class UpdatesScreen extends ConsumerStatefulWidget {
 }
 
 class _UpdatesScreenState extends ConsumerState<UpdatesScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Marked seen on open, after the first frame — calling a notifier during
-    // build is a Riverpod error, and the badge should clear because the user
-    // looked, not because the provider happened to rebuild.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(lastSeenPostsProvider.notifier).markSeen();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(postsProvider);

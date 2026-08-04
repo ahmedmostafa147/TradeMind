@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formatters.dart';
 import '../../core/theme.dart';
+import '../../features/onboarding/providers/onboarding_providers.dart';
 import '../settings_providers.dart';
 
 /// The live max-loss readout card.
@@ -395,6 +396,32 @@ class _GeminiKeyTileState extends ConsumerState<GeminiKeyTile> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Replays the intro.
+///
+/// Exists so the onboarding screens stay reachable after first run. Without it
+/// they are code that executes exactly once per install and can never be seen
+/// again — which is how intro flows quietly rot into stating things the app no
+/// longer does, with nobody noticing because nobody can look.
+class ReplayIntroTile extends ConsumerWidget {
+  const ReplayIntroTile({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.slideshow_outlined),
+      title: const Text('اعرض جولة التعريف تاني'),
+      subtitle: const Text('الأربع شاشات اللي بتظهر أول مرة'),
+      trailing: const Icon(Icons.chevron_left),
+      onTap: () async {
+        // The gate watches this flag, so flipping it swaps the whole subtree —
+        // no navigation, and nothing left underneath to pop back to.
+        await ref.read(onboardingSeenProvider.notifier).reset();
+      },
     );
   }
 }

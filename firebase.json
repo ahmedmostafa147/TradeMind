@@ -1,64 +1,7 @@
 {
+  "//": "Hosting used to live here. The site moved to Vercel, which serves it as a real Next build instead of a static export — see site/vercel.json and the `output: 'export'` note in site/next.config.ts. The block was deleted rather than left unused: with it in place a stray `firebase deploy` republishes a second, stale copy of the whole site — legal pages included — at trademind-6222c.web.app, and two live copies of a published privacy policy is a real problem. This file now exists only to deploy Firestore rules.",
+
   "firestore": {
     "rules": "firestore.rules"
-  },
-
-  "hosting": {
-    "public": "site/out",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-
-    "cleanUrls": false,
-    "trailingSlash": true,
-
-    "headers": [
-      {
-        "source": "**",
-        "headers": [
-          { "key": "X-Content-Type-Options", "value": "nosniff" },
-          { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-          {
-            "key": "Permissions-Policy",
-            "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()"
-          },
-          {
-            "key": "Strict-Transport-Security",
-            "value": "max-age=63072000; includeSubDomains; preload"
-          },
-          {
-            "//": "THE GOOGLE HOSTS ARE NOT OPTIONAL. This policy was 'self' everywhere and it silently broke the whole dashboard: connect-src governs the identitytoolkit/securetoken/firestore endpoints, frame-src governs the __/auth/handler iframe signInWithPopup opens, and script-src governs apis.google.com. Sign-in failed with a generic 'try again' and no clue, because a CSP block surfaces as an opaque auth error. Each allowance is pinned to an exact Google host rather than widened to https:. If sign-in or data loading ever breaks again, read the browser console for a CSP violation first.",
-            "key": "Content-Security-Policy",
-            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com; frame-src https://*.firebaseapp.com https://accounts.google.com; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests"
-          }
-        ]
-      },
-
-      {
-        "//": "Next emits the share card as an extensionless file named `opengraph-image`, and Hosting types files by extension — so without this it is served as application/octet-stream and every social scraper silently drops the card. og:image:type in the HTML is not enough; the real header is what they read.",
-        "source": "/opengraph-image",
-        "headers": [
-          { "key": "Content-Type", "value": "image/png" },
-          { "key": "Cache-Control", "value": "public, max-age=3600" }
-        ]
-      },
-
-      {
-        "source": "/_next/static/**",
-        "headers": [
-          { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-        ]
-      },
-      {
-        "source": "**/*.@(woff2|png|jpg|jpeg|svg|ico)",
-        "headers": [
-          { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-        ]
-      },
-      {
-        "source": "**/*.html",
-        "headers": [
-          { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
-        ]
-      }
-    ]
   }
 }

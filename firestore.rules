@@ -15,8 +15,10 @@ rules_version = '2';
 //
 // WHAT AN ADMIN CAN AND CANNOT SEE
 // An admin reads user PROFILES — email, display name, dates, and the activity
-// counters the app maintains. An admin cannot read anybody's trades or
-// watchlist.
+// counters the app maintains. An admin cannot read anybody's trades, their
+// watchlist, or their risk settings: those are subcollections OF the profile,
+// and a read grant on a document does not reach into its subcollections.
+// That is why `capital` is stored one level down instead of on the profile.
 //
 // That is deliberate, and it is a promise the published privacy policy makes
 // in plain words: «قواعد الأمان على السيرفر بتمنع أي مستخدم تاني من قراءتها أو
@@ -76,6 +78,54 @@ service cloud.firestore {
 
       match /watchlist/{itemId} {
         allow read, write: if isOwner(userId);
+      }
+
+      // The risk rule: capital, the per-trade risk ceiling, and how long an
+      // open position may sit before «قرار اليوم» flags it.
+      //
+      // WHY A SUBCOLLECTION AND NOT THREE FIELDS ON THE PROFILE
+      // The profile is the one document an admin is allowed to read. Capital is
+      // the single most sensitive number a trader has — it is their portfolio
+      // size — and putting it there would hand every user's net position to the
+      // operator, silently, as a side effect of a sync feature. It would also
+      // make the privacy policy's «الأدمن بيشوف ملفات التعريف والعدّادات بس»
+      // false, which is a sentence that has to be rewritten and re-disclosed
+      // before it can change. Down here the rule is the same one trades get:
+      // owner, and nobody else, ever.
+      //
+      // These lived in local Hive settings on the phone and in localStorage in
+      // the browser, so the same trade scored differently on each — the
+      // discipline score's "risk within limit" component and every over-risk
+      // warning divide by capital, so two numbers meant two verdicts and no way
+      // to tell which was right.
+      //
+      // Ranges, not just types. A zero or negative capital turns every figure
+      // on both dashboards into Infinity or a sign-flipped lie. The ceiling is
+      // deliberately absurd rather than tight: it rejects garbage without
+      // second-guessing a real portfolio.
+      //
+      // `is number` rather than `is int` for the day count on purpose — the two
+      // SDKs disagree about whether a whole number serialises as an integer or
+      // a double, and `is int` would turn that disagreement into a silent
+      // permission denial on save. Both readers coerce to a whole number.
+      match /settings/{settingsId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && request.resource.data.keys().hasOnly([
+               'capital', 'maxRiskPercent', 'waitingThresholdDays'
+             ])
+          && (!('capital' in request.resource.data)
+              || (request.resource.data.capital is number
+                  && request.resource.data.capital > 0
+                  && request.resource.data.capital <= 1000000000000))
+          && (!('maxRiskPercent' in request.resource.data)
+              || (request.resource.data.maxRiskPercent is number
+                  && request.resource.data.maxRiskPercent > 0
+                  && request.resource.data.maxRiskPercent <= 1))
+          && (!('waitingThresholdDays' in request.resource.data)
+              || (request.resource.data.waitingThresholdDays is number
+                  && request.resource.data.waitingThresholdDays >= 1
+                  && request.resource.data.waitingThresholdDays <= 3650));
       }
     }
 

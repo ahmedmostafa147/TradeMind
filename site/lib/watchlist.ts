@@ -121,6 +121,7 @@ export function toPlannedTrade(item: WatchlistItem): Trade {
     completedChecklistItems: [],
     source: item.source,
     takeProfitPrice: null,
+    timeline: [],
     screenshotPaths: [],
   };
 }

@@ -37,6 +37,27 @@ class HomeShell extends ConsumerStatefulWidget {
 class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
 
+  /// Position of «المستجدات» in both lists below. Named rather than written as
+  /// a bare 2 in `_select`, because the two lists have to stay in step and a
+  /// loose index is the easiest thing to forget when a destination is added.
+  static const int _updatesIndex = 2;
+
+  /// Switches tab, and marks the feed read when that tab is the updates one.
+  ///
+  /// This belongs to the shell because only the shell knows which screen the
+  /// user is actually looking at: IndexedStack builds all four children at
+  /// launch, so the screen itself cannot tell being mounted from being opened.
+  /// Doing it there marked every post read before the user had seen the badge.
+  void _select(int value) {
+    setState(() => _index = value);
+    if (value == _updatesIndex) {
+      // Deliberately not awaited: the badge clears from the notifier's own
+      // state change, and holding a tab switch on a disk write would make the
+      // bar feel like it stuck.
+      ref.read(lastSeenPostsProvider.notifier).markSeen();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // The shell is what keeps the sync controller alive. A Riverpod provider
@@ -62,7 +83,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (value) => setState(() => _index = value),
+        onDestinationSelected: _select,
         destinations: [
           const NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),

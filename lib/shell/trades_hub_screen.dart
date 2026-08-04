@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
-import '../core/widgets/app_logo_title.dart';
 import '../dashboard/analytics_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 import '../features/ai_parser/widgets/ai_trade_sheet.dart';
@@ -36,7 +35,7 @@ class TradesHubScreen extends StatelessWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const AppLogoTitle(title: 'صفقاتي'),
+          title: const Text('صفقاتي'),
           actions: [
             IconButton(
               icon: Icon(Icons.auto_awesome, color: context.palette.aiAccent),
