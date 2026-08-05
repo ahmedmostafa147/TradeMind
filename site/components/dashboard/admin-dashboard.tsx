@@ -4,6 +4,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import { ManualFlowsForm } from '@/components/dashboard/manual-flows-form';
 import { SignInPanel } from '@/components/dashboard/sign-in-panel';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { firestore } from '@/lib/firebase';
@@ -195,12 +196,13 @@ function MarketRefreshPanel() {
         >
           <p className="text-sm font-semibold text-loss">{error}</p>
           <p className="mt-2 text-xs leading-relaxed text-fg-muted">
-            لو الرسالة بتقول 403، يبقى البورصة رافضة السيرفر نفسه مش الكود —
-            الحل وقتها مصدر بيانات تاني أو تشغيل السحب من شبكة مختلفة، مش إعادة
-            المحاولة.
+            البورصة وراها حماية بوت تجارية (F5 Shape) بترد بتحدي JavaScript، فالسحب
+            الآلي غالبًا مش هينفع منها. استخدم الإدخال اليدوي تحت.
           </p>
         </div>
       )}
+
+      <ManualFlowsForm onSave={(flows) => saveFlows(flows, 'Securities')} />
     </section>
   );
 }
