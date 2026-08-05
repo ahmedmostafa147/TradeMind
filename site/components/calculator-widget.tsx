@@ -185,7 +185,7 @@ export function CalculatorWidget({
             جرّب تزوّد الكمية
           </label>
           <p className="mt-1 text-xs text-fg-muted">
-            ده اللي التطبيق بيعمله وانت بتكتب — أي كمية فوق الحد بتتعلّم فورًا.
+            ده اللي رادار بيعمله وانت بتكتب — أي كمية فوق الحد بتتعلّم فورًا.
           </p>
           <input
             id="calc-qty"

@@ -13,6 +13,7 @@ import { SectionHeader } from '@/components/section-header';
  * marketing.
  */
 const included = [
+  'بيانات تداولات المستثمرين كل جلسة',
   'كل الـ 12 أداة، من غير استثناء',
   'عدد صفقات غير محدود',
   'كل التحليلات ومنحنى رأس المال',
@@ -33,7 +34,9 @@ export function Pricing() {
         <SectionHeader
           eyebrow="السعر"
           title="مفيش باقات. فيه نسخة واحدة، وهي مجانية."
-          lead="مش نسخة تجريبية بتخلص، ومش نسخة ناقصة عشان تدفع للكاملة. اللي بتحمّله هو التطبيق كامل."
+          // «اللي بتحمّله هو التطبيق كامل» pointed at a download that does not
+          // exist — the app is unpublished and the site is the product today.
+          lead="مش نسخة تجريبية بتخلص، ومش نسخة ناقصة عشان تدفع للكاملة. تفتح الموقع وتلاقي كل حاجة."
         />
 
         <div className="mx-auto mt-14 grid max-w-4xl gap-5 lg:grid-cols-[1.15fr_0.85fr]">
@@ -94,7 +97,7 @@ export function Pricing() {
               <p className="mt-3 text-sm leading-relaxed text-fg-muted">
                 ميزة قراءة التوصية من صورة بتشتغل بمفتاح Gemini بتاعك انت، مش
                 بتاعنا. لو Google حاسبتك على استخدامه، ده بينك وبينهم — إحنا
-                مبناخدش منك حاجة. ومن غير المفتاح التطبيق شغّال عادي والميزة دي
+                مبناخدش منك حاجة. ومن غير المفتاح رادار شغّال عادي والميزة دي
                 بس هي المقفولة.
               </p>
             </div>

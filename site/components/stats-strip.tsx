@@ -18,6 +18,13 @@ import { site } from '@/lib/site';
  */
 const stats = [
   {
+    // Three nationalities against two investor classes — the grid the exchange
+    // publishes and the whole point of the market half.
+    value: '6',
+    label: 'فئات مستثمرين',
+    detail: 'مصريين وعرب وأجانب × مؤسسات وأفراد، كل جلسة',
+  },
+  {
     value: '40+',
     label: 'مؤشر أداء',
     detail: 'توقّع رياضي، معامل ربح، وسيط R، سلاسل، أفضل يوم وشهر',
@@ -26,11 +33,6 @@ const stats = [
     value: '12',
     label: 'أداة',
     detail: 'من حاسبة الحجم لتحليل الأداء حسب المصدر',
-  },
-  {
-    value: '6',
-    label: 'بنود قبل كل صفقة',
-    detail: 'تشيك ليست لازم تعدّيها قبل ما تحفظ',
   },
   {
     // The one figure that is a promise rather than a count, and the only one a

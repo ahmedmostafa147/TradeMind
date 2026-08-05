@@ -22,11 +22,26 @@ export const site = {
    */
   nameAr: 'رادار',
 
-  tagline: 'دفتر صفقات البورصة المصرية',
+  /**
+   * THE POSITIONING, IN THE OWNER'S OWN WORDS.
+   *
+   * It was «دفتر صفقات البورصة المصرية» — which described half the product and
+   * the half that is not the reason to choose it. Any journal records what you
+   * did; what Radar adds is what the MARKET did on the same day, split by who
+   * was actually moving the money. The two halves are deliberately parallel:
+   * one sentence, one shape, two subjects.
+   *
+   * Everything downstream reads this — the browser title, the manifest, the
+   * Open Graph card and the footer — so the wording is changed here and nowhere
+   * else. The OG image is the one consumer that needs a second look after any
+   * edit: its Arabic word spacing is hand-measured per word pair.
+   */
+  tagline: 'السوق ماشي فين، ودفترك ماشي فين',
 
   description:
-    'سجّل كل صفقة بسببها وحجمها المحسوب، وارجع لها بعد شهور تعرف غلطت فين. ' +
-    'حاسبة مخاطرة، تحليل أداء، وصفقاتك محفوظة على حسابك — مجاني بالكامل.',
+    'شوف مين بيشتري ومين بيبيع في البورصة المصرية — مؤسسات ولا أفراد، ' +
+    'مصريين ولا أجانب. وسجّل صفقاتك بأسبابها وحجمها المحسوب، واعرف أداءك ' +
+    'رايح على فين. من المتصفح، ومجاني بالكامل.',
 
   /**
    * Set once the listing is live. Every download call-to-action reads this and
@@ -75,10 +90,14 @@ export const site = {
   legalUpdatedAt: '4 أغسطس 2026',
 } as const;
 
+/**
+ * «السوق» leads, because it is the half a visitor cannot get anywhere else and
+ * the half the page used to omit entirely.
+ */
 export const nav = [
-  { href: '#why', label: 'المشكلة' },
+  { href: '#market', label: 'السوق' },
+  { href: '#why', label: 'دفترك' },
   { href: '#tools', label: 'الأدوات' },
-  { href: '#discipline', label: 'الانضباط' },
   { href: '#pricing', label: 'السعر' },
   { href: '#faq', label: 'أسئلة' },
 ] as const;
@@ -90,6 +109,7 @@ export const nav = [
  * to make it too, in the same words.
  */
 export const disclaimer =
-  'رادار أداة لتسجيل الصفقات وحساب المخاطرة. التطبيق لا يقدّم نصائح أو ' +
-  'توصيات استثمارية، ولا ينفّذ أي عمليات بيع أو شراء، ولا يتصل بأي وسيط أو ' +
-  'حساب تداول. كل القرارات مسؤوليتك وحدك.';
+  'رادار أداة لتسجيل الصفقات وحساب المخاطرة، ولعرض بيانات تداولات منشورة من ' +
+  'البورصة المصرية. هو لا يقدّم نصائح أو توصيات استثمارية، ولا ينفّذ أي ' +
+  'عمليات بيع أو شراء، ولا يتصل بأي وسيط أو حساب تداول. كل القرارات ' +
+  'مسؤوليتك وحدك.';

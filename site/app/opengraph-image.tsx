@@ -158,19 +158,23 @@ export default async function OpengraphImage() {
               Wrapping put "ليه؟" alone on the second line, which orphans the
               question mark and wrecks the balance — and the break point would
               shift with any font or size change. */}
+          {/* The two halves stack, one per line — the parallel IS the message,
+              and splitting it anywhere else would break the rhythm the sentence
+              is built on. Gaps re-measured for these words: every value below
+              belongs to the specific pair of letters that meet at that join. */}
           <ArabicLine
-            text="فاكر اشتريت السهم"
-            gaps={[-87, -26]}
+            text="السوق ماشي فين"
+            gaps={[-40, -60]}
             style={{ fontSize: '84px', fontWeight: 700, lineHeight: 1.15 }}
           />
           <ArabicLine
-            text="ده ليه؟"
-            gaps={[-46]}
+            text="ودفترك ماشي فين"
+            gaps={[-40, -60]}
             style={{ fontSize: '84px', fontWeight: 700, lineHeight: 1.15 }}
           />
           <ArabicLine
-            text="دفتر صفقات البورصة المصرية"
-            gaps={[-24, -35, -33]}
+            text="البورصة المصرية"
+            gaps={[-33]}
             style={{
               fontSize: '33px',
               fontWeight: 400,
@@ -197,8 +201,8 @@ export default async function OpengraphImage() {
               which the container's own 40px gap could not do for the same
               reason. */}
           {[
-            { text: 'حاسبة مخاطرة', gaps: [10], lead: -15 },
-            { text: 'تحليل أداء', gaps: [10], lead: 0 },
+            { text: 'تداولات المستثمرين', gaps: [-22], lead: -15 },
+            { text: 'دفتر صفقات', gaps: [-24], lead: 0 },
             { text: 'مجاني بالكامل', gaps: [-23], lead: 0 },
           ].map(({ text, gaps, lead }) => (
             <ArabicLine

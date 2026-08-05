@@ -20,12 +20,13 @@ export function ClosingCta() {
       <div className="mx-auto max-w-6xl px-5 py-16 lg:py-20">
         <div className="rounded-lg bg-inverse-surface px-6 py-16 text-center text-on-inverse-surface lg:px-16 lg:py-20">
           <h2 className="mx-auto max-w-3xl text-3xl font-bold tracking-tight text-balance sm:text-4xl lg:text-5xl">
-            بعد سنة، مش هيفرق إنك فاكر صفقة أو اتنين.
+            السوق بيسيب أثر كل يوم. وانت كمان.
           </h2>
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed opacity-80">
-            اللي هيفرق إن عندك تاريخ كامل يوريك اتطورت إزاي. ابدأ تسجّل من
-            النهاردة — الصفقة اللي مش هتسجّلها دلوقتي هي بالظبط اللي مش
-            هتفتكرها بعد شهرين.
+            الفرق بعد سنة إن عندك الاتنين مكتوبين: مين كان بيشتري في كل جلسة،
+            وانت كنت بتعمل إيه وقتها. ابدأ من النهاردة — الجلسة اللي مش هتشوفها
+            دلوقتي والصفقة اللي مش هتسجّلها هما بالظبط اللي مش هتفتكرهم بعد
+            شهرين.
           </p>
 
           {/* The page used to end on a chip that says «قريبًا» and does

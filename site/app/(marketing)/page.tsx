@@ -3,6 +3,7 @@ import { Discipline } from '@/components/discipline';
 import { Faq, faq } from '@/components/faq';
 import { Features } from '@/components/features';
 import { Hero } from '@/components/hero';
+import { Market } from '@/components/market';
 import { Pricing } from '@/components/pricing';
 import { Problem } from '@/components/problem';
 import { StatsStrip } from '@/components/stats-strip';
@@ -58,6 +59,10 @@ export default function HomePage() {
       />
       <Hero />
       <StatsStrip />
+      {/* Before the journal sections, not after. It is the half a visitor
+          cannot get anywhere else, and burying it under four screens of
+          journal copy would repeat the mistake this section exists to fix. */}
+      <Market />
       <Problem />
       <Features />
       <Tools />

@@ -55,7 +55,7 @@ export function Discipline() {
       <div className="mx-auto max-w-6xl px-5 py-20 lg:py-28">
         <SectionHeader
           eyebrow="الانضباط"
-          title="التطبيق بيقيس التزامك، مش حظك."
+          title="رادار بيقيس التزامك، مش حظك."
           lead={
             <>
               كل صفقة بتاخد درجة من 0 لـ 100 على خمس نقاط، كل واحدة بـ{' '}
@@ -168,7 +168,7 @@ export function Discipline() {
               <span className="num">2,600</span> جنيه مخاطرة — وده{' '}
               <span className="num">2.6%</span> من رأس مال{' '}
               <span className="num">100,000</span>، أعلى من حد الـ{' '}
-              <span className="num">2%</span> اللي انت حاططه. التطبيق بيعلّمها
+              <span className="num">2%</span> اللي انت حاططه. رادار بيعلّمها
               بشريط أحمر وعلامة تحذير وجملة صريحة — مش باللون لوحده، عشان تبان
               حتى لو عندك عمى ألوان.
             </p>

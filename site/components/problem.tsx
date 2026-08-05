@@ -32,7 +32,7 @@ export function Problem() {
     <section id="why" className="border-b border-border-default scroll-mt-20">
       <div className="mx-auto max-w-6xl px-5 py-20 lg:py-28">
         <SectionHeader
-          eyebrow="المشكلة"
+          eyebrow="دفترك"
           title="المشكلة مش إنك بتخسر. المشكلة إنك مش بتتعلّم."
           lead="بتشتري السهم، وبعد فترة تبيعه، وخلاص الموضوع بينتهي. بعد شهرين لما ترجع تبص على العملية، تكتشف إنك مش فاكر اشتريت ليه من الأساس."
         />

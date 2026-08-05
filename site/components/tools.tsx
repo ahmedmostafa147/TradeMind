@@ -54,6 +54,7 @@ const groups = [
         Icon: SparkIcon,
         title: 'قراءة التوصية من صورة',
         body: 'ترفع صورة توصية، والتطبيق يستخرج منها الأسعار. بمفتاحك انت، ومقفولة من غيره.',
+        appOnly: true,
       },
     ],
   },
@@ -70,6 +71,7 @@ const groups = [
         Icon: ChartIcon,
         title: 'أسعار الإغلاق',
         body: 'آخر إغلاق للسهم من البورصة المصرية، وربح وخسارة غير محققة للمراكز المفتوحة.',
+        appOnly: true,
       },
       {
         Icon: TimelineIcon,
@@ -80,6 +82,7 @@ const groups = [
         Icon: ImageIcon,
         title: 'صور الشارت',
         body: 'ترفق لقطات بالصفقة، بتتنسخ لمجلد التطبيق ومبتترفعش لأي مكان.',
+        appOnly: true,
       },
     ],
   },
@@ -118,7 +121,7 @@ export function Tools() {
         <SectionHeader
           eyebrow="الأدوات"
           title="12 أداة، كلها بتخدم سؤال واحد."
-          lead="«الصفقة دي كانت قرار صح ولا لأ؟» — كل حاجة في التطبيق موجودة عشان تجاوب على ده، قبل الصفقة وبعدها."
+          lead="«الصفقة دي كانت قرار صح ولا لأ؟» — ده السؤال اللي كل أداة هنا موجودة عشانه، قبل الصفقة وبعدها. التسعة اللي من غير علامة شغالين من المتصفح دلوقتي."
         />
 
         <div className="mt-16 space-y-14">
@@ -137,13 +140,25 @@ export function Tools() {
               </div>
 
               <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {tools.map(({ Icon, title, body, featured }) => (
+                {tools.map(({ Icon, title, body, featured, appOnly }) => (
                   <li key={title}>
                     <Card className="h-full">
                       <IconChip featured={featured}>
                         <Icon />
                       </IconChip>
-                      <h4 className="mt-4 font-bold">{title}</h4>
+                      {/* Named on the card, not in a footnote. These three read
+                          from the phone's own storage or its API key, so a
+                          visitor who signs up on the web expecting them would
+                          find out ten seconds later — which is the one-star
+                          review this file's header warns about. */}
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <h4 className="font-bold">{title}</h4>
+                        {appOnly && (
+                          <span className="rounded-full border border-border-default bg-surface-high px-2 py-0.5 text-[11px] font-semibold text-fg-muted">
+                            من التطبيق
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-2 text-sm leading-relaxed text-fg-muted">
                         {body}
                       </p>

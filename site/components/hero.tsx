@@ -46,17 +46,22 @@ export function Hero() {
     <section className="border-b border-border-default">
       <div className="mx-auto max-w-3xl px-5 pt-16 text-center lg:pt-24">
         <p className="text-sm font-semibold text-brand-ink">
-          دفتر صفقات البورصة المصرية
+          البورصة المصرية
         </p>
 
+        {/* The two halves as one sentence, in the owner's own words.
+            The headline used to be «فاكر اشتريت السهم ده ليه؟» — a good line,
+            and still the opening of the journal section below, but it sold only
+            the half that every trade journal sells. What a visitor cannot get
+            elsewhere is the market half, and it was nowhere on this page. */}
         <h1 className="mt-5 text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-          فاكر اشتريت السهم ده ليه؟
+          السوق ماشي فين، ودفترك ماشي فين.
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-lg text-fg-muted">
-          أغلب الخسائر مش سببها صفقة وحشة، سببها إنك مش فاكر ليه دخلت أصلًا.
-          رادار بيخلّي لكل صفقة سبب مكتوب، وحجم محسوب قبل ما تشتري، وسجل ترجعله
-          بعد شهور تعرف منه غلطت فين — وتبطّل تكرّر نفس الغلطة.
+          كل جلسة، رادار بيوريك مين كان بيشتري ومين كان بيبيع فعلًا — مؤسسات ولا
+          أفراد، مصريين ولا أجانب. وعلى الناحية التانية بيمسك دفترك: كل صفقة
+          بسببها وحجمها المحسوب قبل ما تشتري، وأداءك رايح على فين.
         </p>
 
         {/* The two account actions lead, because they are the two things on
@@ -125,7 +130,7 @@ export function Hero() {
 
           <div className="mt-7 border-t border-border-default pt-7">
             <p className="mb-4 text-center text-xs font-semibold text-fg-muted">
-              نفس الصفقة، زي ما بتتسجّل في التطبيق
+              نفس الصفقة، زي ما بتتسجّل في رادار
             </p>
             {/* Decorative in the accessibility sense: the card repeats
                 information the chart's own label already carries, and reading
