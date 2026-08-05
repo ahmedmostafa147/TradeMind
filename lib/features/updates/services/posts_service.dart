@@ -9,13 +9,19 @@ import '../models/post.dart';
 /// be: firestore.rules grants writes to members of the `admins` collection
 /// only, and that collection is unreachable from every client path.
 ///
-/// THIS USED TO FETCH `signals` TOO, AND IT HAD TO STOP.
-/// That collection carried operator-published trade ideas; it is gone from the
-/// admin console and denied by firestore.rules, for the reasons recorded there.
-/// The fetch could not simply be left in place: it ran inside a [Future.wait]
-/// whose `catch` returns an empty list, so one denied read would have taken the
-/// announcements down with it and the updates tab would have gone quietly blank
-/// with no error anywhere.
+/// THIS FEATURE IS DEAD AND THIS CLASS NOW ALWAYS RETURNS AN EMPTY LIST.
+///
+/// It read two collections. `signals` carried operator-published trade ideas
+/// and contradicted the product's own no-advice disclaimer; `announcements` was
+/// a broadcast feed the owner then dropped as well. Both are denied by
+/// firestore.rules — see the note there — so the read below is refused and the
+/// `catch` turns that into an empty feed. No crash, no error banner: the
+/// updates tab simply shows its "nothing published yet" state forever.
+///
+/// That is deliberate for now, not an oversight. The site half of this removal
+/// is done; deleting the app's updates tab, its screen, its providers and the
+/// shell wiring is the cleanup still owed, and was left out because the owner
+/// asked for the website to be the whole focus.
 class PostsService {
   const PostsService._();
 

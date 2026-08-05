@@ -15,7 +15,6 @@ import { EquityChart, MonthlyBars } from '@/components/dashboard/charts';
 import { SignInPanel } from '@/components/dashboard/sign-in-panel';
 import { TodayPanel } from '@/components/dashboard/today-panel';
 import { TradeForm, type TradeDraft } from '@/components/dashboard/trade-form';
-import { UpdatesPanel } from '@/components/dashboard/updates-panel';
 import { WatchlistPanel } from '@/components/dashboard/watchlist-panel';
 import {
   analyse,
@@ -29,7 +28,6 @@ import { checklistCompletion } from '@/lib/checklist';
 import { firestore } from '@/lib/firebase';
 import { dateLabel, money, percent, rMultiple, signedMoney } from '@/lib/format';
 import { useAccountSettings, type SettingsSource } from '@/lib/account-settings';
-import { decodePost, sortPosts, type Post } from '@/lib/posts';
 import { parseNumber } from '@/lib/risk-math';
 import {
   averageRiskScore,
@@ -73,13 +71,7 @@ function Gate() {
   return <Journal />;
 }
 
-type Tab =
-  | 'today'
-  | 'overview'
-  | 'analytics'
-  | 'trades'
-  | 'watchlist'
-  | 'updates';
+type Tab = 'today' | 'overview' | 'analytics' | 'trades' | 'watchlist';
 type View = { kind: 'list' } | { kind: 'new'; seed?: Trade } | { kind: 'edit'; trade: Trade };
 
 function Journal() {
@@ -88,7 +80,6 @@ function Journal() {
 
   const [trades, setTrades] = useState<Trade[] | null>(null);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
   const [failed, setFailed] = useState(false);
   const [view, setView] = useState<View>({ kind: 'list' });
   const [tab, setTab] = useState<Tab>('today');
@@ -143,31 +134,6 @@ function Journal() {
    */
   useEffect(() => {
     if (user) void upsertProfile(user);
-  }, [user]);
-
-  /**
-   * The operator's feed. Read separately and failure-tolerantly: a denied or
-   * empty announcements collection must not blank out the journal, which is the
-   * thing the user actually came for.
-   */
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const ann = await getDocs(collection(firestore(), 'announcements'));
-        if (cancelled) return;
-        setPosts(sortPosts(ann.docs.map((d) => decodePost(d.id, d.data()))));
-      } catch {
-        // Nothing published, or the rules said no. Either way the tab shows
-        // its empty state rather than an error the user cannot act on.
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
   }, [user]);
 
   /**
@@ -269,7 +235,6 @@ function Journal() {
     { id: 'analytics', label: 'التحليلات' },
     { id: 'trades', label: 'الصفقات', badge: trades?.length },
     { id: 'watchlist', label: 'قائمة المراقبة', badge: watchlist.length },
-    { id: 'updates', label: 'المستجدات', badge: posts.length },
   ];
 
   const hasTrades = trades !== null && trades.length > 0;
@@ -392,8 +357,6 @@ function Journal() {
               ) : (
                 <EmptyJournal onAdd={() => setView({ kind: 'new' })} />
               ))}
-
-            {tab === 'updates' && <UpdatesPanel posts={posts} />}
 
             {tab === 'watchlist' && (
               <WatchlistPanel

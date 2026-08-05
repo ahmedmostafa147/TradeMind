@@ -1,18 +1,8 @@
 'use client';
 
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  setDoc,
-} from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { SignInPanel } from '@/components/dashboard/sign-in-panel';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
@@ -67,23 +57,22 @@ function Gate() {
 }
 
 /**
- * THERE WAS A THIRD TAB, «الصفقات», AND IT IS GONE ON PURPOSE.
+ * THIS CONSOLE HAD THREE TABS AND NOW HAS NONE — it is one panel.
  *
- * It published a ticker with an entry price and a stop to every signed-in user.
- * That is a recommendation whatever the badge says, and the product states the
- * opposite in three published places — the footer disclaimer, the terms, and
- * the FAQ. See the note in lib/posts.ts before considering bringing it back.
+ * «الصفقات» published a ticker with an entry price and a stop to every
+ * signed-in user. That is a recommendation whatever the badge says, and the
+ * product states the opposite in three published places: the footer
+ * disclaimer, the terms, and the FAQ.
+ *
+ * «الإعلانات» went next, by the owner's call — a broadcast feed was never what
+ * this product is for, and nothing had been published through it. Both
+ * collections are denied in firestore.rules; see the note there.
+ *
+ * The tab bar went with them rather than being left as a single tab labelling
+ * the only thing on the page.
  */
-type Tab = 'users' | 'announcements';
-
 function Console() {
   const { user, logout } = useAuth();
-  const [tab, setTab] = useState<Tab>('users');
-
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'users', label: 'المستخدمين' },
-    { id: 'announcements', label: 'الإعلانات' },
-  ];
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-10 lg:py-14">
@@ -111,30 +100,8 @@ function Console() {
         </div>
       </header>
 
-      <nav aria-label="أقسام الإدارة" className="mt-6">
-        <ul className="flex flex-wrap gap-2">
-          {tabs.map((item) => (
-            <li key={item.id}>
-              <button
-                type="button"
-                onClick={() => setTab(item.id)}
-                aria-current={tab === item.id ? 'page' : undefined}
-                className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-                  tab === item.id
-                    ? 'bg-brand text-on-brand'
-                    : 'border border-border-default text-fg-muted hover:bg-surface-high'
-                }`}
-              >
-                {item.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
       <div className="mt-8">
-        {tab === 'users' && <UsersPanel />}
-        {tab === 'announcements' && <AnnouncementsPanel />}
+        <UsersPanel />
       </div>
     </div>
   );
@@ -293,248 +260,6 @@ function fmtDate(value: Date | null): string {
   const m = String(value.getMonth() + 1).padStart(2, '0');
   const d = String(value.getDate()).padStart(2, '0');
   return `${y}/${m}/${d}`;
-}
-
-// ---------------------------------------------------------------------------
-// Announcements
-// ---------------------------------------------------------------------------
-
-type Post = {
-  id: string;
-  title: string;
-  body: string;
-  createdAt: Date | null;
-};
-
-/**
- * Was parameterised by collection name, because there were two. There is one
- * now, so the parameter went with the second — a knob with a single valid
- * setting is a knob that only makes the call sites harder to read.
- */
-function useCollection() {
-  const [items, setItems] = useState<Post[] | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      const snap = await getDocs(
-        query(
-          collection(firestore(), 'announcements'),
-          orderBy('createdAt', 'desc')
-        )
-      );
-      setItems(
-        snap.docs.map((d) => {
-          const data = d.data();
-          return {
-            id: d.id,
-            title: typeof data.title === 'string' ? data.title : '',
-            body: typeof data.body === 'string' ? data.body : '',
-            createdAt: toDate(data.createdAt),
-          };
-        })
-      );
-    } catch {
-      setFailed(true);
-    }
-  }, [name]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  return { items, failed, reload: load };
-}
-
-function AnnouncementsPanel() {
-  const name = 'announcements';
-  const { items, failed, reload } = useCollection();
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  function startEdit(item: Post) {
-    setEditingId(item.id);
-    setTitle(item.title);
-    setBody(item.body);
-    setError(null);
-    // The form is above the list on a narrow screen, so without this the page
-    // appears not to have reacted to the click at all.
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function cancelEdit() {
-    setEditingId(null);
-    setTitle('');
-    setBody('');
-    setError(null);
-  }
-
-  async function publish() {
-    if (!title.trim() || !body.trim()) return;
-    setBusy(true);
-    setError(null);
-    try {
-      if (editingId === null) {
-        await addDoc(collection(firestore(), name), {
-          title: title.trim(),
-          body: body.trim(),
-          createdAt: serverTimestamp(),
-        });
-      } else {
-        // merge, and `createdAt` deliberately not resent: an edit must not
-        // repost the item. Overwriting it would jump a months-old announcement
-        // back to the top of every reader's feed for a fixed typo.
-        await setDoc(
-          doc(firestore(), name, editingId),
-          {
-            title: title.trim(),
-            body: body.trim(),
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
-      }
-      cancelEdit();
-      await reload();
-    } catch {
-      setError(
-        editingId === null
-          ? 'تعذّر النشر. اتأكد إن حسابك مصرّح له.'
-          : 'تعذّر حفظ التعديل. اتأكد إن حسابك مصرّح له.'
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove(id: string) {
-    // Deleting published content is not undoable and there is no trash, so it
-    // asks first. The browser dialog is deliberate — a custom modal here would
-    // be more code guarding a rarer action than the confirm it replaces.
-    if (!window.confirm('تمسح ده نهائيًا؟')) return;
-    try {
-      await deleteDoc(doc(firestore(), name, id));
-      await reload();
-    } catch {
-      setError('تعذّر الحذف.');
-    }
-  }
-
-  return (
-    <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-      <div
-        className={`h-fit rounded-lg border bg-surface p-6 lg:sticky lg:top-6 ${
-          editingId === null ? 'border-border-default' : 'border-brand-ink'
-        }`}
-      >
-        <h2 className="font-bold">
-          {editingId === null ? 'إعلان جديد' : 'تعديل منشور'}
-        </h2>
-        <p className="mt-1 text-xs text-fg-muted">
-          {editingId === null
-            ? 'بيظهر لكل مستخدم مسجّل دخول في تبويب «المستجدات».'
-            : 'التعديل مش بيغيّر تاريخ النشر، فالمنشور مش هيرجع لأول القايمة تاني.'}
-        </p>
-
-        <div className="mt-5 space-y-4">
-          <div>
-            <label htmlFor={`${name}-title`} className="text-sm font-semibold">
-              العنوان
-            </label>
-            <input
-              id={`${name}-title`}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="mt-2 w-full rounded-md border border-border-default bg-surface-low px-3 py-2 outline-none focus:border-brand-ink"
-            />
-          </div>
-          <div>
-            <label htmlFor={`${name}-body`} className="text-sm font-semibold">
-              النص
-            </label>
-            <textarea
-              id={`${name}-body`}
-              rows={6}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              className="mt-2 w-full rounded-md border border-border-default bg-surface-low px-3 py-2 outline-none focus:border-brand-ink"
-            />
-          </div>
-
-          {error && (
-            <p role="alert" className="text-sm font-semibold text-loss">
-              {error}
-            </p>
-          )}
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={busy || !title.trim() || !body.trim()}
-              onClick={() => void publish()}
-              className="flex-1 rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-50"
-            >
-              {busy ? '...' : editingId === null ? 'نشر' : 'احفظ التعديل'}
-            </button>
-            {editingId !== null && (
-              <button
-                type="button"
-                onClick={cancelEdit}
-                className="rounded-md border border-border-strong px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-surface-high"
-              >
-                إلغاء
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div>
-        {failed && <ErrorNote>تعذّر التحميل.</ErrorNote>}
-        {!failed && items === null && <Loading />}
-        {items !== null && items.length === 0 && (
-          <p className="text-sm text-fg-muted">مفيش حاجة منشورة لسه.</p>
-        )}
-        {items?.map((item) => (
-          <article
-            key={item.id}
-            className={`mb-3 rounded-lg border bg-surface p-5 ${
-              editingId === item.id ? 'border-brand-ink' : 'border-border-default'
-            }`}
-          >
-            <div className="flex items-start justify-between gap-4">
-              <h3 className="font-bold">{item.title}</h3>
-              <div className="flex shrink-0 gap-3">
-                <button
-                  type="button"
-                  onClick={() => startEdit(item)}
-                  className="text-xs font-semibold text-brand-ink underline-offset-4 hover:underline"
-                >
-                  تعديل
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void remove(item.id)}
-                  className="text-xs font-semibold text-loss underline-offset-4 hover:underline"
-                >
-                  حذف
-                </button>
-              </div>
-            </div>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-fg-muted">
-              {item.body}
-            </p>
-            <p className="num mt-3 text-xs text-fg-subtle">
-              {fmtDate(item.createdAt)}
-            </p>
-          </article>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 // ---------------------------------------------------------------------------

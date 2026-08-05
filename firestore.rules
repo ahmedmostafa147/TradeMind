@@ -134,29 +134,31 @@ service cloud.firestore {
     // Read requires a session rather than being public: this is a product
     // surface, not a marketing page, and an open read would let anyone scrape
     // the whole feed without ever installing anything.
-    match /announcements/{announcementId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    // THERE WAS A `signals` COLLECTION HERE. It is deliberately not replaced.
+    // THERE WERE `announcements` AND `signals` COLLECTIONS HERE. Both are gone,
+    // and neither is replaced — they fall through to the catch-all below, which
+    // denies them outright, so documents still sitting in either are unreadable
+    // by every client rather than merely unrendered.
     //
-    // It carried operator-published trade ideas — a ticker with an entry price
-    // and a stop, delivered to every signed-in user. The product says the
-    // opposite in three published places (the site footer disclaimer, the
-    // terms, and the FAQ answer to «التطبيق بيقولي أشتري إيه؟»), RELEASE.md
-    // depends on that claim so Play does not file the app under its restricted
-    // financial categories, and handing out tickers carries the FRA licensing
-    // exposure this project already decided against.
+    // `announcements` was a broadcast feed from the operator to every user. It
+    // is gone by the owner's decision: the product is a market and journal
+    // tool, not a channel, and nothing was ever published through it.
     //
-    // Falling through to the catch-all below denies it, which is the point: any
-    // document still sitting in that collection is now unreadable by every
-    // client rather than merely unrendered. Removing the rule and leaving a
-    // reader in place would have been the dangerous half-measure — a denial
-    // there took the announcements feed down with it, because both surfaces
-    // fetched the two collections in one Promise.all / Future.wait.
+    // `signals` carried operator-published trade ideas — a ticker with an entry
+    // price and a stop. The product says the opposite in three published places
+    // (the site footer disclaimer, the terms, and the FAQ answer to «التطبيق
+    // بيقولي أشتري إيه؟»), RELEASE.md depends on that claim so Play does not
+    // file the app under its restricted financial categories, and handing out
+    // tickers carries the FRA licensing exposure this project already decided
+    // against.
     //
-    // Do not add it back without changing the legal pages FIRST.
+    // A READER MUST NEVER OUTLIVE ITS RULE. When `signals` was removed, both
+    // clients still fetched the two collections in one Promise.all /
+    // Future.wait, and both swallow a rejection into an empty list — so a
+    // denial on one would have taken the announcements feed down with it,
+    // silently. Whatever replaces these, remove the fetch and the rule in the
+    // same change.
+    //
+    // Do not add `signals` back without changing the legal pages FIRST.
 
     // Anything not matched above is denied, including any path a future
     // version adds before its rule does.
