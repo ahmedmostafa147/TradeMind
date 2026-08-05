@@ -83,11 +83,17 @@ export const site = {
   ),
 
   /** Kept in sync with the «آخر تحديث» line inside the privacy policy. Bumped
-   *  when the policy's substance changes, not when its wording is tidied — the
-   *  4 أغسطس revision added risk settings to the stored-data table, because
-   *  capital stopped being device-only and started syncing through the
-   *  account. */
-  legalUpdatedAt: '4 أغسطس 2026',
+   *  when the policy's substance changes, not when its wording is tidied.
+   *
+   *  4 أغسطس added risk settings to the stored-data table, because capital
+   *  stopped being device-only and started syncing through the account.
+   *
+   *  5 أغسطس is a substance change twice over: the product started DISPLAYING
+   *  third-party market data, which needed its own clause in both documents,
+   *  and both documents stopped saying «التطبيق» when they meant Radar — a
+   *  reader on the website was being governed by terms that named something
+   *  else. Widened, never narrowed. */
+  legalUpdatedAt: '5 أغسطس 2026',
 } as const;
 
 /**
