@@ -127,3 +127,76 @@ export function InstallButton({ className = '' }: { className?: string }) {
     </button>
   );
 }
+
+/**
+ * A back control that exists ONLY inside the installed app.
+ *
+ * THE PROBLEM IT SOLVES. `display: standalone` removes the browser's own
+ * chrome, and with it the back button. In a tab that costs nothing — every
+ * page here links onward — but installed, the legal pages are a dead end: the
+ * manifest's `scope` is `/` precisely so /privacy and /terms open INSIDE the
+ * app window rather than kicking the user out to Safari, and once there the
+ * only navigation offered is the wordmark, which goes to the landing page
+ * rather than back to the journal they came from. On Android the hardware back
+ * gesture still works; on iOS there is no gesture and no button, and the user
+ * is simply stuck until they kill the app.
+ *
+ * Rendered nothing in a browser tab, where the browser's own control is better
+ * than ours and a second one is clutter.
+ *
+ * `history.length > 1` is checked because a cold launch straight into
+ * `start_url` has nothing behind it, and a back button that does nothing is
+ * worse than none — but it is checked at CLICK time as well as at mount, since
+ * client-side navigation grows the history without remounting this.
+ */
+export function StandaloneBack({ className = '' }: { className?: string }) {
+  const [installed, setInstalled] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia('(display-mode: standalone)');
+
+    const update = () => {
+      // `navigator.standalone` is the iOS-only signal — Safari does not report
+      // the display-mode media query for a home-screen launch, which is the
+      // exact platform that has no back gesture to fall back on.
+      const iosStandalone =
+        (window.navigator as Navigator & { standalone?: boolean }).standalone ===
+        true;
+      setInstalled(query.matches || iosStandalone);
+    };
+
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+
+  if (!installed) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (window.history.length > 1) window.history.back();
+        else window.location.assign('/dashboard/');
+      }}
+      aria-label="رجوع"
+      title="رجوع"
+      className={`grid size-9 shrink-0 place-items-center rounded-md border border-border-default text-fg-muted transition-colors hover:bg-surface-high hover:text-fg ${className}`}
+    >
+      {/* Points right: this is an RTL interface, so "back" is the direction the
+          text comes from. A left-pointing chevron here reads as "forward". */}
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="size-4"
+        aria-hidden
+      >
+        <path d="m9 18 6-6-6-6" />
+      </svg>
+    </button>
+  );
+}

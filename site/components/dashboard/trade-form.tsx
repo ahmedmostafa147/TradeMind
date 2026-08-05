@@ -188,6 +188,17 @@ export function TradeForm({
     };
   }, [capital, entryPrice, stopPrice, qty, maxRisk]);
 
+  // MATCHES THE APP: the exit block appears for any position that exists, not
+  // only a closed one — lib/trades/widgets/trade_form_body.dart shows it under
+  // `status.isExecuted` with the hint «سيبهم فاضيين لو الصفقة لسه مفتوحة». That
+  // is the better shape: closing a trade is filling in an exit, not hunting for
+  // a status dropdown first.
+  //
+  // The fields are only REQUIRED when the status says closed, which is a guard
+  // the app lacks — its saver quietly writes status=closed with a null exit,
+  // and such a record has no P&L, no R and no place on the equity curve while
+  // still being counted as a finished trade.
+  const showsExit = isExecuted(status);
   const needsExit = status === 'closed';
 
   function toggleCheck(id: string) {
@@ -491,8 +502,15 @@ export function TradeForm({
         </p>
       )}
 
-      {needsExit && (
-        <div className="grid gap-4 rounded-lg border border-border-default bg-surface-low p-5 sm:grid-cols-2">
+      {showsExit && (
+        <fieldset className="rounded-lg border border-border-default bg-surface-low p-5">
+          <legend className="px-2 text-sm font-bold">الخروج من الصفقة</legend>
+          <p className="mb-4 text-xs text-fg-muted">
+            {needsExit
+              ? 'الصفقة مقفولة، فلازم تكتب سعر وتاريخ الخروج.'
+              : 'سيبهم فاضيين لو الصفقة لسه مفتوحة — أول ما تكتبهم وتخليها «عملتها وخلصت» تتحسب في أداءك.'}
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
           <Field label="سعر الخروج" htmlFor="tf-exit" suffix="ج.م">
             <input
               id="tf-exit"
@@ -501,7 +519,7 @@ export function TradeForm({
               onChange={(e) => setExitPrice(e.target.value)}
               dir="ltr"
               className={inputCls}
-              required
+              required={needsExit}
             />
           </Field>
           <Field label="تاريخ الخروج" htmlFor="tf-exitdate">
@@ -512,10 +530,11 @@ export function TradeForm({
               onChange={(e) => setExitDate(e.target.value)}
               dir="ltr"
               className={inputCls}
-              required
+              required={needsExit}
             />
           </Field>
-        </div>
+          </div>
+        </fieldset>
       )}
 
       <Field label="سبب الدخول" htmlFor="tf-reason">

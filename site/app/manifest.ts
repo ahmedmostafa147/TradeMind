@@ -18,9 +18,16 @@ import { site } from '@/lib/site';
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: `${site.name} — ${site.tagline}`,
-    // Home screens truncate at roughly 12 characters. The Arabic wordmark fits
-    // where «Radar — دفتر صفقات البورصة المصرية» would be cut mid-word.
+    // NOT the tagline. `name` is what Android prints under the icon on the
+    // launch splash and in the install sheet, and it truncates — «السوق ماشي
+    // فين، ودفترك ماشي فين» is a sentence, and a sentence cut mid-word is a
+    // worse first impression than a short label. The tagline still reaches the
+    // browser title, the share card and the footer; this is the one consumer
+    // that needs it short, so it is decoupled here rather than shortened
+    // everywhere.
+    name: `${site.name} — رادار`,
+    // Home screens truncate at roughly 12 characters, so the Arabic wordmark
+    // alone goes here.
     short_name: site.nameAr,
     description: site.description,
     lang: 'ar-EG',

@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { InstallButton } from '@/components/pwa';
+import { InstallButton, StandaloneBack } from '@/components/pwa';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { nav, site } from '@/lib/site';
 
@@ -9,6 +9,11 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border-default bg-bg/85 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-5">
+        {/* Only rendered inside the installed app — see StandaloneBack. The
+            legal pages open in this window by design, and without it they are
+            a dead end on iOS. */}
+        <StandaloneBack />
+
         <Link
           href="/"
           className="flex shrink-0 items-center gap-2.5"

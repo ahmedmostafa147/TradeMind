@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { InstallButton } from '@/components/pwa';
+import { InstallButton, StandaloneBack } from '@/components/pwa';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { disclaimer, site } from '@/lib/site';
 
@@ -42,7 +42,8 @@ export default function AppLayout({
       </a>
 
       <header className="border-b border-border-default bg-surface">
-        <div className="mx-auto flex h-14 max-w-6xl items-center px-5">
+        <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-5">
+          <StandaloneBack />
           <Link
             href="/"
             className="text-sm font-bold tracking-tight transition-colors hover:text-brand-ink"
