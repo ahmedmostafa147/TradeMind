@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { EquityChart, MonthlyBars } from '@/components/dashboard/charts';
+import { GoalPanel } from '@/components/dashboard/goal-panel';
 import { SignInPanel } from '@/components/dashboard/sign-in-panel';
 import { TodayPanel } from '@/components/dashboard/today-panel';
 import { TradeForm, type TradeDraft } from '@/components/dashboard/trade-form';
@@ -71,7 +72,7 @@ function Gate() {
   return <Journal />;
 }
 
-type Tab = 'today' | 'overview' | 'analytics' | 'trades' | 'watchlist';
+type Tab = 'today' | 'overview' | 'analytics' | 'goal' | 'trades' | 'watchlist';
 type View = { kind: 'list' } | { kind: 'new'; seed?: Trade } | { kind: 'edit'; trade: Trade };
 
 function Journal() {
@@ -233,6 +234,7 @@ function Journal() {
     { id: 'today', label: 'قرار اليوم' },
     { id: 'overview', label: 'نظرة عامة' },
     { id: 'analytics', label: 'التحليلات' },
+    { id: 'goal', label: 'الهدف' },
     { id: 'trades', label: 'الصفقات', badge: trades?.length },
     { id: 'watchlist', label: 'قائمة المراقبة', badge: watchlist.length },
   ];
@@ -341,6 +343,21 @@ function Journal() {
               ) : (
                 <EmptyJournal onAdd={() => setView({ kind: 'new' })} />
               ))}
+
+            {/* Not gated behind hasTrades like the two above. An empty journal
+                is exactly when somebody wants to know what the target needs,
+                and the panel's own «لسه بدري» state answers that far better
+                than the generic "add your first trade" card would. */}
+            {tab === 'goal' && (
+              <GoalPanel
+                capital={settings.capital}
+                expectancy={stats?.expectancy ?? null}
+                trades={trades.map((t) => ({
+                  exitDate: t.exitDate,
+                  pnl: metricsOf(t, settings.capital).pnl,
+                }))}
+              />
+            )}
 
             {tab === 'trades' &&
               (hasTrades ? (
