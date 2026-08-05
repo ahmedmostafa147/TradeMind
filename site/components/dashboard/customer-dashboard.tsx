@@ -11,6 +11,7 @@ import {
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { CalculatorWidget } from '@/components/calculator-widget';
 import { EquityChart, MonthlyBars } from '@/components/dashboard/charts';
 import { GoalPanel } from '@/components/dashboard/goal-panel';
 import { MarketFlowsPanel } from '@/components/dashboard/market-flows-panel';
@@ -30,7 +31,7 @@ import { checklistCompletion } from '@/lib/checklist';
 import { firestore } from '@/lib/firebase';
 import { dateLabel, money, percent, rMultiple, signedMoney } from '@/lib/format';
 import { useAccountSettings, type SettingsSource } from '@/lib/account-settings';
-import { parseNumber } from '@/lib/risk-math';
+import { exceedsRiskLimit, parseNumber } from '@/lib/risk-math';
 import {
   averageRiskScore,
   GRADE_LABELS,
@@ -80,6 +81,7 @@ type Tab =
   | 'analytics'
   | 'goal'
   | 'trades'
+  | 'planning'
   | 'watchlist';
 type View = { kind: 'list' } | { kind: 'new'; seed?: Trade } | { kind: 'edit'; trade: Trade };
 
@@ -199,6 +201,30 @@ function Journal() {
     [trades, settings.capital]
   );
 
+  /**
+   * THE SPLIT THE WHOLE JOURNAL HANGS ON.
+   *
+   * `open` and `closed` are trades that exist — money moved, or is moving.
+   * `planned` and `cancelled` are intentions: one still live, one abandoned.
+   * They were listed together, so the tab badge counted nine ideas and three
+   * trades as «12» — a number that answers no question anybody has.
+   */
+  const realTrades = useMemo(
+    () =>
+      (trades ?? []).filter(
+        (t) => t.status === 'open' || t.status === 'closed'
+      ),
+    [trades]
+  );
+
+  const plannedTrades = useMemo(
+    () =>
+      (trades ?? []).filter(
+        (t) => t.status === 'planned' || t.status === 'cancelled'
+      ),
+    [trades]
+  );
+
   const avgDiscipline = useMemo(
     () =>
       trades === null
@@ -244,11 +270,16 @@ function Journal() {
     { id: 'overview', label: 'نظرة عامة' },
     { id: 'analytics', label: 'التحليلات' },
     { id: 'goal', label: 'الهدف' },
-    { id: 'trades', label: 'الصفقات', badge: trades?.length },
+    { id: 'trades', label: 'صفقاتي', badge: realTrades.length },
+    { id: 'planning', label: 'تخطيط', badge: plannedTrades.length },
     { id: 'watchlist', label: 'قائمة المراقبة', badge: watchlist.length },
   ];
 
-  const hasTrades = trades !== null && trades.length > 0;
+  // Gates the performance views on REAL trades, not on the journal being
+  // non-empty. A user holding nothing but plans has an analytics page whose
+  // every figure is «—»; the empty state, which says what to do next, is the
+  // more useful answer to the same situation.
+  const hasTrades = realTrades.length > 0;
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-10 lg:py-14">
@@ -374,9 +405,10 @@ function Journal() {
             )}
 
             {tab === 'trades' &&
-              (hasTrades ? (
+              (realTrades.length > 0 ? (
                 <TradesTable
-                  trades={trades}
+                  trades={realTrades}
+                  variant="real"
                   capital={settings.capital}
                   maxRiskPercent={settings.maxRiskPercent}
                   busyId={busyId}
@@ -388,6 +420,20 @@ function Journal() {
               ) : (
                 <EmptyJournal onAdd={() => setView({ kind: 'new' })} />
               ))}
+
+            {tab === 'planning' && (
+              <PlanningTab
+                trades={plannedTrades}
+                capital={settings.capital}
+                maxRiskPercent={settings.maxRiskPercent}
+                busyId={busyId}
+                onAdd={() => setView({ kind: 'new' })}
+                onEdit={(trade) => setView({ kind: 'edit', trade })}
+                onDelete={(trade) =>
+                  void removeDoc('trades', trade.id, `صفقة ${trade.ticker}`)
+                }
+              />
+            )}
 
             {tab === 'watchlist' && (
               <WatchlistPanel
@@ -796,11 +842,28 @@ function ExtremeCard({
 
 // ---------------------------------------------------------------------------
 
-function TradesTable({
+/**
+ * «تخطيط» — the two things that are not yet trades.
+ *
+ * A scratch calculator on top, the saved plans underneath, in that order and
+ * not the reverse. The calculator is the more common act: sizing a position is
+ * something a trader does several times a day and commits to once, and until
+ * now the only way to do it while signed in was to fill in the trade form and
+ * SAVE — which put throwaway arithmetic permanently into the journal and made
+ * the trade count meaningless. Nothing here writes anything until «صفقة جديدة»
+ * is pressed.
+ *
+ * The calculator is the same component the landing page runs, seeded from the
+ * account instead of the worked example, because the arithmetic must not fork:
+ * it imports lib/risk-math.ts, which carries both epsilons from the Dart
+ * original, so the number here is the number the phone gives.
+ */
+function PlanningTab({
   trades,
   capital,
   maxRiskPercent,
   busyId,
+  onAdd,
   onEdit,
   onDelete,
 }: {
@@ -808,21 +871,121 @@ function TradesTable({
   capital: number;
   maxRiskPercent: number;
   busyId: string | null;
+  onAdd: () => void;
   onEdit: (trade: Trade) => void;
   onDelete: (trade: Trade) => void;
 }) {
-  const statusLabel: Record<Trade['status'], string> = {
-    planned: 'مخططة',
-    open: 'مفتوحة',
-    closed: 'مغلقة',
-    cancelled: 'ملغاة',
-  };
+  return (
+    <div className="space-y-8">
+      <section>
+        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+          <div>
+            <h2 className="font-bold">احسبها الأول</h2>
+            <p className="mt-1 text-xs text-fg-muted">
+              جرّب أي سعر دخول واستوب وشوف الكمية المسموحة. مفيش حاجة بتتحفظ هنا
+              — لو الفكرة عجبتك، سجّلها كصفقة مخططة.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onAdd}
+            className="shrink-0 rounded-md border border-border-strong px-4 py-2 text-sm font-semibold transition-colors hover:bg-surface-high"
+          >
+            + سجّلها كصفقة
+          </button>
+        </div>
+
+        {/* Keyed on the account values: the widget seeds its state once in
+            useState, and these arrive asynchronously from Firestore. Without
+            this it would keep the 100,000 default after the real capital
+            landed — the same trap the settings panel and the trade form
+            document. */}
+        <CalculatorWidget
+          key={`${capital}-${maxRiskPercent}`}
+          initialCapital={capital}
+          initialRisk={maxRiskPercent}
+          blankPrices
+        />
+      </section>
+
+      <section>
+        <h2 className="font-bold">صفقات مخططة</h2>
+        <p className="mt-1 text-xs text-fg-muted">
+          أفكار سجّلتها ولسه ما نفّذتهاش. مش بتتحسب في أداءك ولا في التحليلات —
+          لحد ما تتحول لمفتوحة.
+        </p>
+
+        <div className="mt-4">
+          {trades.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border-default p-10 text-center">
+              <p className="text-sm text-fg-muted">
+                مفيش صفقات مخططة. احسب فكرة فوق وسجّلها لو عجبتك.
+              </p>
+            </div>
+          ) : (
+            <TradesTable
+              trades={trades}
+              variant="planned"
+              capital={capital}
+              maxRiskPercent={maxRiskPercent}
+              busyId={busyId}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+const STATUS_LABELS: Record<Trade['status'], string> = {
+  planned: 'مخططة',
+  open: 'مفتوحة',
+  closed: 'مغلقة',
+  cancelled: 'ملغاة',
+};
+
+/**
+ * The journal, in two tables that do NOT share a column set.
+ *
+ * A trade that has not happened has no profit, no R and no discipline score
+ * worth reading — those three columns exist to judge a decision by its outcome,
+ * and an idea has no outcome. Rendering them anyway is what made one mixed
+ * table confusing: «—» in the P&L column reads as "broke even" at a glance, and
+ * a discipline badge on an unexecuted plan invites the reader to grade
+ * something that was never done.
+ *
+ * So `variant` picks the columns rather than a filter picking the rows:
+ *   real    open + closed     money columns, judged by result
+ *   planned planned+cancelled intent columns — what it would cost if taken
+ */
+function TradesTable({
+  trades,
+  capital,
+  maxRiskPercent,
+  busyId,
+  variant,
+  onEdit,
+  onDelete,
+}: {
+  trades: Trade[];
+  capital: number;
+  maxRiskPercent: number;
+  busyId: string | null;
+  variant: 'real' | 'planned';
+  onEdit: (trade: Trade) => void;
+  onDelete: (trade: Trade) => void;
+}) {
+  const real = variant === 'real';
 
   return (
     // The table is the one block here that can exceed a narrow viewport, so it
     // scrolls inside its own wrapper and the page body never does.
     <div className="overflow-x-auto rounded-lg border border-border-default">
-      <table className="w-full min-w-[56rem] border-collapse text-sm">
+      <table
+        className={`w-full border-collapse text-sm ${real ? 'min-w-[56rem]' : 'min-w-[48rem]'}`}
+      >
         <thead>
           <tr className="bg-surface-high text-start">
             <Th>السهم</Th>
@@ -830,9 +993,20 @@ function TradesTable({
             <Th>الدخول</Th>
             <Th>الاستوب</Th>
             <Th>الكمية</Th>
-            <Th>الربح/الخسارة</Th>
-            <Th>R</Th>
-            <Th>الانضباط</Th>
+            {real ? (
+              <>
+                <Th>الربح/الخسارة</Th>
+                <Th>R</Th>
+                <Th>الانضباط</Th>
+              </>
+            ) : (
+              <>
+                {/* What the plan would cost if it were taken — the only two
+                    figures an unexecuted trade can honestly carry. */}
+                <Th>المخاطرة</Th>
+                <Th>% من رأس المال</Th>
+              </>
+            )}
             <Th>التاريخ</Th>
             <Th>—</Th>
           </tr>
@@ -840,25 +1014,50 @@ function TradesTable({
         <tbody>
           {trades.map((trade) => {
             const m = metricsOf(trade, capital);
-            const score = riskScoreOf(trade, capital, maxRiskPercent);
             const tone =
               m.result === 'win'
                 ? 'text-win'
                 : m.result === 'loss'
                   ? 'text-loss'
                   : '';
+            const over =
+              m.riskPct !== null && exceedsRiskLimit(m.riskPct, maxRiskPercent);
+
             return (
               <tr key={trade.id} className="border-t border-border-default">
                 <Td className="num font-bold">{trade.ticker || '—'}</Td>
-                <Td className="text-fg-muted">{statusLabel[trade.status]}</Td>
+                <Td className="text-fg-muted">{STATUS_LABELS[trade.status]}</Td>
                 <Td className="num">{money(trade.entryPrice)}</Td>
                 <Td className="num">{money(trade.stopPrice)}</Td>
                 <Td className="num">{trade.quantity || '—'}</Td>
-                <Td className={`num font-bold ${tone}`}>{signedMoney(m.pnl)}</Td>
-                <Td className={`num font-bold ${tone}`}>{rMultiple(m.rMultiple)}</Td>
-                <Td>
-                  <DisciplineBadge score={score} />
-                </Td>
+
+                {real ? (
+                  <>
+                    <Td className={`num font-bold ${tone}`}>
+                      {signedMoney(m.pnl)}
+                    </Td>
+                    <Td className={`num font-bold ${tone}`}>
+                      {rMultiple(m.rMultiple)}
+                    </Td>
+                    <Td>
+                      <DisciplineBadge
+                        score={riskScoreOf(trade, capital, maxRiskPercent)}
+                      />
+                    </Td>
+                  </>
+                ) : (
+                  <>
+                    <Td className="num">{money(m.riskEgp)}</Td>
+                    <Td className={`num font-semibold ${over ? 'text-loss' : ''}`}>
+                      {percent(m.riskPct)}
+                      {/* Not colour alone — the same rule the app's own
+                          over-risk warning follows, so it survives colour
+                          blindness and a greyscale screenshot. */}
+                      {over && <span className="ms-1 text-xs">فوق الحد</span>}
+                    </Td>
+                  </>
+                )}
+
                 <Td className="num text-fg-muted">{dateLabel(trade.entryDate)}</Td>
                 <Td>
                   <div className="flex gap-3">

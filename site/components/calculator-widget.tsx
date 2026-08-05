@@ -26,11 +26,27 @@ import {
 
 const RISK_PRESETS = [0.01, 0.015, 0.02, 0.03];
 
-export function CalculatorWidget() {
-  const [capital, setCapital] = useState('100000');
-  const [maxRisk, setMaxRisk] = useState(0.02);
-  const [entry, setEntry] = useState('78.40');
-  const [stop, setStop] = useState('74.50');
+export function CalculatorWidget({
+  initialCapital,
+  initialRisk,
+  /**
+   * Signed-in use. The landing page shows a worked example — a visitor facing
+   * four empty boxes has to invent a trade before the widget can argue
+   * anything. Someone who already has an account has their own trade in mind,
+   * and prefilled prices are then just two fields to clear.
+   */
+  blankPrices = false,
+}: {
+  initialCapital?: number;
+  initialRisk?: number;
+  blankPrices?: boolean;
+} = {}) {
+  const [capital, setCapital] = useState(
+    initialCapital != null ? String(initialCapital) : '100000'
+  );
+  const [maxRisk, setMaxRisk] = useState(initialRisk ?? 0.02);
+  const [entry, setEntry] = useState(blankPrices ? '' : '78.40');
+  const [stop, setStop] = useState(blankPrices ? '' : '74.50');
 
   /** null until the visitor overrides it, so the suggestion drives the display. */
   const [override, setOverride] = useState<string | null>(null);
