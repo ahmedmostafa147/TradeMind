@@ -2,20 +2,21 @@
  * Fetching the EGX investor-flow page. Network only — parsing lives in
  * lib/market-flows.ts, which stays pure so it can be tested without egx.com.eg.
  *
- * THE PAGE ANSWERS AUTOMATED REQUESTS WITH 403.
- * Verified: a plain GET from two unrelated networks returns 403 Forbidden with
- * no body, while a browser loads it fine. So this sends a full browser-shaped
- * header set — a bare `fetch` with no User-Agent is refused outright. That is
- * not evasion of a paywall or a login: the page is public, unauthenticated
- * market data that the exchange publishes for everyone. It is a bot filter, and
- * the request is identified honestly rather than disguised as a specific
- * browser build.
+ * THE PAGE FILTERS AUTOMATED REQUESTS, AND IT DOES IT DIFFERENTLY BY NETWORK.
+ * Measured, not assumed: a plain GET from two unrelated networks returns 403
+ * with no body, while the same request from Vercel returns 200 carrying a
+ * bot-check interstitial rather than the report. Both are the same filter
+ * answering in two different registers.
  *
- * IF THIS STILL 403s FROM VERCEL, that is the expected failure and it is
- * reported rather than retried into a ban: datacenter IP ranges are the usual
- * thing such filters block, and the fix is a different egress (a proxy, a
- * scheduled run from somewhere residential, or the paid feed the owner is
- * pricing) — not more requests.
+ * So this sends a full browser-shaped header set AND carries cookies between
+ * the two requests. That is not evasion of a paywall or a login: the page is
+ * public, unauthenticated market data the exchange publishes for everyone, and
+ * the request identifies itself honestly rather than forging a session.
+ *
+ * When it still fails, the failure is REPORTED WITH A SAMPLE of what came back
+ * rather than retried — a filter answering 200-with-a-challenge cannot be
+ * argued out of it by asking again, and the sample is what tells the next
+ * person whether to fix a header or go buy the paid feed.
  */
 
 import { readViewState } from '@/lib/market-flows';
@@ -39,7 +40,36 @@ const HEADERS: Record<string, string> = {
 
 export type FetchOutcome =
   | { ok: true; html: string }
-  | { ok: false; status: number | null; reason: string };
+  | {
+      ok: false;
+      status: number | null;
+      reason: string;
+      /** A slice of whatever came back, when something came back. Without it a
+       *  bot-check interstitial and a changed layout are indistinguishable. */
+      sample?: string;
+    };
+
+/**
+ * Carries cookies from the GET into the POST.
+ *
+ * `fetch` DOES NOT DO THIS. There is no cookie jar in the server runtime, so
+ * every call is a fresh anonymous client — and that is exactly what a bot
+ * filter is looking for. The first response typically sets a session cookie
+ * (ASP.NET's own `ASP.NET_SessionId`, plus whatever the filter adds) and a
+ * postback arriving without it is a form submission from a client the server
+ * has never seen, which is not a thing a browser can do.
+ *
+ * Values are passed through untouched — no parsing of attributes, no expiry
+ * handling. These live for one pair of requests seconds apart, and a cookie
+ * library for that would be more moving parts than the problem has.
+ */
+function cookieHeader(response: Response): string | null {
+  const raw = response.headers.getSetCookie?.() ?? [];
+  const pairs = raw
+    .map((c) => c.split(';')[0].trim())
+    .filter((c) => c.includes('='));
+  return pairs.length > 0 ? pairs.join('; ') : null;
+}
 
 /**
  * GETs the page, then posts the form back with the tokens it returned.
@@ -79,18 +109,21 @@ export async function fetchFlowsHtml(
       };
     }
 
+    const cookies = cookieHeader(first);
     const landing = await first.text();
     const { viewState, generator } = readViewState(landing);
 
     // No tokens means the response was not the form — an interstitial, a
     // challenge page, or a redirect to something else. Posting blindly would
-    // turn a diagnosable problem into a confusing one.
+    // turn a diagnosable problem into a confusing one, so this reports what
+    // actually arrived instead of guessing at it.
     if (viewState === null) {
       return {
         ok: false,
         status: first.status,
         reason:
           'The page loaded but carried no __VIEWSTATE — the response was probably a bot-check interstitial rather than the report.',
+        sample: landing.slice(0, 700),
       };
     }
 
@@ -110,6 +143,7 @@ export async function fetchFlowsHtml(
         'Content-Type': 'application/x-www-form-urlencoded',
         Referer: PAGE,
         Origin: 'https://www.egx.com.eg',
+        ...(cookies ? { Cookie: cookies } : {}),
       },
       body,
       signal: controller.signal,
@@ -121,6 +155,7 @@ export async function fetchFlowsHtml(
         ok: false,
         status: second.status,
         reason: `POST failed with HTTP ${second.status}.`,
+        sample: (await second.text().catch(() => '')).slice(0, 700),
       };
     }
 

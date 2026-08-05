@@ -57,7 +57,13 @@ export async function GET(request: Request) {
     // 502, not 500: the failure is upstream, and a caller retrying its way out
     // of our bug is a different thing from a caller waiting for EGX.
     return NextResponse.json(
-      { ok: false, stage: 'fetch', status: outcome.status, reason: outcome.reason },
+      {
+        ok: false,
+        stage: 'fetch',
+        status: outcome.status,
+        reason: outcome.reason,
+        sample: outcome.sample,
+      },
       { status: 502 }
     );
   }
