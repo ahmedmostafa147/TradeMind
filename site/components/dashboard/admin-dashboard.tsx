@@ -66,7 +66,15 @@ function Gate() {
   return <Console />;
 }
 
-type Tab = 'users' | 'announcements' | 'signals';
+/**
+ * THERE WAS A THIRD TAB, «الصفقات», AND IT IS GONE ON PURPOSE.
+ *
+ * It published a ticker with an entry price and a stop to every signed-in user.
+ * That is a recommendation whatever the badge says, and the product states the
+ * opposite in three published places — the footer disclaimer, the terms, and
+ * the FAQ. See the note in lib/posts.ts before considering bringing it back.
+ */
+type Tab = 'users' | 'announcements';
 
 function Console() {
   const { user, logout } = useAuth();
@@ -75,7 +83,6 @@ function Console() {
   const tabs: { id: Tab; label: string }[] = [
     { id: 'users', label: 'المستخدمين' },
     { id: 'announcements', label: 'الإعلانات' },
-    { id: 'signals', label: 'الصفقات' },
   ];
 
   return (
@@ -128,7 +135,6 @@ function Console() {
       <div className="mt-8">
         {tab === 'users' && <UsersPanel />}
         {tab === 'announcements' && <AnnouncementsPanel />}
-        {tab === 'signals' && <SignalsPanel />}
       </div>
     </div>
   );
@@ -290,7 +296,7 @@ function fmtDate(value: Date | null): string {
 }
 
 // ---------------------------------------------------------------------------
-// Announcements and signals — same shape, different collection
+// Announcements
 // ---------------------------------------------------------------------------
 
 type Post = {
@@ -300,14 +306,22 @@ type Post = {
   createdAt: Date | null;
 };
 
-function useCollection(name: 'announcements' | 'signals') {
+/**
+ * Was parameterised by collection name, because there were two. There is one
+ * now, so the parameter went with the second — a knob with a single valid
+ * setting is a knob that only makes the call sites harder to read.
+ */
+function useCollection() {
   const [items, setItems] = useState<Post[] | null>(null);
   const [failed, setFailed] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const snap = await getDocs(
-        query(collection(firestore(), name), orderBy('createdAt', 'desc'))
+        query(
+          collection(firestore(), 'announcements'),
+          orderBy('createdAt', 'desc')
+        )
       );
       setItems(
         snap.docs.map((d) => {
@@ -333,43 +347,8 @@ function useCollection(name: 'announcements' | 'signals') {
 }
 
 function AnnouncementsPanel() {
-  return (
-    <PostsPanel
-      name="announcements"
-      heading="إعلان جديد"
-      titleLabel="العنوان"
-      bodyLabel="النص"
-      hint="بيظهر لكل مستخدم مسجّل دخول."
-    />
-  );
-}
-
-function SignalsPanel() {
-  return (
-    <PostsPanel
-      name="signals"
-      heading="نزّل صفقة"
-      titleLabel="السهم أو العنوان"
-      bodyLabel="التفاصيل"
-      hint="بيظهر لكل مستخدم مسجّل دخول. اكتب التفاصيل كاملة — الأسعار والاستوب والسبب."
-    />
-  );
-}
-
-function PostsPanel({
-  name,
-  heading,
-  titleLabel,
-  bodyLabel,
-  hint,
-}: {
-  name: 'announcements' | 'signals';
-  heading: string;
-  titleLabel: string;
-  bodyLabel: string;
-  hint: string;
-}) {
-  const { items, failed, reload } = useCollection(name);
+  const name = 'announcements';
+  const { items, failed, reload } = useCollection();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -452,18 +431,18 @@ function PostsPanel({
         }`}
       >
         <h2 className="font-bold">
-          {editingId === null ? heading : 'تعديل منشور'}
+          {editingId === null ? 'إعلان جديد' : 'تعديل منشور'}
         </h2>
         <p className="mt-1 text-xs text-fg-muted">
           {editingId === null
-            ? hint
+            ? 'بيظهر لكل مستخدم مسجّل دخول في تبويب «المستجدات».'
             : 'التعديل مش بيغيّر تاريخ النشر، فالمنشور مش هيرجع لأول القايمة تاني.'}
         </p>
 
         <div className="mt-5 space-y-4">
           <div>
             <label htmlFor={`${name}-title`} className="text-sm font-semibold">
-              {titleLabel}
+              العنوان
             </label>
             <input
               id={`${name}-title`}
@@ -474,7 +453,7 @@ function PostsPanel({
           </div>
           <div>
             <label htmlFor={`${name}-body`} className="text-sm font-semibold">
-              {bodyLabel}
+              النص
             </label>
             <textarea
               id={`${name}-body`}

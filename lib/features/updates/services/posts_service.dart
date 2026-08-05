@@ -5,15 +5,17 @@ import '../models/post.dart';
 
 /// Reads what the operator published.
 ///
-/// WHY THIS EXISTS
-/// The admin console has written to `announcements` and `signals` since it was
-/// built, and nothing anywhere read them — not the app, not the site. Every
-/// post went into a collection no surface consulted, so publishing one had no
-/// effect a user could observe.
-///
 /// Read-only by construction. There is no write path here and there must not
 /// be: firestore.rules grants writes to members of the `admins` collection
 /// only, and that collection is unreachable from every client path.
+///
+/// THIS USED TO FETCH `signals` TOO, AND IT HAD TO STOP.
+/// That collection carried operator-published trade ideas; it is gone from the
+/// admin console and denied by firestore.rules, for the reasons recorded there.
+/// The fetch could not simply be left in place: it ran inside a [Future.wait]
+/// whose `catch` returns an empty list, so one denied read would have taken the
+/// announcements down with it and the updates tab would have gone quietly blank
+/// with no error anywhere.
 class PostsService {
   const PostsService._();
 
@@ -21,24 +23,17 @@ class PostsService {
 
   static FirebaseFirestore get _db => FirebaseFirestore.instance;
 
-  /// Every announcement and signal, newest first.
+  /// Every announcement, newest first.
   ///
   /// Returns an empty list on ANY failure — offline, unconfigured Firebase, or
   /// a rules denial for a signed-out session. The updates screen renders that
   /// as "nothing published yet", which is the honest reading: the app cannot
   /// distinguish an empty feed from an unreachable one, and an error banner
   /// over a feature the user did not ask for would be noise.
-  ///
-  /// Both collections are fetched together rather than in sequence, so one slow
-  /// response does not serialise onto the other.
   static Future<List<Post>> fetchAll() async {
     if (!_available) return const [];
     try {
-      final results = await Future.wait([
-        _fetch(PostKind.announcement),
-        _fetch(PostKind.signal),
-      ]);
-      return sortPosts([for (final list in results) ...list]);
+      return sortPosts(await _fetch(PostKind.announcement));
     } catch (_) {
       return const [];
     }

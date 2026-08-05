@@ -139,10 +139,24 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    match /signals/{signalId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
+    // THERE WAS A `signals` COLLECTION HERE. It is deliberately not replaced.
+    //
+    // It carried operator-published trade ideas — a ticker with an entry price
+    // and a stop, delivered to every signed-in user. The product says the
+    // opposite in three published places (the site footer disclaimer, the
+    // terms, and the FAQ answer to «التطبيق بيقولي أشتري إيه؟»), RELEASE.md
+    // depends on that claim so Play does not file the app under its restricted
+    // financial categories, and handing out tickers carries the FRA licensing
+    // exposure this project already decided against.
+    //
+    // Falling through to the catch-all below denies it, which is the point: any
+    // document still sitting in that collection is now unreadable by every
+    // client rather than merely unrendered. Removing the rule and leaving a
+    // reader in place would have been the dangerous half-measure — a denial
+    // there took the announcements feed down with it, because both surfaces
+    // fetched the two collections in one Promise.all / Future.wait.
+    //
+    // Do not add it back without changing the legal pages FIRST.
 
     // Anything not matched above is denied, including any path a future
     // version adds before its rule does.

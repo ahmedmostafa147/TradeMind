@@ -156,17 +156,9 @@ function Journal() {
 
     (async () => {
       try {
-        const [ann, sig] = await Promise.all([
-          getDocs(collection(firestore(), 'announcements')),
-          getDocs(collection(firestore(), 'signals')),
-        ]);
+        const ann = await getDocs(collection(firestore(), 'announcements'));
         if (cancelled) return;
-        setPosts(
-          sortPosts([
-            ...ann.docs.map((d) => decodePost(d.id, 'announcements', d.data())),
-            ...sig.docs.map((d) => decodePost(d.id, 'signals', d.data())),
-          ])
-        );
+        setPosts(sortPosts(ann.docs.map((d) => decodePost(d.id, d.data()))));
       } catch {
         // Nothing published, or the rules said no. Either way the tab shows
         // its empty state rather than an error the user cannot act on.

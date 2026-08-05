@@ -2,9 +2,16 @@ import 'package:flutter/foundation.dart';
 
 /// Which collection a post came from.
 ///
-/// One shape, two collections, because they are read together and shown in one
-/// stream — but they are NOT interchangeable: a signal names a ticker, so it
-/// carries a disclaimer an announcement does not need.
+/// `signal` IS NO LONGER REACHABLE and is kept only so this file and the
+/// updates screen still compile. The `signals` collection was removed from the
+/// admin console and is denied by firestore.rules — see the note there —
+/// so [PostsService] never constructs one, and the badge and disclaimer
+/// branches in updates_screen.dart are dead code.
+///
+/// The app half of this cleanup was deliberately left minimal: only the fetch
+/// changed, because a denied read inside its `Future.wait` would have blanked
+/// the announcements feed too. Deleting the enum value and its two UI branches
+/// is the tidy-up still owed.
 enum PostKind {
   announcement,
   signal;

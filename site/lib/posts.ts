@@ -1,21 +1,29 @@
 /**
- * What the operator publishes and every signed-in user reads.
+ * What the operator publishes and every signed-in user reads: product news,
+ * from the `announcements` collection.
  *
- * Two collections with one shape: `announcements` (product news) and `signals`
- * (trade ideas). The admin console has written to both since it was built, and
- * until now nothing anywhere read them — the app does not, and neither did this
- * site, so every post went into a collection no surface consulted.
- *
- * Reads require a session, which firestore.rules enforces: these are a product
+ * Reads require a session, which firestore.rules enforces: this is a product
  * surface, not a marketing page, and an open read would let anyone scrape the
  * whole feed without ever installing anything.
+ *
+ * THERE WAS A SECOND COLLECTION, `signals`, AND IT IS GONE ON PURPOSE.
+ * It carried trade ideas — a ticker with an entry price and a stop, published
+ * by the operator to every user. That is a recommendation however it is
+ * labelled, and it contradicted the product outright: `disclaimer` in site.ts
+ * says «التطبيق لا يقدّم نصائح أو توصيات استثمارية», the terms repeat it, and
+ * the FAQ answers «التطبيق بيقولي أشتري إيه؟» with a flat no. A per-post
+ * disclaimer under a priced-out idea does not reconcile those — it sits under
+ * the thing it contradicts. RELEASE.md wants the no-advice claim stated so Play
+ * keeps the app out of its restricted financial categories, and handing out
+ * tickers is also the FRA licensing exposure CLAUDE.md already recorded as a
+ * decided no.
+ *
+ * Do not reintroduce it without changing the legal pages FIRST, and taking
+ * advice on whether they can say that at all.
  */
-
-export type PostKind = 'announcements' | 'signals';
 
 export type Post = {
   id: string;
-  kind: PostKind;
   title: string;
   body: string;
   createdAt: Date | null;
@@ -44,12 +52,10 @@ export function toDate(value: unknown): Date | null {
 
 export function decodePost(
   id: string,
-  kind: PostKind,
   data: Record<string, unknown>
 ): Post {
   return {
     id,
-    kind,
     title: typeof data.title === 'string' ? data.title : '',
     body: typeof data.body === 'string' ? data.body : '',
     createdAt: toDate(data.createdAt),
