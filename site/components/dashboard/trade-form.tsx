@@ -38,12 +38,37 @@ import {
  * should not silently rewrite the rule every other figure is scored against.
  */
 
-const STATUS_LABELS: Record<TradeStatus, string> = {
-  planned: 'مخططة',
-  open: 'مفتوحة',
-  closed: 'مغلقة',
-  cancelled: 'ملغاة',
-};
+/**
+ * THE FIRST QUESTION, BECAUSE IT DECIDES WHAT THE REST OF THE FORM MEANS.
+ *
+ * This used to be a dropdown near the bottom, under the calculator — so the
+ * form computed a suggested position size, and only then asked whether the
+ * trade had already happened. For a trade you have already taken that
+ * suggestion answers a question nobody asked: the quantity is a fact you are
+ * recording, not a number to solve for. Sizing advice on a done deal is at best
+ * noise and at worst an invitation to feel bad about a position you cannot
+ * change.
+ *
+ * So the type is chosen first, and it drives three things: whether the sizing
+ * calculator appears at all, what the quantity field is asking for, and whether
+ * the exit block is required.
+ */
+const TYPE_OPTIONS: { value: TradeStatus; label: string; hint: string }[] = [
+  { value: 'planned', label: 'لسه هعملها', hint: 'بحسب حجمها قبل ما أدخل' },
+  { value: 'open', label: 'عملتها ولسه فيها', hint: 'دخلت، وما خرجتش لسه' },
+  { value: 'closed', label: 'عملتها وخلصت', hint: 'دخلت وخرجت — أعرف نتيجتها' },
+  { value: 'cancelled', label: 'فكرة ألغيتها', hint: 'حسبتها وقرّرت ما أدخلش' },
+];
+
+/** Sizing is a question about the future. Only one status has one. */
+function needsSizing(status: TradeStatus): boolean {
+  return status === 'planned';
+}
+
+/** The position exists — so risk is a fact to check, not a target to hit. */
+function isExecuted(status: TradeStatus): boolean {
+  return status === 'open' || status === 'closed';
+}
 
 const RISK_PRESETS = [0.01, 0.015, 0.02, 0.03];
 
@@ -185,7 +210,18 @@ export function TradeForm({
     if (e === null || e <= 0) return setError('سعر الدخول لازم يكون أكبر من صفر.');
     if (s === null || s <= 0) return setError('الاستوب لازم يكون أكبر من صفر.');
     if (s >= e) return setError('الاستوب لازم يكون أقل من سعر الدخول.');
-    if (q === null || q <= 0) return setError('الكمية لازم تكون أكبر من صفر.');
+    // An abandoned idea may never have been sized at all — that is what
+    // abandoning it means — so `cancelled` accepts zero AND an empty box.
+    // parseNumber returns null for both a blank field and a typo, which the
+    // other statuses must keep rejecting; only here does blank mean "never
+    // decided" rather than "not filled in yet".
+    const quantity =
+      status === 'cancelled' && qty.trim() === '' ? 0 : q;
+
+    if (quantity === null || quantity < 0)
+      return setError('الكمية مش مظبوطة.');
+    if (quantity === 0 && status !== 'cancelled')
+      return setError('الكمية لازم تكون أكبر من صفر.');
 
     // The app's Trade asserts exitPrice and exitDate are set together, and its
     // codec normalises a half-written pair back to "still open". Letting a
@@ -212,7 +248,7 @@ export function TradeForm({
         reason: reason.trim(),
         entryPrice: e,
         stopPrice: s,
-        quantity: Math.floor(q),
+        quantity: Math.floor(quantity),
         exitPrice: exit,
         exitDate: exitOn,
         notes: notes.trim() || null,
@@ -239,6 +275,43 @@ export function TradeForm({
 
   return (
     <form onSubmit={submit} className="space-y-6">
+      {/* Cards rather than a <select>: four options whose difference is the
+          whole shape of the form is not a thing to hide behind a closed
+          dropdown, and each one carries the sentence that tells you which you
+          are. A radiogroup, so arrow keys work and a screen reader announces
+          it as one choice of four. */}
+      <fieldset>
+        <legend className="text-sm font-bold">الصفقة دي إيه؟</legend>
+        <div
+          role="radiogroup"
+          aria-label="نوع الصفقة"
+          className="mt-3 grid gap-2 sm:grid-cols-2"
+        >
+          {TYPE_OPTIONS.map((option) => {
+            const active = status === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setStatus(option.value)}
+                className={`rounded-lg border p-4 text-start transition-colors ${
+                  active
+                    ? 'border-brand-ink bg-surface-high'
+                    : 'border-border-default bg-surface-low hover:bg-surface-high'
+                }`}
+              >
+                <span className="block text-sm font-bold">{option.label}</span>
+                <span className="mt-1 block text-xs text-fg-muted">
+                  {option.hint}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </fieldset>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="رمز السهم" htmlFor="tf-ticker">
           <input
@@ -253,7 +326,10 @@ export function TradeForm({
           />
         </Field>
 
-        <Field label="تاريخ الدخول" htmlFor="tf-date">
+        <Field
+          label={isExecuted(status) ? 'تاريخ الدخول' : 'تاريخ الدخول المتوقّع'}
+          htmlFor="tf-date"
+        >
           <input
             id="tf-date"
             type="date"
@@ -307,7 +383,12 @@ export function TradeForm({
         </p>
       )}
 
-      {/* The calculator, inline. Same functions the app runs, both epsilons. */}
+      {/* SIZING ONLY WHEN THERE IS STILL A SIZE TO DECIDE.
+          For an executed trade the quantity is history, and a suggestion next
+          to it reads as a verdict on a position that cannot be changed. The
+          risk read-out below stays for every status — on a done trade it is a
+          fact worth seeing, just not a target. */}
+      {needsSizing(status) && (
       <fieldset className="rounded-lg border border-border-default bg-surface-low p-5">
         <legend className="px-2 text-sm font-bold">حاسبة الحجم</legend>
 
@@ -369,9 +450,13 @@ export function TradeForm({
           )}
         </div>
       </fieldset>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="عدد الأسهم" htmlFor="tf-qty">
+        <Field
+          label={isExecuted(status) ? 'عدد الأسهم اللي اشتريتها' : 'عدد الأسهم'}
+          htmlFor="tf-qty"
+        >
           <input
             id="tf-qty"
             inputMode="numeric"
@@ -379,24 +464,14 @@ export function TradeForm({
             onChange={(e) => setQty(e.target.value)}
             dir="ltr"
             className={inputCls}
-            required
+            // Not required for an abandoned idea. The browser enforces this
+            // BEFORE submit(), so leaving it on would block the empty box the
+            // validation below deliberately accepts — the constraint has to be
+            // relaxed in both places or in neither.
+            required={status !== 'cancelled'}
           />
         </Field>
 
-        <Field label="الحالة" htmlFor="tf-status">
-          <select
-            id="tf-status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as TradeStatus)}
-            className={inputCls}
-          >
-            {(Object.keys(STATUS_LABELS) as TradeStatus[]).map((s) => (
-              <option key={s} value={s}>
-                {STATUS_LABELS[s]}
-              </option>
-            ))}
-          </select>
-        </Field>
       </div>
 
       <dl className="grid gap-3 rounded-lg border border-border-default bg-surface p-5 sm:grid-cols-3">
@@ -410,8 +485,9 @@ export function TradeForm({
           role="status"
           className="rounded-md border border-loss-border bg-loss-surface p-3 text-sm font-semibold text-loss"
         >
-          المخاطرة أعلى من الحد اللي اخترته ({percent(maxRisk)}). التطبيق هيعلّم
-          الصفقة دي بالأحمر.
+          {isExecuted(status)
+            ? `المخاطرة في الصفقة دي كانت أعلى من حدك (${percent(maxRisk)}) — متسجّلة زي ما هي، ودرجة الانضباط هتعكسها.`
+            : `المخاطرة أعلى من الحد اللي اخترته (${percent(maxRisk)}). رادار هيعلّم الصفقة دي بالأحمر.`}
         </p>
       )}
 
