@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import {
@@ -41,10 +42,10 @@ export function SignInPanel({ title, subtitle }: { title: string; subtitle: stri
    * «ابدأ مجانًا» on the landing page should land on the sign-UP form, not on
    * sign-in with an extra click in the way.
    *
-   * Read from the hash in an effect rather than from useSearchParams: the site
-   * is a static export, so a query param would force this subtree into a
-   * Suspense boundary for a value that is only ever present on first paint.
-   * The hash is client-only by definition, which is exactly what this is.
+   * Read from the hash in an effect rather than from useSearchParams: a query
+   * param would force this subtree into a Suspense boundary for a value that is
+   * only ever present on first paint. The hash is client-only by definition,
+   * which is exactly what this is.
    */
   useEffect(() => {
     if (window.location.hash === '#signup') setMode('up');
@@ -251,6 +252,37 @@ export function SignInPanel({ title, subtitle }: { title: string; subtitle: stri
             <GoogleMark />
             المتابعة بحساب Google
           </button>
+
+          {/* Consent, on the account-CREATION mode only, and placed after the
+              Google button so it covers both routes into a new account rather
+              than just the email form.
+
+              The signed-in shell has no marketing footer, so before this line
+              existed there was no path from any authenticated surface to the
+              privacy policy or the terms at all — a visitor could create an
+              account having never been offered either document. Both are
+              published legal pages that the app's own store listing depends on
+              (RELEASE.md), which makes their absence at the one moment consent
+              is actually given the wrong kind of gap. */}
+          {mode === 'up' && (
+            <p className="mt-5 text-center text-xs leading-relaxed text-fg-subtle">
+              بإنشائك حساب انت موافق على{' '}
+              <Link
+                href="/terms"
+                className="font-semibold text-fg-muted underline underline-offset-4 hover:text-fg"
+              >
+                شروط الاستخدام
+              </Link>{' '}
+              و
+              <Link
+                href="/privacy"
+                className="font-semibold text-fg-muted underline underline-offset-4 hover:text-fg"
+              >
+                سياسة الخصوصية
+              </Link>
+              .
+            </p>
+          )}
 
           <p className="mt-6 text-center text-sm text-fg-muted">
             {mode === 'in' ? 'لسه معندكش حساب؟' : 'عندك حساب بالفعل؟'}{' '}

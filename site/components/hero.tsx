@@ -80,13 +80,17 @@ export function Hero() {
         </div>
 
         {/* Says what the browser CAN do, not what it is "just as good as".
-            The web dashboard reads the journal; it does not write to it yet —
-            customer-dashboard.tsx has no create or edit path. Claiming parity
-            with the app here would be a promise the build cannot keep, and the
-            first visitor to sign up and look for an "add trade" button would
-            find out inside ten seconds. */}
+            The web dashboard writes now — customer-dashboard.tsx has saveTrade,
+            the watchlist panel and the timeline editor — so "تابع دفترك" was
+            underselling the only surface that actually works today. What it
+            still cannot do is the three device-bound features (chart images,
+            closing prices, reading a tip from an image), and the FAQ names them
+            outright rather than letting someone discover the gap after signing
+            up. Claiming full parity here would be the promise the build cannot
+            keep; claiming read-only was the opposite mistake. */}
         <p className="mt-5 text-sm text-fg-muted">
-          مش مستني التطبيق — سجّل دخول دلوقتي وتابع دفترك من أي متصفح.
+          مش مستني التطبيق — الموقع شغّال دلوقتي: سجّل صفقاتك وحلّل أداءك من أي
+          متصفح.
         </p>
 
         <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-fg-muted">

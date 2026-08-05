@@ -16,10 +16,10 @@ export const metadata: Metadata = {
  * installing the app or signing in. The privacy policy already promised this
  * page existed; until now it did not.
  *
- * The site is a static export with no backend, so the web route is a prepared
- * mailto rather than a form. That is a deliberate trade: a form would need a
- * server to receive it, and a form that silently drops requests is worse than
- * an email that visibly opens.
+ * The site has no backend of its own, so the web route is a prepared mailto
+ * rather than a form. That is a deliberate trade: a form would need somewhere
+ * to receive it, and a form that silently drops requests is worse than an email
+ * that visibly opens.
  */
 const subject = 'طلب حذف حساب رادار';
 const body = [
@@ -36,9 +36,30 @@ export default function DeleteAccountPage() {
   return (
     <LegalPage title="حذف الحساب والبيانات">
       <p>
-        تقدر تمسح حسابك في {site.name} وكل البيانات المرتبطة بيه في أي وقت. فيه
-        طريقتين، والأولى أسرع وفورية.
+        تقدر تمسح حسابك في {site.name} وكل البيانات المرتبطة بيه في أي وقت.
+        {site.playStoreUrl
+          ? ' فيه طريقتين، والأولى أسرع وفورية.'
+          : ' فيه طريقتين، وواحدة بس منهم متاحة دلوقتي.'}
       </p>
+
+      {/* Reads the same flag every download call-to-action reads, so this page
+          corrects itself the moment the listing goes live instead of needing to
+          be remembered.
+
+          WHY IT MATTERS HERE MORE THAN ANYWHERE ELSE. This page is a Play
+          requirement and it must be accurate for the people reading it now —
+          and right now that is web users only, for whom the "fast, instant"
+          route is the one route that does not exist. Sending them to a settings
+          tab inside an app they cannot install is the worst possible answer to
+          "how do I delete my data". */}
+      {!site.playStoreUrl && (
+        <div className="callout">
+          <strong>دلوقتي:</strong> تطبيق الأندرويد لسه مانزلش على Google Play،
+          فلو حسابك اتعمل من الموقع الطريقة المتاحة ليك هي{' '}
+          <strong>الطلب بالبريد</strong> اللي تحت. الطريقة اللي جوه التطبيق
+          هتشتغل أول ما التطبيق ينزل.
+        </div>
+      )}
 
       <h2>الطريقة الأولى — من داخل التطبيق (فورية)</h2>
       <ol className="!ps-0 space-y-3">
@@ -99,9 +120,14 @@ export default function DeleteAccountPage() {
         كده.
       </p>
 
+      {/* «صدّره» used to lead this sentence, and there is no export — not in
+          the app, not on the web, nowhere in the repo. Telling somebody to use
+          a feature that does not exist, in the last line before an irreversible
+          action, is the one place a hopeful verb costs real data. */}
       <div className="callout">
-        <strong>تنبيه:</strong> حذف الحساب لا يمكن التراجع عنه. لو عايز تحتفظ
-        بسجل صفقاتك، صدّره أو خد نسخة منه قبل ما تمسح.
+        <strong>تنبيه:</strong> حذف الحساب لا يمكن التراجع عنه، ولسه مفيش خاصية
+        تصدير. لو عايز تحتفظ بسجل صفقاتك، خد لقطات شاشة أو انقل الأرقام المهمة
+        بنفسك قبل ما تمسح.
       </div>
     </LegalPage>
   );

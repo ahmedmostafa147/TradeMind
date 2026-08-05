@@ -38,8 +38,10 @@ const firebaseConfig = {
 /**
  * Initialised lazily and only in the browser.
  *
- * The site is a static export: every page is rendered at BUILD time in Node,
- * where there is no browser and no signed-in user. Calling initializeApp at
+ * Every page here is prerendered at BUILD time in Node — that stayed true when
+ * the site moved off `output: 'export'` onto Vercel, because these pages are
+ * still client components with no server data. There is no browser and no
+ * signed-in user during that render. Calling initializeApp at
  * module scope would run during that build, and getAuth would throw on a
  * missing `window`. Every caller goes through these functions, so nothing
  * Firebase-shaped exists until a component actually mounts.
