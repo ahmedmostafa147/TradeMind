@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { SignInPanel } from '@/components/dashboard/sign-in-panel';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { firestore } from '@/lib/firebase';
+import { fetchFlowsFromApi, saveFlows } from '@/lib/market-flows-store';
 
 export function AdminDashboard() {
   return (
@@ -100,10 +101,107 @@ function Console() {
         </div>
       </header>
 
-      <div className="mt-8">
+      <div className="mt-8 space-y-8">
+        <MarketRefreshPanel />
         <UsersPanel />
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Market flows
+// ---------------------------------------------------------------------------
+
+/**
+ * Pulls today's EGX investor flows and stores them.
+ *
+ * THE FETCH IS SERVER-SIDE, THE WRITE IS NOT. /api/egx-flows exists only
+ * because egx.com.eg sends no CORS headers, so the browser cannot read it
+ * directly; the route hands back parsed JSON and this component writes it to
+ * Firestore under the admin's own credentials. That is why there is no service
+ * account anywhere in this project — see the note on the route.
+ *
+ * A BUTTON RATHER THAN A CRON, FOR NOW, AND DELIBERATELY. EGX answers
+ * automated requests with 403 from at least some networks, and whether it
+ * answers Vercel is unknown until this is deployed and pressed. A cron that
+ * silently 502s every evening would look exactly like a market with no data.
+ * One button, one visible error message, and the failure is legible on the
+ * first try — then the same route can be put behind a schedule once it is known
+ * to work.
+ */
+function MarketRefreshPanel() {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function refresh() {
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    try {
+      const flows = await fetchFlowsFromApi('Securities');
+      await saveFlows(flows, 'Securities');
+      setResult(
+        `اتخزّنت جلسة ${flows.date} — ` +
+          `مصريين ${Math.round(flows.all.egyptian.net).toLocaleString('en-US')}، ` +
+          `عرب ${Math.round(flows.all.arab.net).toLocaleString('en-US')}، ` +
+          `أجانب ${Math.round(flows.all.foreign.net).toLocaleString('en-US')}`
+      );
+    } catch (e) {
+      // The route's own reason is shown verbatim rather than replaced with
+      // «حصل خطأ»: "EGX refused the request (403)" and "could not read three
+      // tables" need completely different responses, and only one of them is
+      // worth retrying.
+      setError(e instanceof Error ? e.message : 'تعذّر التحديث.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="rounded-lg border border-border-default bg-surface p-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="font-bold">بيانات السوق</h2>
+          <p className="mt-1 text-xs leading-relaxed text-fg-muted">
+            بيسحب تداولات المستثمرين من البورصة المصرية ويخزّنها لليوم ده. لو
+            اتضغط أكتر من مرة في نفس اليوم، آخر مرة هي اللي بتفضل.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void refresh()}
+          disabled={busy}
+          className="shrink-0 rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-50"
+        >
+          {busy ? 'جاري السحب...' : 'اسحب جلسة النهاردة'}
+        </button>
+      </div>
+
+      {result && (
+        <p
+          role="status"
+          className="mt-4 rounded-md border border-border-strong bg-surface-high p-3 text-sm leading-relaxed"
+        >
+          {result}
+        </p>
+      )}
+
+      {error && (
+        <div
+          role="alert"
+          className="mt-4 rounded-md border border-loss-border bg-loss-surface p-3"
+        >
+          <p className="text-sm font-semibold text-loss">{error}</p>
+          <p className="mt-2 text-xs leading-relaxed text-fg-muted">
+            لو الرسالة بتقول 403، يبقى البورصة رافضة السيرفر نفسه مش الكود —
+            الحل وقتها مصدر بيانات تاني أو تشغيل السحب من شبكة مختلفة، مش إعادة
+            المحاولة.
+          </p>
+        </div>
+      )}
+    </section>
   );
 }
 

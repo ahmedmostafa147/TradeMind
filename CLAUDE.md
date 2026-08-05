@@ -41,8 +41,12 @@ site/                   Next.js 16 + Tailwind 4 — على Vercel، مش تصد�
   lib/                  firebase, auth-context, trade, risk-math, format, site
                         + account-settings.ts (قاعدة المخاطرة من الحساب)
                         + projection.ts (حاسبة الهدف — ويب بس، مفيش نسخة Dart)
+                        + market-flows.ts (تحليل صفحة البورصة — pure، متختبر)
+                        + egx-fetch.ts (الشبكة بس) + market-flows-store.ts
+  app/api/egx-flows/    أول كود سيرفر في المشروع — بيجيب ويحلّل، مش بيكتب
   components/dashboard/ الداشبورد الاتنين + بانل تسجيل الدخول + محرّر التايم لاين
                         + goal-panel.tsx (تبويب «الهدف»)
+                        + market-flows-panel.tsx (تبويب «السوق»)
   app/manifest.ts       PWA manifest (راوت، مش ملف ثابت)
   public/sw.js          service worker — أوفلاين + شرط التثبيت
   components/pwa.tsx    التسجيل وزرار «ثبّت التطبيق»

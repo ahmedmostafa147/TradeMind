@@ -160,6 +160,35 @@ service cloud.firestore {
     //
     // Do not add `signals` back without changing the legal pages FIRST.
 
+    // EGX investor flows — who bought and who sold, by nationality and by
+    // investor class. One document per session, keyed YYYY-MM-DD.
+    //
+    // This is PUBLIC MARKET DATA the exchange publishes to everyone, so it is
+    // not owned by any user and carries nothing private. Read still requires a
+    // session for the same reason the old feed did: it is a product surface,
+    // and an open read would let anyone scrape the accumulated history without
+    // ever signing up. The history is the part that took time to gather.
+    //
+    // Writes are admin-only. The refresh runs in the admin's own browser
+    // against /api/egx-flows, so the write arrives with the admin's
+    // credentials and needs no service account — which is why there is no
+    // server identity anywhere in this file.
+    //
+    // The shape is pinned like the profile is. Without a whitelist an admin
+    // account could park arbitrary fields on a document every signed-in user
+    // renders.
+    match /marketFlows/{sessionDate} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+             'date', 'scope', 'all', 'institutions', 'individuals',
+             'fetchedAt', 'source'
+           ])
+        && request.resource.data.date is string
+        && request.resource.data.date.size() <= 10;
+      allow delete: if isAdmin();
+    }
+
     // Anything not matched above is denied, including any path a future
     // version adds before its rule does.
     match /{document=**} {

@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { EquityChart, MonthlyBars } from '@/components/dashboard/charts';
 import { GoalPanel } from '@/components/dashboard/goal-panel';
+import { MarketFlowsPanel } from '@/components/dashboard/market-flows-panel';
 import { SignInPanel } from '@/components/dashboard/sign-in-panel';
 import { TodayPanel } from '@/components/dashboard/today-panel';
 import { TradeForm, type TradeDraft } from '@/components/dashboard/trade-form';
@@ -72,7 +73,14 @@ function Gate() {
   return <Journal />;
 }
 
-type Tab = 'today' | 'overview' | 'analytics' | 'goal' | 'trades' | 'watchlist';
+type Tab =
+  | 'today'
+  | 'market'
+  | 'overview'
+  | 'analytics'
+  | 'goal'
+  | 'trades'
+  | 'watchlist';
 type View = { kind: 'list' } | { kind: 'new'; seed?: Trade } | { kind: 'edit'; trade: Trade };
 
 function Journal() {
@@ -232,6 +240,7 @@ function Journal() {
 
   const tabs: { id: Tab; label: string; badge?: number }[] = [
     { id: 'today', label: 'قرار اليوم' },
+    { id: 'market', label: 'السوق' },
     { id: 'overview', label: 'نظرة عامة' },
     { id: 'analytics', label: 'التحليلات' },
     { id: 'goal', label: 'الهدف' },
@@ -348,6 +357,11 @@ function Journal() {
                 is exactly when somebody wants to know what the target needs,
                 and the panel's own «لسه بدري» state answers that far better
                 than the generic "add your first trade" card would. */}
+            {/* Not gated on the journal at all: market flows are the same for
+                everybody and are worth reading on day one, before a single
+                trade has been logged. */}
+            {tab === 'market' && <MarketFlowsPanel />}
+
             {tab === 'goal' && (
               <GoalPanel
                 capital={settings.capital}
