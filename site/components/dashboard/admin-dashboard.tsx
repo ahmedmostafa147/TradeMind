@@ -79,7 +79,7 @@ function Console() {
   const { user, logout } = useAuth();
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10 lg:py-14">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-5 lg:py-8">
       <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border-default pb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">لوحة الإدارة</h1>
@@ -108,7 +108,7 @@ function Console() {
         </div>
       </header>
 
-      <div className="mt-8 space-y-8">
+      <div className="mt-8 space-y-5">
         <MarketRefreshPanel />
         <UsersPanel />
       </div>
@@ -167,7 +167,7 @@ function MarketRefreshPanel() {
   }
 
   return (
-    <section className="rounded-lg border border-border-default bg-surface p-6">
+    <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="font-bold">بيانات السوق</h2>
@@ -298,7 +298,7 @@ function UsersPanel() {
 
   return (
     <>
-      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Metric label="مستخدم مسجّل" value={rows.length} />
         <Metric label="جديد آخر 7 أيام" value={newThisWeek} />
         <Metric label="نشط آخر 7 أيام" value={activeThisWeek} />
@@ -404,7 +404,7 @@ function Metric({
   note?: string;
 }) {
   return (
-    <div className="rounded-lg border border-border-default bg-surface p-5">
+    <div className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
       <dt className="text-sm text-fg-muted">{label}</dt>
       <dd className="num mt-1.5 text-2xl font-bold">{value}</dd>
       {note && <p className="mt-1.5 text-xs text-fg-subtle">{note}</p>}

@@ -55,7 +55,7 @@ export function WatchlistPanel({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-sm text-fg-muted">
           <span className="num font-bold text-fg">{sorted.length}</span> سهم تحت
@@ -71,7 +71,7 @@ export function WatchlistPanel({
       </div>
 
       {sorted.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border-default p-10 text-center">
+        <div className="rounded-lg border border-dashed border-border-default p-8 text-center">
           <h2 className="font-bold">قائمة المراقبة فاضية</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-fg-muted">
             ضيف سهم بتراقبه بسعر شراء مستهدف واستوب، وأول ما يوصل حوّله لصفقة
@@ -83,13 +83,13 @@ export function WatchlistPanel({
           {sorted.map((item) => (
             <li
               key={item.id}
-              className="rounded-lg border border-border-default bg-surface p-5"
+              className="rounded-lg border border-border-default bg-surface p-4 sm:p-5"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="num text-lg font-bold">{item.ticker || '—'}</p>
-                  <p className="num mt-1 text-xs text-fg-subtle">
-                    من {dateLabel(item.dateAdded)}
+                  <p className="mt-1 text-xs text-fg-subtle">
+                    من <span className="num">{dateLabel(item.dateAdded)}</span>
                   </p>
                 </div>
                 <PriorityBadge priority={item.priority} />

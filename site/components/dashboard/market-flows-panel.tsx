@@ -91,8 +91,8 @@ export function MarketFlowsPanel() {
   const table = latest[investorClass];
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-lg border border-border-default bg-surface p-6">
+    <div className="space-y-5">
+      <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="font-bold">مين اشترى ومين باع</h2>
@@ -166,7 +166,7 @@ function NetCard({
   const flat = row.net === 0;
 
   return (
-    <div className="rounded-lg border border-border-default bg-surface-low p-5">
+    <div className="rounded-lg border border-border-default bg-surface-low p-4 sm:p-5">
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-sm font-bold">{label}</p>
         <p className="text-xs font-semibold text-fg-muted">
@@ -274,7 +274,7 @@ function History({
   investorClass: InvestorClass;
 }) {
   return (
-    <section className="rounded-lg border border-border-default bg-surface p-6">
+    <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
       <h3 className="font-bold">الجلسات السابقة</h3>
       <p className="mt-1 text-xs text-fg-subtle">
         صافي التعامل لكل فئة — {CLASS_LABELS[investorClass]}

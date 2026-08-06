@@ -228,3 +228,36 @@ export function XIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/**
+ * The four bottom-bar destinations and the add-trade action.
+ *
+ * Drawn to stand in for the app's Material icons one-for-one — receipt_long,
+ * insights, calculate, settings, add — so the same slot carries the same
+ * picture on both surfaces. ChartIcon above already covers `insights`.
+ */
+export function ReceiptIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <path d="M5 21V4.5A1.5 1.5 0 0 1 6.5 3h11A1.5 1.5 0 0 1 19 4.5V21l-2.3-1.5L14.4 21l-2.3-1.5L9.8 21l-2.3-1.5Z" />
+      <path d="M9 8h6M9 12h6M9 16h3" />
+    </svg>
+  );
+}
+
+export function SettingsIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6M18.7 18.7l-1.6-1.6M6.9 6.9 5.3 5.3" />
+    </svg>
+  );
+}
+
+export function PlusIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}

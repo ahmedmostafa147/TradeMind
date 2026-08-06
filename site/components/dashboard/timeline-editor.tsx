@@ -76,11 +76,13 @@ export function TimelineEditor({
     .sort((a, b) => b.entry.date.getTime() - a.entry.date.getTime());
 
   return (
-    <fieldset className="rounded-lg border border-border-default p-5">
+    <fieldset className="rounded-lg border border-border-default p-4">
       <legend className="px-2 text-sm font-bold">
-        تايم لاين الصفقة
-        <span className="num ms-2 font-normal text-fg-subtle">
-          {entries.length}
+        <span className="inline-flex items-center gap-2">
+          تايم لاين الصفقة
+          <span className="num font-normal text-fg-subtle">
+            {entries.length}
+          </span>
         </span>
       </legend>
 

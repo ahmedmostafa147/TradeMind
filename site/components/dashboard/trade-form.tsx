@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 
+import { TickerField } from '@/components/dashboard/ticker-field';
 import { TimelineEditor } from '@/components/dashboard/timeline-editor';
 import { CHECKLIST } from '@/lib/checklist';
 import { money, percent, quantity as fmtQuantity } from '@/lib/format';
@@ -123,16 +124,22 @@ export function TradeForm({
   const [entryDate, setEntryDate] = useState(
     toDateInput(initial?.entryDate ?? new Date())
   );
+  // `initial` may be a SEED rather than a stored trade — the quick-add sheet
+  // hands over whatever was typed, and an untouched price arrives as 0. Seeding
+  // the box with "0" would make the user clear it before typing, and 0 is not a
+  // price any stored trade legitimately carries.
   const [entryPrice, setEntryPrice] = useState(
-    initial ? String(initial.entryPrice) : ''
+    initial && initial.entryPrice > 0 ? String(initial.entryPrice) : ''
   );
   const [stopPrice, setStopPrice] = useState(
-    initial ? String(initial.stopPrice) : ''
+    initial && initial.stopPrice > 0 ? String(initial.stopPrice) : ''
   );
   const [takeProfit, setTakeProfit] = useState(
     initial?.takeProfitPrice != null ? String(initial.takeProfitPrice) : ''
   );
-  const [qty, setQty] = useState(initial ? String(initial.quantity) : '');
+  const [qty, setQty] = useState(
+    initial && initial.quantity > 0 ? String(initial.quantity) : ''
+  );
   const [status, setStatus] = useState<TradeStatus>(initial?.status ?? 'planned');
   const [exitPrice, setExitPrice] = useState(
     initial?.exitPrice != null ? String(initial.exitPrice) : ''
@@ -159,11 +166,6 @@ export function TradeForm({
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const firstFieldRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    firstFieldRef.current?.focus();
-  }, []);
 
   const calc = useMemo(() => {
     const c = parseNumber(capital) ?? 0;
@@ -285,7 +287,7 @@ export function TradeForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-6">
+    <form onSubmit={submit} className="space-y-5">
       {/* Cards rather than a <select>: four options whose difference is the
           whole shape of the form is not a thing to hide behind a closed
           dropdown, and each one carries the sentence that tells you which you
@@ -325,15 +327,15 @@ export function TradeForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="رمز السهم" htmlFor="tf-ticker">
-          <input
-            ref={firstFieldRef}
+          {/* The same suggesting field the quick sheet and the app use, so a
+              code is never typed from memory in one place and picked from a
+              list in another. */}
+          <TickerField
             id="tf-ticker"
             value={ticker}
-            onChange={(e) => setTicker(e.target.value)}
-            dir="ltr"
-            placeholder="COMI"
-            className={inputCls}
+            onChange={setTicker}
             required
+            autoFocus
           />
         </Field>
 
@@ -400,7 +402,7 @@ export function TradeForm({
           risk read-out below stays for every status — on a done trade it is a
           fact worth seeing, just not a target. */}
       {needsSizing(status) && (
-      <fieldset className="rounded-lg border border-border-default bg-surface-low p-5">
+      <fieldset className="rounded-lg border border-border-default bg-surface-low p-4 sm:p-5">
         <legend className="px-2 text-sm font-bold">حاسبة الحجم</legend>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -485,7 +487,7 @@ export function TradeForm({
 
       </div>
 
-      <dl className="grid gap-3 rounded-lg border border-border-default bg-surface p-5 sm:grid-cols-3">
+      <dl className="grid gap-3 rounded-lg border border-border-default bg-surface p-4 sm:p-5 sm:grid-cols-3">
         <Metric label="المبلغ المعرّض للخطر" value={money(calc.riskEgp)} tone={calc.over} />
         <Metric label="نسبة المخاطرة" value={percent(calc.riskPct)} tone={calc.over} />
         <Metric label="قيمة المركز" value={money(calc.positionValue)} />
@@ -503,7 +505,7 @@ export function TradeForm({
       )}
 
       {showsExit && (
-        <fieldset className="rounded-lg border border-border-default bg-surface-low p-5">
+        <fieldset className="rounded-lg border border-border-default bg-surface-low p-4 sm:p-5">
           <legend className="px-2 text-sm font-bold">الخروج من الصفقة</legend>
           <p className="mb-4 text-xs text-fg-muted">
             {needsExit
@@ -569,11 +571,13 @@ export function TradeForm({
         </Field>
       </div>
 
-      <fieldset className="rounded-lg border border-border-default p-5">
+      <fieldset className="rounded-lg border border-border-default p-4">
         <legend className="px-2 text-sm font-bold">
-          تشيك ليست ما قبل الصفقة
-          <span className="num ms-2 font-normal text-fg-subtle">
-            {checked.length}/{CHECKLIST.length}
+          <span className="inline-flex items-center gap-2">
+            تشيك ليست ما قبل الصفقة
+            <span className="num font-normal text-fg-subtle">
+              {checked.length}/{CHECKLIST.length}
+            </span>
           </span>
         </legend>
         <ul className="grid gap-2 sm:grid-cols-2">

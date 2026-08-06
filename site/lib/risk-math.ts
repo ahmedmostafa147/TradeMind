@@ -110,6 +110,20 @@ export function parseNumber(input: string): number | null {
 }
 
 /**
+ * Whole-number input, for share counts. Mirror of `parseInteger` in
+ * formatters.dart, and it rejects rather than truncates: `int.tryParse` returns
+ * null for "12.5", so accepting it here as 12 would let the browser save a
+ * quantity the phone refuses.
+ */
+export function parseInteger(input: string): number | null {
+  const normalised = toWesternDigits(input).trim();
+  if (normalised === '') return null;
+  if (!/^[+-]?\d+$/.test(normalised)) return null;
+  const value = Number(normalised);
+  return Number.isSafeInteger(value) ? value : null;
+}
+
+/**
  * Rounds a price to the piastre.
  *
  * Mirror of `roundToPiastre` in lib/core/calc/risk_math.dart, added when

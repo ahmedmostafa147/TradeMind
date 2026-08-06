@@ -12,9 +12,20 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { CalculatorWidget } from '@/components/calculator-widget';
+import {
+  CalculatorIcon,
+  ChartIcon,
+  PlusIcon,
+  ReceiptIcon,
+  SettingsIcon,
+} from '@/components/icons';
 import { EquityChart, MonthlyBars } from '@/components/dashboard/charts';
 import { GoalPanel } from '@/components/dashboard/goal-panel';
 import { MarketFlowsPanel } from '@/components/dashboard/market-flows-panel';
+import {
+  ADD_TRADE_LABEL,
+  QuickAddSheet,
+} from '@/components/dashboard/quick-add-sheet';
 import { ScenariosPanel } from '@/components/dashboard/scenarios-panel';
 import { SignInPanel } from '@/components/dashboard/sign-in-panel';
 import { InstallButton } from '@/components/pwa';
@@ -83,13 +94,41 @@ function Gate() {
 
 type Tab =
   | 'today'
-  | 'market'
   | 'overview'
   | 'analytics'
   | 'goal'
   | 'trades'
   | 'planning'
   | 'watchlist';
+
+/**
+ * The four bottom-bar destinations, mirroring HomeShell's NavigationBar
+ * one-for-one: look at my trades, read the market, size a trade, change my
+ * settings. Each is a different JOB — which is the test that moved «قرار
+ * اليوم», «الأداء» and the rest into the tab strip inside «صفقاتي» rather than
+ * leaving eight siblings in one row.
+ *
+ * A phone got all eight as wrapping pills, which took three rows of the first
+ * screen and read as eight separate features.
+ */
+type Section = 'journal' | 'market' | 'calculator' | 'settings';
+
+/**
+ * The bar itself. Labels and order are the app's, so the same slot holds the
+ * same destination on both surfaces — under RTL «صفقاتي» lands rightmost in
+ * both, because a row reverses and Material's NavigationBar does the same.
+ */
+const SECTIONS: {
+  id: Section;
+  label: string;
+  Icon: (props: { className?: string }) => React.ReactElement;
+}[] = [
+  { id: 'journal', label: 'صفقاتي', Icon: ReceiptIcon },
+  { id: 'market', label: 'السوق', Icon: ChartIcon },
+  { id: 'calculator', label: 'حاسبة الصفقة', Icon: CalculatorIcon },
+  { id: 'settings', label: 'الإعدادات', Icon: SettingsIcon },
+];
+
 type View = { kind: 'list' } | { kind: 'new'; seed?: Trade } | { kind: 'edit'; trade: Trade };
 
 function Journal() {
@@ -100,8 +139,19 @@ function Journal() {
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [failed, setFailed] = useState(false);
   const [view, setView] = useState<View>({ kind: 'list' });
+  const [section, setSection] = useState<Section>('journal');
   const [tab, setTab] = useState<Tab>('today');
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  /**
+   * The add-trade sheet, which is now what «أضف صفقة» opens everywhere.
+   *
+   * It used to jump straight to the full form — type picker, dates, reason,
+   * checklist, timeline — for an act the app answers in five fields. The full
+   * form is still there behind «التفاصيل الكاملة ←», seeded with whatever was
+   * typed, so choosing the fast path never costs anything.
+   */
+  const [quickAdd, setQuickAdd] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -255,7 +305,7 @@ function Journal() {
 
   if (view.kind !== 'list') {
     return (
-      <div className="mx-auto max-w-3xl px-5 py-10 lg:py-14">
+      <div className="mx-auto max-w-3xl px-4 py-6 sm:px-5 lg:py-8">
         <h1 className="text-2xl font-bold tracking-tight">
           {view.kind === 'new' ? 'صفقة جديدة' : `تعديل ${view.trade.ticker}`}
         </h1>
@@ -284,14 +334,21 @@ function Journal() {
     );
   }
 
+  /**
+   * The journal's own views, in the app's order and under the app's names.
+   *
+   * Same seven the phone shows in TradesHubScreen's TabBar, plus «قائمة
+   * المراقبة» — which the app keeps in an overflow menu and the web has always
+   * had as a tab. CLAUDE.md §6 requires the labels match literally; the order
+   * now matches too, so the muscle memory carries between the two.
+   */
   const tabs: { id: Tab; label: string; badge?: number }[] = [
     { id: 'today', label: 'قرار اليوم' },
-    { id: 'market', label: 'السوق' },
+    { id: 'trades', label: 'صفقاتي', badge: realTrades.length },
+    { id: 'planning', label: 'تخطيط', badge: plannedTrades.length },
     { id: 'overview', label: 'الأداء' },
     { id: 'analytics', label: 'التحليلات' },
     { id: 'goal', label: 'الهدف' },
-    { id: 'trades', label: 'صفقاتي', badge: realTrades.length },
-    { id: 'planning', label: 'تخطيط', badge: plannedTrades.length },
     { id: 'watchlist', label: 'قائمة المراقبة', badge: watchlist.length },
   ];
 
@@ -302,21 +359,25 @@ function Journal() {
   const hasTrades = realTrades.length > 0;
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10 lg:py-14">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border-default pb-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">دفتر صفقاتك</h1>
-          <p className="num mt-1 text-sm text-fg-muted" dir="ltr">
-            {user?.email}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="mx-auto max-w-6xl px-4 py-4 sm:px-5 sm:py-6 lg:py-8">
+      {/* Compact on a phone, for the reason the app's hub AppBar has no title:
+          the bar at the bottom already says which destination you are in, so a
+          heading repeating it spends a row saying the same word twice. The
+          account line and the actions live in «الإعدادات» now — where the app
+          keeps them — and stay in the header from `sm` up, where there is room
+          and there is no bottom bar. */}
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default pb-3 sm:pb-4">
+        <h1 className="text-lg font-bold tracking-tight sm:text-2xl">
+          {SECTIONS.find((d) => d.id === section)?.label ?? 'دفتر صفقاتك'}
+        </h1>
+
+        <div className="hidden flex-wrap items-center gap-2 sm:flex">
           <button
             type="button"
-            onClick={() => setView({ kind: 'new' })}
+            onClick={() => setQuickAdd(true)}
             className="rounded-md bg-brand px-5 py-2 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90"
           >
-            + صفقة جديدة
+            + {ADD_TRADE_LABEL}
           </button>
           {isAdmin && (
             <Link
@@ -326,30 +387,39 @@ function Journal() {
               لوحة الإدارة
             </Link>
           )}
-          <button
-            type="button"
-            onClick={() => void logout()}
-            className="rounded-md border border-border-default px-4 py-2 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
-          >
-            خروج
-          </button>
-          {/* Moved here when the shell's own header was removed — it stacked a
-              second bar on top of this one and said the app's name twice. */}
           <InstallButton />
           <ThemeToggle />
         </div>
       </header>
 
-      <SettingsBar
-        settings={settings}
-        onChange={update}
-        source={settingsSource}
-      />
+      {/* The destination switcher, as a row here and as the bottom bar below.
+          One navigation model, drawn where each screen expects it. */}
+      <nav aria-label="الأقسام" className="mt-4 hidden sm:block">
+        <ul className="flex flex-wrap gap-2">
+          {SECTIONS.map((d) => (
+            <li key={d.id}>
+              <button
+                type="button"
+                onClick={() => setSection(d.id)}
+                aria-current={section === d.id ? 'page' : undefined}
+                className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
+                  section === d.id
+                    ? 'bg-brand text-on-brand'
+                    : 'border border-border-default text-fg-muted hover:bg-surface-high'
+                }`}
+              >
+                <d.Icon className="size-4" />
+                {d.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
       {failed && (
         <p
           role="alert"
-          className="mt-6 rounded-md border border-loss-border bg-loss-surface p-4 text-sm font-semibold text-loss"
+          className="mt-4 rounded-md border border-loss-border bg-loss-surface p-4 text-sm font-semibold text-loss"
         >
           تعذّر تحميل بياناتك. جرّب تحدّث الصفحة.
         </p>
@@ -359,125 +429,242 @@ function Journal() {
 
       {trades !== null && (
         <>
-          <nav aria-label="أقسام الدفتر" className="mt-6">
-            <ul className="flex flex-wrap gap-2">
-              {tabs.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => setTab(item.id)}
-                    aria-current={tab === item.id ? 'page' : undefined}
-                    className={`rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-                      tab === item.id
-                        ? 'bg-brand text-on-brand'
-                        : 'border border-border-default text-fg-muted hover:bg-surface-high'
-                    }`}
-                  >
-                    {item.label}
-                    {item.badge !== undefined && item.badge > 0 && (
-                      <span className="num ms-1.5 opacity-70">{item.badge}</span>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          {section === 'journal' && (
+            <>
+              {/* Scrollable and start-aligned, exactly like the hub's TabBar:
+                  seven labels wrapped onto three rows of pills is most of a
+                  phone's first screen spent on navigation. The underline marks
+                  the current view the way the app's indicator does. */}
+              <nav
+                aria-label="أقسام الدفتر"
+                className="-mx-4 mt-3 overflow-x-auto border-b border-border-default px-4 sm:mx-0 sm:mt-4 sm:px-0"
+              >
+                <ul className="flex w-max gap-1">
+                  {tabs.map((item) => (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => setTab(item.id)}
+                        aria-current={tab === item.id ? 'page' : undefined}
+                        className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-semibold transition-colors ${
+                          tab === item.id
+                            ? 'border-brand-ink text-brand-ink'
+                            : 'border-transparent text-fg-muted hover:text-fg'
+                        }`}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          {item.label}
+                          {item.badge !== undefined && item.badge > 0 && (
+                            <span className="num rounded-full bg-surface-high px-1.5 text-xs font-bold text-fg-muted">
+                              {item.badge}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
 
-          <div className="mt-8">
-            {tab === 'today' && (
-              <TodayPanel
-                trades={trades}
+              <div className="mt-4">
+                {tab === 'today' && (
+                  <TodayPanel
+                    trades={trades}
+                    capital={settings.capital}
+                    maxRiskPercent={settings.maxRiskPercent}
+                    waitingThresholdDays={settings.waitingThresholdDays}
+                    onEdit={(trade) => setView({ kind: 'edit', trade })}
+                  />
+                )}
+
+                {tab === 'overview' &&
+                  (hasTrades && stats ? (
+                    <Overview
+                      stats={stats}
+                      avgDiscipline={avgDiscipline}
+                      scenarios={scenarios}
+                    />
+                  ) : (
+                    <EmptyJournal onAdd={() => setQuickAdd(true)} />
+                  ))}
+
+                {tab === 'analytics' &&
+                  (hasTrades && stats ? (
+                    <AnalyticsTab stats={stats} avgDiscipline={avgDiscipline} />
+                  ) : (
+                    <EmptyJournal onAdd={() => setQuickAdd(true)} />
+                  ))}
+
+                {/* Not gated behind hasTrades like the two above. An empty
+                    journal is exactly when somebody wants to know what the
+                    target needs, and the panel's own «لسه بدري» state answers
+                    that far better than the generic card would. */}
+                {tab === 'goal' && (
+                  <GoalPanel
+                    capital={settings.capital}
+                    expectancy={stats?.expectancy ?? null}
+                    trades={trades.map((t) => ({
+                      exitDate: t.exitDate,
+                      pnl: metricsOf(t, settings.capital).pnl,
+                    }))}
+                  />
+                )}
+
+                {tab === 'trades' &&
+                  (realTrades.length > 0 ? (
+                    <TradesTable
+                      trades={realTrades}
+                      variant="real"
+                      capital={settings.capital}
+                      maxRiskPercent={settings.maxRiskPercent}
+                      busyId={busyId}
+                      onEdit={(trade) => setView({ kind: 'edit', trade })}
+                      onDelete={(trade) =>
+                        void removeDoc('trades', trade.id, `صفقة ${trade.ticker}`)
+                      }
+                    />
+                  ) : (
+                    <EmptyJournal onAdd={() => setQuickAdd(true)} />
+                  ))}
+
+                {tab === 'planning' && (
+                  <PlanningTab
+                    trades={plannedTrades}
+                    capital={settings.capital}
+                    maxRiskPercent={settings.maxRiskPercent}
+                    busyId={busyId}
+                    onAdd={() => setQuickAdd(true)}
+                    onEdit={(trade) => setView({ kind: 'edit', trade })}
+                    onDelete={(trade) =>
+                      void removeDoc('trades', trade.id, `صفقة ${trade.ticker}`)
+                    }
+                    onCalculator={() => setSection('calculator')}
+                  />
+                )}
+
+                {tab === 'watchlist' && (
+                  <WatchlistPanel
+                    items={watchlist}
+                    busyId={busyId}
+                    onSave={saveWatch}
+                    onDelete={(item) =>
+                      void removeDoc(
+                        'watchlist',
+                        item.id,
+                        `${item.ticker} من المراقبة`
+                      )
+                    }
+                    onConvert={(item) =>
+                      setView({ kind: 'new', seed: toPlannedTrade(item) })
+                    }
+                  />
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Market flows are not gated on the journal at all: they are the
+              same for everybody and worth reading on day one, before a single
+              trade has been logged. */}
+          {section === 'market' && (
+            <div className="mt-4">
+              <MarketFlowsPanel />
+            </div>
+          )}
+
+          {section === 'calculator' && (
+            <div className="mt-4">
+              <CalculatorSection
                 capital={settings.capital}
                 maxRiskPercent={settings.maxRiskPercent}
-                waitingThresholdDays={settings.waitingThresholdDays}
-                onEdit={(trade) => setView({ kind: 'edit', trade })}
+                onAdd={() => setQuickAdd(true)}
               />
-            )}
+            </div>
+          )}
 
-            {tab === 'overview' &&
-              (hasTrades && stats ? (
-                <Overview
-                  stats={stats}
-                  avgDiscipline={avgDiscipline}
-                  scenarios={scenarios}
-                />
-              ) : (
-                <EmptyJournal onAdd={() => setView({ kind: 'new' })} />
-              ))}
-
-            {tab === 'analytics' &&
-              (hasTrades && stats ? (
-                <AnalyticsTab stats={stats} avgDiscipline={avgDiscipline} />
-              ) : (
-                <EmptyJournal onAdd={() => setView({ kind: 'new' })} />
-              ))}
-
-            {/* Not gated behind hasTrades like the two above. An empty journal
-                is exactly when somebody wants to know what the target needs,
-                and the panel's own «لسه بدري» state answers that far better
-                than the generic "add your first trade" card would. */}
-            {/* Not gated on the journal at all: market flows are the same for
-                everybody and are worth reading on day one, before a single
-                trade has been logged. */}
-            {tab === 'market' && <MarketFlowsPanel />}
-
-            {tab === 'goal' && (
-              <GoalPanel
-                capital={settings.capital}
-                expectancy={stats?.expectancy ?? null}
-                trades={trades.map((t) => ({
-                  exitDate: t.exitDate,
-                  pnl: metricsOf(t, settings.capital).pnl,
-                }))}
+          {section === 'settings' && (
+            <div className="mt-4">
+              <SettingsSection
+                settings={settings}
+                onChange={update}
+                source={settingsSource}
+                email={user?.email ?? null}
+                isAdmin={isAdmin}
+                onLogout={() => void logout()}
               />
-            )}
-
-            {tab === 'trades' &&
-              (realTrades.length > 0 ? (
-                <TradesTable
-                  trades={realTrades}
-                  variant="real"
-                  capital={settings.capital}
-                  maxRiskPercent={settings.maxRiskPercent}
-                  busyId={busyId}
-                  onEdit={(trade) => setView({ kind: 'edit', trade })}
-                  onDelete={(trade) =>
-                    void removeDoc('trades', trade.id, `صفقة ${trade.ticker}`)
-                  }
-                />
-              ) : (
-                <EmptyJournal onAdd={() => setView({ kind: 'new' })} />
-              ))}
-
-            {tab === 'planning' && (
-              <PlanningTab
-                trades={plannedTrades}
-                capital={settings.capital}
-                maxRiskPercent={settings.maxRiskPercent}
-                busyId={busyId}
-                onAdd={() => setView({ kind: 'new' })}
-                onEdit={(trade) => setView({ kind: 'edit', trade })}
-                onDelete={(trade) =>
-                  void removeDoc('trades', trade.id, `صفقة ${trade.ticker}`)
-                }
-              />
-            )}
-
-            {tab === 'watchlist' && (
-              <WatchlistPanel
-                items={watchlist}
-                busyId={busyId}
-                onSave={saveWatch}
-                onDelete={(item) =>
-                  void removeDoc('watchlist', item.id, `${item.ticker} من المراقبة`)
-                }
-                onConvert={(item) =>
-                  setView({ kind: 'new', seed: toPlannedTrade(item) })
-                }
-              />
-            )}
-          </div>
+            </div>
+          )}
         </>
+      )}
+
+      {/* Clears the bottom bar and the FAB, which are fixed over the page. */}
+      <div className="h-24 sm:hidden" />
+
+      {/* The app's extended FAB, in the app's place — and only where the app
+          puts it. It belongs to the trades hub, not to every destination: a
+          button for adding a trade floating over the settings screen is an
+          offer to do something the screen is not about. Phone only, because
+          from `sm` up the same action sits in the header. */}
+      {section === 'journal' && (
+        <button
+          type="button"
+          onClick={() => setQuickAdd(true)}
+          className="fixed bottom-20 end-4 z-30 flex items-center gap-2 rounded-2xl bg-brand px-5 py-3.5 text-sm font-bold text-on-brand shadow-lg transition-opacity hover:opacity-90 sm:hidden"
+        >
+          <PlusIcon className="size-5" />
+          {ADD_TRADE_LABEL}
+        </button>
+      )}
+
+      <nav
+        aria-label="الأقسام"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border-default bg-surface pb-[env(safe-area-inset-bottom)] sm:hidden"
+      >
+        <ul className="mx-auto flex max-w-md">
+          {SECTIONS.map((d) => (
+            <li key={d.id} className="flex-1">
+              <button
+                type="button"
+                onClick={() => setSection(d.id)}
+                aria-current={section === d.id ? 'page' : undefined}
+                className={`flex w-full flex-col items-center gap-1 px-1 py-2 text-[11px] font-semibold transition-colors ${
+                  section === d.id ? 'text-brand-ink' : 'text-fg-muted'
+                }`}
+              >
+                {/* The filled pill behind the current icon is Material 3's
+                    active indicator, which is what the app draws. */}
+                <span
+                  className={`flex h-7 w-14 items-center justify-center rounded-full transition-colors ${
+                    section === d.id ? 'bg-brand/25' : ''
+                  }`}
+                >
+                  <d.Icon className="size-5" />
+                </span>
+                {d.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
+      {quickAdd && (
+        <QuickAddSheet
+          // Keyed on the account values for the same reason the form and the
+          // settings panel are: the sizing seeds off capital and the risk rule,
+          // and those land asynchronously from Firestore.
+          key={`${settings.capital}-${settings.maxRiskPercent}`}
+          capital={settings.capital}
+          maxRiskPercent={settings.maxRiskPercent}
+          onClose={() => setQuickAdd(false)}
+          onSave={async (trade) => {
+            await saveTrade(trade);
+            setQuickAdd(false);
+          }}
+          onFullDetails={(seed) => {
+            setQuickAdd(false);
+            setView({ kind: 'new', seed });
+          }}
+        />
       )}
     </div>
   );
@@ -494,19 +681,30 @@ function Journal() {
  * copy — and presenting a cache as the account's rule is the exact thing that
  * made the old browser-only version misleading.
  */
-function SettingsBar({
+function SettingsSection({
   settings,
   onChange,
   source,
+  email,
+  isAdmin,
+  onLogout,
 }: {
   settings: ReturnType<typeof useAccountSettings>['settings'];
   onChange: (next: Partial<typeof settings>) => void;
   source: SettingsSource;
+  email: string | null;
+  isAdmin: boolean;
+  onLogout: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  // Always open. It used to be a collapsed strip above every tab, sitting on
+  // screen while nobody was editing it; a destination of its own is where the
+  // app keeps this, and a settings screen that opens closed is a settings
+  // screen with an extra tap in front of it.
+  const open = true;
 
   return (
-    <div className="mt-5 rounded-lg border border-border-default bg-surface-low px-5 py-3">
+    <div className="space-y-5">
+      <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-fg-muted">
           رأس المال{' '}
@@ -519,14 +717,6 @@ function SettingsBar({
             <span className="text-fg-subtle"> · نسخة محفوظة على المتصفح</span>
           )}
         </p>
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          className="text-xs font-semibold text-brand-ink underline-offset-4 hover:underline"
-        >
-          {open ? 'إخفاء' : 'تعديل'}
-        </button>
       </div>
 
       {open && (
@@ -601,13 +791,95 @@ function SettingsBar({
           </p>
         </div>
       )}
+      </section>
+
+      {/* The account itself — where the app keeps it, and where it stops
+          costing the journal a header row on every screen. */}
+      <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
+        <h2 className="font-bold">حسابك</h2>
+        <p className="num mt-1 text-sm text-fg-muted" dir="ltr">
+          {email ?? '—'}
+        </p>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="rounded-md border border-border-strong px-4 py-2 text-sm font-semibold transition-colors hover:bg-surface-high"
+            >
+              لوحة الإدارة
+            </Link>
+          )}
+          <InstallButton />
+          <ThemeToggle />
+          <button
+            type="button"
+            onClick={onLogout}
+            className="rounded-md border border-border-default px-4 py-2 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
+          >
+            خروج
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/**
+ * «حاسبة الصفقة» — a destination, not a widget buried in «تخطيط».
+ *
+ * The app gives this its own slot in the bottom bar because sizing a position
+ * is something a trader does several times a day and commits to once. It was
+ * stacked on top of the planned-trades list here, which meant reaching it cost
+ * a tab switch plus a scroll past somebody else's saved ideas.
+ *
+ * NOTHING HERE WRITES ANYTHING. That is the point: until «أضف صفقة» is pressed,
+ * this is scratch arithmetic and the journal stays clean. Before it existed the
+ * only way to size a position while signed in was to fill in the trade form and
+ * SAVE, which put throwaway sums permanently into the trade count.
+ */
+function CalculatorSection({
+  capital,
+  maxRiskPercent,
+  onAdd,
+}: {
+  capital: number;
+  maxRiskPercent: number;
+  onAdd: () => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <p className="max-w-xl text-xs leading-relaxed text-fg-muted">
+          جرّب أي سعر دخول واستوب وشوف الكمية المسموحة. مفيش حاجة بتتحفظ هنا —
+          لو الفكرة عجبتك، سجّلها كصفقة.
+        </p>
+        <button
+          type="button"
+          onClick={onAdd}
+          className="hidden shrink-0 rounded-md border border-border-strong px-4 py-2 text-sm font-semibold transition-colors hover:bg-surface-high sm:block"
+        >
+          + {ADD_TRADE_LABEL}
+        </button>
+      </div>
+
+      {/* Keyed on the account values: the widget seeds its state once in
+          useState, and these arrive asynchronously from Firestore. Without this
+          it would keep the 100,000 default after the real capital landed — the
+          same trap the settings panel and the trade form document. */}
+      <CalculatorWidget
+        key={`${capital}-${maxRiskPercent}`}
+        initialCapital={capital}
+        initialRisk={maxRiskPercent}
+        blankPrices
+      />
     </div>
   );
 }
 
 function EmptyJournal({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="rounded-lg border border-dashed border-border-default p-12 text-center">
+    <div className="rounded-lg border border-dashed border-border-default p-8 text-center">
       <h2 className="text-lg font-bold">مفيش صفقات لسه</h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-fg-muted">
         سجّل أول صفقة من هنا، أو من التطبيق على تليفونك — الاتنين بيكتبوا في نفس
@@ -618,7 +890,7 @@ function EmptyJournal({ onAdd }: { onAdd: () => void }) {
         onClick={onAdd}
         className="mt-6 rounded-md bg-brand px-6 py-3 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90"
       >
-        سجّل أول صفقة
+        {ADD_TRADE_LABEL}
       </button>
     </div>
   );
@@ -636,8 +908,8 @@ function Overview({
   scenarios: PortfolioScenarios;
 }) {
   return (
-    <div className="space-y-8">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi
           label="صافي الربح/الخسارة"
           value={signedMoney(stats.totalPnl)}
@@ -699,9 +971,9 @@ function AnalyticsTab({
       : `${stats.averageHoldingDays.toFixed(1)} يوم`;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       <Panel title="أرقام الأداء">
-        <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 lg:grid-cols-4">
           <Row label="معامل الربح" value={stats.profitFactor === null ? '—' : stats.profitFactor.toFixed(2)} />
           <Row label="متوسط R" value={rMultiple(stats.averageR)} />
           <Row label="وسيط R" value={rMultiple(stats.medianR)} />
@@ -738,7 +1010,7 @@ function AnalyticsTab({
       </div>
 
       <Panel title="التوقيت" note="مجمّع بتاريخ الخروج عبر كل السنين">
-        <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-4 lg:grid-cols-4">
           <Row
             label="أحسن يوم"
             value={
@@ -852,7 +1124,7 @@ function ExtremeCard({
   tone: 'win' | 'loss';
 }) {
   return (
-    <div className="rounded-lg border border-border-default bg-surface p-6">
+    <div className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
       <h3 className="text-sm font-bold text-fg-muted">{title}</h3>
       {extreme === null ? (
         <p className="mt-3 text-sm text-fg-muted">—</p>
@@ -866,8 +1138,8 @@ function ExtremeCard({
           >
             {signedMoney(extreme.pnl)}
           </p>
-          <p className="num mt-2 text-xs text-fg-subtle">
-            خرجت في {dateLabel(extreme.exitDate)}
+          <p className="mt-2 text-xs text-fg-subtle">
+            خرجت في <span className="num">{dateLabel(extreme.exitDate)}</span>
           </p>
         </>
       )}
@@ -878,20 +1150,12 @@ function ExtremeCard({
 // ---------------------------------------------------------------------------
 
 /**
- * «تخطيط» — the two things that are not yet trades.
+ * «تخطيط» — ideas that are not yet trades.
  *
- * A scratch calculator on top, the saved plans underneath, in that order and
- * not the reverse. The calculator is the more common act: sizing a position is
- * something a trader does several times a day and commits to once, and until
- * now the only way to do it while signed in was to fill in the trade form and
- * SAVE — which put throwaway arithmetic permanently into the journal and made
- * the trade count meaningless. Nothing here writes anything until «صفقة جديدة»
- * is pressed.
- *
- * The calculator is the same component the landing page runs, seeded from the
- * account instead of the worked example, because the arithmetic must not fork:
- * it imports lib/risk-math.ts, which carries both epsilons from the Dart
- * original, so the number here is the number the phone gives.
+ * The scratch calculator used to sit on top of this list. It is a bottom-bar
+ * destination now, as it is in the app, so this tab is what its name says: the
+ * plans you saved. The link below is the only thing left of the old stacking,
+ * and it points at the destination rather than duplicating the widget.
  */
 function PlanningTab({
   trades,
@@ -901,61 +1165,52 @@ function PlanningTab({
   onAdd,
   onEdit,
   onDelete,
+  onCalculator,
 }: {
   trades: Trade[];
+  /** The planned table shows risk and its share of capital, so it needs both. */
   capital: number;
   maxRiskPercent: number;
   busyId: string | null;
   onAdd: () => void;
   onEdit: (trade: Trade) => void;
   onDelete: (trade: Trade) => void;
+  onCalculator: () => void;
 }) {
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       <section>
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
-            <h2 className="font-bold">احسبها الأول</h2>
+            <h2 className="font-bold">صفقات مخططة</h2>
             <p className="mt-1 text-xs text-fg-muted">
-              جرّب أي سعر دخول واستوب وشوف الكمية المسموحة. مفيش حاجة بتتحفظ هنا
-              — لو الفكرة عجبتك، سجّلها كصفقة مخططة.
+              أفكار سجّلتها ولسه ما نفّذتهاش. مش بتتحسب في أداءك ولا في
+              التحليلات — لحد ما تتحول لمفتوحة.
             </p>
           </div>
           <button
             type="button"
-            onClick={onAdd}
-            className="shrink-0 rounded-md border border-border-strong px-4 py-2 text-sm font-semibold transition-colors hover:bg-surface-high"
+            onClick={onCalculator}
+            className="shrink-0 text-xs font-semibold text-brand-ink underline-offset-4 hover:underline"
           >
-            + سجّلها كصفقة
+            افتح حاسبة الصفقة ←
           </button>
         </div>
 
-        {/* Keyed on the account values: the widget seeds its state once in
-            useState, and these arrive asynchronously from Firestore. Without
-            this it would keep the 100,000 default after the real capital
-            landed — the same trap the settings panel and the trade form
-            document. */}
-        <CalculatorWidget
-          key={`${capital}-${maxRiskPercent}`}
-          initialCapital={capital}
-          initialRisk={maxRiskPercent}
-          blankPrices
-        />
-      </section>
-
-      <section>
-        <h2 className="font-bold">صفقات مخططة</h2>
-        <p className="mt-1 text-xs text-fg-muted">
-          أفكار سجّلتها ولسه ما نفّذتهاش. مش بتتحسب في أداءك ولا في التحليلات —
-          لحد ما تتحول لمفتوحة.
-        </p>
-
         <div className="mt-4">
           {trades.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-border-default p-10 text-center">
+            <div className="rounded-lg border border-dashed border-border-default p-8 text-center">
               <p className="text-sm text-fg-muted">
-                مفيش صفقات مخططة. احسب فكرة فوق وسجّلها لو عجبتك.
+                مفيش صفقات مخططة لسه. احسب فكرة في «حاسبة الصفقة» وسجّلها لو
+                عجبتك.
               </p>
+              <button
+                type="button"
+                onClick={onAdd}
+                className="mt-4 rounded-md bg-brand px-5 py-2 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90"
+              >
+                {ADD_TRADE_LABEL}
+              </button>
             </div>
           ) : (
             <TradesTable
@@ -1180,8 +1435,8 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-border-default bg-surface p-6">
-      <div className="mb-5">
+    <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
+      <div className="mb-4">
         <h2 className="font-bold">{title}</h2>
         {note && <p className="mt-1 text-xs text-fg-subtle">{note}</p>}
       </div>
@@ -1202,16 +1457,16 @@ function Kpi({
   tone?: 'win' | 'loss';
 }) {
   return (
-    <div className="rounded-lg border border-border-default bg-surface p-5">
-      <p className="text-sm text-fg-muted">{label}</p>
+    <div className="rounded-lg border border-border-default bg-surface p-4">
+      <p className="text-xs text-fg-muted sm:text-sm">{label}</p>
       <p
-        className={`num mt-1.5 text-2xl font-bold ${
+        className={`num mt-1.5 whitespace-nowrap text-lg font-bold sm:text-2xl ${
           tone === 'win' ? 'text-win' : tone === 'loss' ? 'text-loss' : ''
         }`}
       >
         {value}
       </p>
-      {note && <p className="mt-1.5 text-xs text-fg-subtle">{note}</p>}
+      {note && <p className="mt-1 text-xs text-fg-subtle">{note}</p>}
     </div>
   );
 }

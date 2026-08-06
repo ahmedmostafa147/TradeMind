@@ -45,8 +45,8 @@ export function TodayPanel({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Count label="فوق حد المخاطرة" value={d.overRisk.length} tone="loss" />
         <Count label="مفتوحة" value={d.open.length} />
         <Count label="مخططة" value={d.planned.length} />
@@ -121,16 +121,18 @@ function Section({
 
   return (
     <section
-      className={`rounded-lg border bg-surface p-6 ${
+      className={`rounded-lg border bg-surface p-4 sm:p-5 ${
         tone === 'loss' ? 'border-loss-border' : 'border-border-default'
       }`}
     >
       <div className="mb-4">
-        <h2 className={`font-bold ${tone === 'loss' ? 'text-loss' : ''}`}>
+        <h2
+          className={`flex items-center gap-2 font-bold ${
+            tone === 'loss' ? 'text-loss' : ''
+          }`}
+        >
           {title}
-          <span className="num ms-2 font-normal text-fg-subtle">
-            {items.length}
-          </span>
+          <span className="num font-normal text-fg-subtle">{items.length}</span>
         </h2>
         <p className="mt-1 text-xs text-fg-subtle">{note}</p>
       </div>
@@ -150,17 +152,28 @@ function Section({
                   </span>
                 )}
               </p>
-              <p className="num mt-1 text-xs text-fg-muted">
-                دخول {money(item.trade.entryPrice)} · استوب{' '}
-                {money(item.trade.stopPrice)}
+              <p className="mt-1 text-xs text-fg-muted">
+                دخول <span className="num">{money(item.trade.entryPrice)}</span>{' '}
+                · استوب <span className="num">{money(item.trade.stopPrice)}</span>
                 {capital > 0 && item.metrics.riskPct !== null && (
-                  <> · مخاطرة {percent(item.metrics.riskPct)}</>
+                  <>
+                    {' '}· مخاطرة{' '}
+                    <span className="num">{percent(item.metrics.riskPct)}</span>
+                  </>
                 )}
               </p>
-              <p className="num mt-1 text-xs text-fg-subtle">
-                {item.trade.exitDate
-                  ? `قفلت ${dateLabel(item.trade.exitDate)}`
-                  : `من ${item.daysSinceEntry} يوم · ${dateLabel(item.trade.entryDate)}`}
+              <p className="mt-1 text-xs text-fg-subtle">
+                {item.trade.exitDate ? (
+                  <>
+                    قفلت{' '}
+                    <span className="num">{dateLabel(item.trade.exitDate)}</span>
+                  </>
+                ) : (
+                  <>
+                    من <span className="num">{item.daysSinceEntry}</span> يوم ·{' '}
+                    <span className="num">{dateLabel(item.trade.entryDate)}</span>
+                  </>
+                )}
               </p>
             </div>
 
@@ -203,7 +216,7 @@ function Count({
   tone?: 'loss';
 }) {
   return (
-    <div className="rounded-lg border border-border-default bg-surface p-5">
+    <div className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
       <p className="text-sm text-fg-muted">{label}</p>
       <p
         className={`num mt-1.5 text-2xl font-bold ${

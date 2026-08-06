@@ -30,8 +30,8 @@ export function ScenariosPanel({
   if (scenarios.openCount === 0) return null;
 
   return (
-    <section className="rounded-lg border border-border-default bg-surface p-6">
-      <div className="mb-5">
+    <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
+      <div className="mb-4">
         <h2 className="font-bold">سيناريوهات المحفظة</h2>
         <p className="mt-1 text-xs text-fg-subtle">
           على <span className="num">{scenarios.openCount}</span> صفقة مفتوحة —
@@ -39,7 +39,7 @@ export function ScenariosPanel({
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3">
         {/* Same wording as the app's two readout rows — the figures have to
             read as the same thing on both surfaces. */}
         <Extreme
@@ -55,7 +55,7 @@ export function ScenariosPanel({
       </div>
 
       {hasOneWinnerAnalysis(scenarios) && (
-        <div className="mt-6 border-t border-border-default pt-5">
+        <div className="mt-5 border-t border-border-default pt-4">
           <h3 className="text-sm font-bold">
             لو صفقة واحدة بس وصلت الهدف والباقي ضرب الاستوب
           </h3>
@@ -64,13 +64,16 @@ export function ScenariosPanel({
             الصفقة دي لوحدها بتغطّي خسارة الباقي.
           </p>
 
-          <ul className="mt-4 space-y-2">
+          {/* Divided rows, not one bordered pill per line. A box inside a box
+              inside a box is what made this surface read as busier than the
+              app's card, which draws these as plain rows. */}
+          <ul className="mt-3 divide-y divide-border-default">
             {scenarios.oneWinner.map((outcome) => {
               const covers = coversTheRest(outcome);
               return (
                 <li
                   key={outcome.tradeId}
-                  className="flex items-center justify-between gap-4 rounded-md border border-border-default bg-surface-low px-4 py-3"
+                  className="flex items-center justify-between gap-4 py-2.5"
                 >
                   <span className="num font-bold">
                     {outcome.ticker || '—'}
@@ -94,7 +97,7 @@ export function ScenariosPanel({
         </div>
       )}
 
-      <p className="mt-5 text-xs leading-relaxed text-fg-subtle">
+      <p className="mt-4 text-xs leading-relaxed text-fg-subtle">
         دي حسبة على الأرقام اللي انت مدخّلها، <strong>مش توقّع</strong> — مفيش
         حاجة هنا بتقول إيه احتمال إن ده يحصل. الصفقة اللي مالهاش هدف أو استوب
         مكتوب بتتحسب على <span className="num">5%</span> و
@@ -114,10 +117,10 @@ function Extreme({
   tone: 'win' | 'loss';
 }) {
   return (
-    <div className="rounded-lg border border-border-default bg-surface-low p-5">
-      <p className="text-sm text-fg-muted">{label}</p>
+    <div className="rounded-lg bg-surface-low p-4">
+      <p className="text-xs text-fg-muted sm:text-sm">{label}</p>
       <p
-        className={`num mt-1.5 text-2xl font-bold ${
+        className={`num mt-1.5 whitespace-nowrap text-lg font-bold sm:text-2xl ${
           value === null ? '' : tone === 'win' ? 'text-win' : 'text-loss'
         }`}
       >

@@ -53,15 +53,15 @@ export function GoalPanel({
       : project({ closed, capital, target, expectancy });
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-lg border border-border-default bg-surface p-6">
+    <div className="space-y-5">
+      <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
         <h2 className="font-bold">الهدف</h2>
         <p className="mt-1 text-xs text-fg-subtle">
           اكتب المبلغ اللي عايز توصله، والحساب بيتعمل على أداءك الحقيقي في الدفتر
           — مش على نسبة عائد مفترضة.
         </p>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-2 gap-3">
           <div>
             <p className="text-xs text-fg-muted">رأس مالك دلوقتي</p>
             <p className="num mt-1 text-2xl font-bold">{money(capital)}</p>
@@ -116,7 +116,7 @@ function Answer({
   // The answer that matters most, and the one a friendlier tool would bury.
   if (result.kind === 'no-edge') {
     return (
-      <section className="rounded-lg border border-loss-border bg-loss-surface p-6">
+      <section className="rounded-lg border border-loss-border bg-loss-surface p-4 sm:p-5">
         <h2 className="font-bold text-loss">
           بالأداء الحالي، مش هتوصل للهدف ده
         </h2>
@@ -137,7 +137,7 @@ function Answer({
   }
 
   return (
-    <section className="rounded-lg border border-border-default bg-surface p-6">
+    <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
       <h2 className="font-bold">
         {result.beyondHorizon ? 'الهدف بعيد جدًا' : 'التوقّع'}
       </h2>
@@ -189,7 +189,7 @@ function Answer({
 
 function Note({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-border-default bg-surface-low p-6">
+    <section className="rounded-lg border border-border-default bg-surface-low p-4 sm:p-5">
       <h2 className="font-bold">{title}</h2>
       <p className="mt-2 text-sm leading-relaxed text-fg-muted">{children}</p>
     </section>
