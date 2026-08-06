@@ -52,3 +52,5 @@ app.*.map.json
 # .vercelignore), so this lands here as well as in site/. Never commit it:
 # `vercel pull` writes .env.production.local into it.
 /.vercel
+services/market-data/node_modules/
+services/market-data/dist/
