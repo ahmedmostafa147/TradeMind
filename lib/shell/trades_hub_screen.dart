@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme.dart';
 import '../dashboard/analytics_screen.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../dashboard/goal_view.dart';
 import '../features/ai_parser/widgets/ai_trade_sheet.dart';
 import '../today/today_screen.dart';
 import '../trades/trades_screen.dart';
@@ -32,7 +33,7 @@ class TradesHubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('صفقاتي'),
@@ -84,11 +85,20 @@ class TradesHubScreen extends StatelessWidget {
               ],
             ),
           ],
+          // Scrollable, because five fixed tabs crush their labels on a
+          // narrow phone. «الهدف» is new and «التحليلات» was promoted out of
+          // the overflow menu: the web carries both as top-level tabs, and a
+          // feature reachable only from a three-dot menu is a feature most
+          // people never find.
           bottom: const TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             tabs: [
               Tab(text: 'اليوم'),
               Tab(text: 'كل الصفقات'),
               Tab(text: 'الأداء'),
+              Tab(text: 'التحليلات'),
+              Tab(text: 'الهدف'),
             ],
           ),
         ),
@@ -98,7 +108,13 @@ class TradesHubScreen extends StatelessWidget {
           label: const Text(kAddTradeLabel),
         ),
         body: const TabBarView(
-          children: [TodayView(), TradesView(), PerformanceView()],
+          children: [
+            TodayView(),
+            TradesView(),
+            PerformanceView(),
+            AnalyticsView(),
+            GoalView(),
+          ],
         ),
       ),
     );

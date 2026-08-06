@@ -10,8 +10,8 @@ import 'widgets/stat_card.dart';
 
 /// Section 16 — the deeper statistics, kept off the dashboard so the daily
 /// view stays scannable.
-class AnalyticsScreen extends ConsumerWidget {
-  const AnalyticsScreen({super.key});
+class AnalyticsView extends ConsumerWidget {
+  const AnalyticsView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,9 +25,7 @@ class AnalyticsScreen extends ConsumerWidget {
       return null;
     }
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('الإحصائيات')),
-      body: ListView(
+    return ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _SectionTitle('جودة الأداء'),
@@ -265,7 +263,6 @@ class AnalyticsScreen extends ConsumerWidget {
             ),
           ],
         ],
-      ),
     );
   }
 
@@ -352,4 +349,16 @@ class _ExtremeRow extends StatelessWidget {
       ],
     );
   }
+}
+
+/// The same body with a Scaffold around it, for the places that still push
+/// «الإحصائيات» as its own route rather than showing it as a hub tab.
+class AnalyticsScreen extends StatelessWidget {
+  const AnalyticsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('الإحصائيات')),
+    body: const AnalyticsView(),
+  );
 }

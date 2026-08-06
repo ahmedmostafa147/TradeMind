@@ -13,7 +13,7 @@
 | | |
 |---|---|
 | الفرع | `main` — كل الشغل اتدمج فيه، ومفيش فروع تانية |
-| الاختبارات | `flutter analyze` نضيف · `tsc` نضيف |
+| الاختبارات | `flutter analyze` نضيف · `tsc` نضيف · `flutter test` **٣٧٣ نجحوا، وبيعلّق** — شوف تحت |
 | النشر | **الموقع نازل** على <https://radar-one-phi.vercel.app> (مشروع Vercel `radar`) · قواعد Firestore منشورة · التطبيق لسه مانزلش على Play |
 | مشروع Firebase | `trademind-6222c` (اسم العرض Radar) — مربوط في `.firebaserc` فمش محتاج `--project`. بقى للـ Auth وFirestore بس |
 
@@ -301,7 +301,21 @@ firebase deploy --only firestore:rules
 
 ## حاجات معروفة وناقصة
 
-- **`lib/features/updates/` كله بقى ميت.** الإعلانات والتوصيات اتشالوا من الويب
+- **`flutter test` بيعلّق على أي اختبار بيبني `HomeShell`.** الاختبار
+  `auth_gate_test.dart` عند «a stored session goes straight to the journal»،
+  و`acceptance_test.dart` عند «app opens RTL» — الاتنين بيقفوا للأبد.
+  **ده موجود قبل شغل ٦ أغسطس**: اتأكدت بـ`git stash` وتشغيل الاختبار على الكود
+  الأصلي، وعلّق بالظبط في نفس المكان. باقي السويت (**٣٧٣ اختبار**) بينجح، يعني
+  الشغل الجديد سليم — بس السويت كاملة مش بتخلص. لازم يتصلّح.
+- **Flutter بيتثبّت في الجلسة دي.** الشبكة بتسمح بـ`storage.googleapis.com`،
+  فـ`flutter analyze` و`flutter test` **بيشتغلوا فعلًا** دلوقتي:
+  ```bash
+  curl -sSL -o /tmp/f.tar.xz "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.44.8-stable.tar.xz"
+  tar xf /tmp/f.tar.xz -C /opt && git config --global --add safe.directory /opt/flutter
+  export PATH="/opt/flutter/bin:$PATH"
+  ```
+  لازم **3.44.8** أو أحدث — الإصدارات الأقدم عندها Dart 3.5 والمشروع طالب ^3.12.2.
+- **`lib/features/updates/` لسه موجود بس مفصول عن الشل.** الإعلانات والتوصيات اتشالوا من الويب
   ومن القواعد، فـ`PostsService` بيتقفل عليه ويرجّع لستة فاضية، وتبويب
   «المستجدات» في التطبيق هيفضل فاضي للأبد (من غير كراش ولا رسالة خطأ). حذف
   التبويب وشاشته وبروفايدرز والربط في `home_shell.dart` **لسه مطلوب** — اتساب

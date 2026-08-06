@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../calculator/calculator_screen.dart';
 import '../features/sync/providers/sync_provider.dart';
-import '../features/updates/providers/posts_providers.dart';
-import '../features/updates/screens/updates_screen.dart';
+import '../features/market/screens/market_screen.dart';
 import '../settings/settings_screen.dart';
 import 'trades_hub_screen.dart';
 
@@ -37,26 +36,11 @@ class HomeShell extends ConsumerStatefulWidget {
 class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
 
-  /// Position of «المستجدات» in both lists below. Named rather than written as
-  /// a bare 2 in `_select`, because the two lists have to stay in step and a
-  /// loose index is the easiest thing to forget when a destination is added.
-  static const int _updatesIndex = 2;
-
-  /// Switches tab, and marks the feed read when that tab is the updates one.
-  ///
-  /// This belongs to the shell because only the shell knows which screen the
-  /// user is actually looking at: IndexedStack builds all four children at
-  /// launch, so the screen itself cannot tell being mounted from being opened.
-  /// Doing it there marked every post read before the user had seen the badge.
-  void _select(int value) {
-    setState(() => _index = value);
-    if (value == _updatesIndex) {
-      // Deliberately not awaited: the badge clears from the notifier's own
-      // state change, and holding a tab switch on a disk write would make the
-      // bar feel like it stuck.
-      ref.read(lastSeenPostsProvider.notifier).markSeen();
-    }
-  }
+  /// «المستجدات» USED TO LIVE AT INDEX 2, with a seen/unseen badge and the
+  /// bookkeeping that went with it. The feed is gone — both collections behind
+  /// it are denied by firestore.rules — so the tab, its badge and the
+  /// mark-as-seen call went with it, and «السوق» took the slot.
+  void _select(int value) => setState(() => _index = value);
 
   @override
   Widget build(BuildContext context) {
@@ -67,8 +51,6 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     // no trade was ever uploaded.
     ref.watch(syncControllerProvider);
 
-    final unseen = ref.watch(unseenPostsProvider);
-
     return Scaffold(
       // IndexedStack, not a rebuild-on-switch: it preserves scroll position and
       // half-typed calculator input across tab changes.
@@ -76,8 +58,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         index: _index,
         children: const [
           TradesHubScreen(),
+          MarketScreen(),
           CalculatorScreen(),
-          UpdatesScreen(),
           SettingsScreen(),
         ],
       ),
@@ -91,21 +73,14 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             label: 'صفقاتي',
           ),
           const NavigationDestination(
+            icon: Icon(Icons.insights_outlined),
+            selectedIcon: Icon(Icons.insights),
+            label: 'السوق',
+          ),
+          const NavigationDestination(
             icon: Icon(Icons.calculate_outlined),
             selectedIcon: Icon(Icons.calculate),
             label: 'حاسبة الصفقة',
-          ),
-          NavigationDestination(
-            // The count rides on the unselected icon only. Once the tab is
-            // open the screen marks everything seen, so a badge over the
-            // selected icon would be stating something already false.
-            icon: Badge(
-              isLabelVisible: unseen > 0,
-              label: Text('$unseen'),
-              child: const Icon(Icons.campaign_outlined),
-            ),
-            selectedIcon: const Icon(Icons.campaign),
-            label: 'المستجدات',
           ),
           const NavigationDestination(
             icon: Icon(Icons.settings_outlined),
