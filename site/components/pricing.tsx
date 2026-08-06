@@ -1,106 +1,175 @@
-import { DownloadButton } from '@/components/download-button';
-import { BanIcon, CheckIcon, ShieldIcon } from '@/components/icons';
-import { SectionHeader } from '@/components/section-header';
+"use client";
 
-/**
- * There is one tier, and it costs nothing.
- *
- * Written as a real pricing section rather than a footnote because "free" is
- * the strongest claim on the page and burying it wastes it — but it is written
- * as the CURRENT state, not as a promise of eternity. The FAQ and the privacy
- * policy both say the same thing in the same words; if this ever gains a paid
- * tier, all three change together or the legal pages start contradicting the
- * marketing.
- */
-const included = [
-  'بيانات تداولات المستثمرين كل جلسة',
-  'كل الـ 12 أداة، من غير استثناء',
-  'عدد صفقات غير محدود',
-  'كل التحليلات ومنحنى رأس المال',
-  'النسخة الاحتياطية السحابية',
-  'التحديثات الجاية',
-];
+import { useState } from "react";
+import Link from "next/link";
+import { CheckIcon } from "@/components/icons";
+import { SectionHeader } from "@/components/section-header";
 
-const never = [
-  'مفيش إعلانات',
-  'مفيش بيع لبياناتك',
-  'مفيش ميزة مقفولة ورا دفع',
+type BillingPeriod = "monthly" | "semiAnnual" | "annual";
+
+const plans: Record<
+  BillingPeriod,
+  { price: string; periodLabel: string; discount?: string }
+> = {
+  monthly: { price: "99", periodLabel: "شهرياً" },
+  semiAnnual: { price: "499", periodLabel: "كل 6 أشهر", discount: "توفير 16%" },
+  annual: {
+    price: "799",
+    periodLabel: "سنوياً (يعادل 66 ج.م/شهر)",
+    discount: "توفير 33%",
+  },
+};
+
+const proFeatures = [
+  "أسعار لحظية متجددة لأسهم البورصة المصرية",
+  "تتبّع سيولة صانع السوق (مؤسسات وأفراد)",
+  "حاسبة إدارة المخاطرة وحاسبة الأهداف المالية",
+  "تحليل وتتبع صفقاتك وتحديد نقاط الخروج والدخول",
+  "قراءة التوصيات بالذكاء الاصطناعي (AI OCR)",
+  "نسخة سحابية متزامنة على الهاتف والمستعرض",
 ];
 
 export function Pricing() {
+  const [period, setPeriod] = useState<BillingPeriod>("annual");
+
   return (
-    <section id="pricing" className="border-b border-border-default scroll-mt-20">
-      <div className="mx-auto max-w-6xl px-5 py-20 lg:py-28">
+    <section
+      id="pricing"
+      className="border-b border-border-default scroll-mt-20"
+    >
+      <div className="mx-auto max-w-6xl px-5 py-16 lg:py-24">
         <SectionHeader
-          eyebrow="السعر"
-          title="مفيش باقات. فيه نسخة واحدة، وهي مجانية."
-          // «اللي بتحمّله هو التطبيق كامل» pointed at a download that does not
-          // exist — the app is unpublished and the site is the product today.
-          lead="مش نسخة تجريبية بتخلص، ومش نسخة ناقصة عشان تدفع للكاملة. تفتح الموقع وتلاقي كل حاجة."
+          eyebrow="الاشتراكات والأسعار"
+          title="ابدأ بتجربة مجانية 14 يوماً شاملة لكل المميزات"
+          lead="احصل على وصول كامل لكافة الأدوات والأسعار اللحظية وسيولة صانع السوق مجاناً لمدة 14 يوماً عند التسجيل، اختر الباقة المناسبة لك لاحقاً."
         />
 
-        <div className="mx-auto mt-14 grid max-w-4xl gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-lg bg-inverse-surface p-8 text-on-inverse-surface">
-            <p className="text-sm font-semibold opacity-70">النسخة الكاملة</p>
-
-            {/* The lime appears as a FILL — a pill — not as ink on the price.
-                This card is the inverse surface, which is charcoal in the
-                light theme but cream in the dark one, and lime type on cream
-                is 1.01:1. A filled chip carries its own dark text and is
-                correct against either. */}
-            <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-2">
-              <p className="flex items-baseline gap-2">
-                <span className="num text-6xl font-bold">0</span>
-                <span className="text-xl font-semibold">ج.م</span>
-              </p>
-              <span className="rounded-full bg-brand px-3 py-1 text-xs font-bold text-on-brand">
-                مجاني للأبد
+        {/* Duration Toggle */}
+        <div className="mt-10 flex justify-center">
+          <div className="flex rounded-xl border border-border-default bg-surface-high p-1 text-xs sm:text-sm font-bold">
+            <button
+              type="button"
+              onClick={() => setPeriod("monthly")}
+              className={`rounded-lg px-4 py-2 transition-all ${
+                period === "monthly"
+                  ? "bg-surface text-fg shadow-xs"
+                  : "text-fg-muted"
+              }`}
+            >
+              شهري (99 ج.م)
+            </button>
+            <button
+              type="button"
+              onClick={() => setPeriod("semiAnnual")}
+              className={`rounded-lg px-4 py-2 transition-all ${
+                period === "semiAnnual"
+                  ? "bg-surface text-fg shadow-xs"
+                  : "text-fg-muted"
+              }`}
+            >
+              6 أشهر (499 ج.م)
+            </button>
+            <button
+              type="button"
+              onClick={() => setPeriod("annual")}
+              className={`flex items-center gap-1.5 rounded-lg px-4 py-2 transition-all ${
+                period === "annual"
+                  ? "bg-brand text-on-brand shadow-xs"
+                  : "text-fg-muted"
+              }`}
+            >
+              <span>سنوي (799 ج.م)</span>
+              <span className="rounded bg-black/20 px-1.5 py-0.5 text-[10px]">
+                الأفضل قيمة
               </span>
-            </div>
-            <p className="mt-2 text-sm opacity-70">مش لفترة تجريبية</p>
+            </button>
+          </div>
+        </div>
 
-            <ul className="mt-8 space-y-3">
-              {included.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm">
-                  <CheckIcon className="mt-0.5 size-4 shrink-0 opacity-70" />
-                  {item}
+        {/* Pricing Cards Grid */}
+        <div className="mx-auto mt-10 grid max-w-4xl gap-6 md:grid-cols-2">
+          {/* Free Card */}
+          <div className="flex flex-col justify-between rounded-xl border border-border-default bg-surface p-6 sm:p-8">
+            <div>
+              <span className="rounded-md bg-surface-high px-2.5 py-1 text-xs font-bold text-fg-subtle">
+                Radar Free
+              </span>
+              <h3 className="mt-4 text-xl font-bold">الباقة المجانية</h3>
+              <p className="mt-1 text-xs text-fg-muted">
+                تغطية الأساسيات وحاسبة إدارة المخاطرة
+              </p>
+              <div className="mt-5 flex items-baseline gap-1">
+                <span className="num text-5xl font-extrabold text-fg">0</span>
+                <span className="text-sm font-bold text-fg-muted">
+                  ج.م / للأبد
+                </span>
+              </div>
+              <ul className="mt-6 space-y-3 border-t border-border-default pt-5 text-xs text-fg-muted">
+                <li className="flex items-center gap-2">
+                  <CheckIcon className="size-4 text-fg" /> حاسبة حجم الصفقة
+                  والمخاطرة
                 </li>
-              ))}
-            </ul>
-
-            <div className="mt-8 border-t border-white/10 pt-6">
-              <DownloadButton variant="inverse" className="w-full" />
+                <li className="flex items-center gap-2">
+                  <CheckIcon className="size-4 text-fg" /> حاسبة الأهداف
+                  الماليّة المستقبلية
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckIcon className="size-4 text-fg" /> تسجيل ومتابعة الصفقات
+                  الأساسية
+                </li>
+              </ul>
             </div>
+            <Link
+              href="/dashboard#signup"
+              className="mt-8 rounded-lg border border-border-strong py-3 text-center text-xs font-bold transition-colors hover:bg-surface-high"
+            >
+              ابدأ مجاناً الآن
+            </Link>
           </div>
 
-          <div className="flex flex-col gap-6">
-            <div className="rounded-lg border border-border-default bg-surface p-6">
-              <BanIcon className="size-5 text-fg-muted" />
-              <h3 className="mt-4 font-bold">ومش هيحصل</h3>
-              <ul className="mt-4 space-y-2.5">
-                {never.map((item) => (
-                  <li
-                    key={item}
-                    className="text-sm text-fg-muted"
-                  >
-                    {item}
+          {/* Pro Card */}
+          <div className="relative flex flex-col justify-between rounded-xl border-2 border-brand bg-inverse-surface p-6 text-on-inverse-surface sm:p-8 shadow-lg">
+            <div className="absolute -top-3.5 left-6 rounded-full bg-brand px-3 py-1 text-[11px] font-bold text-on-brand">
+              🎉 14 يوماً تجربة مجانية بدون أية رسوم
+            </div>
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="rounded-md bg-brand px-2.5 py-1 text-xs font-extrabold text-on-brand shadow-xs">
+                  Radar Pro
+                </span>
+                {plans[period].discount && (
+                  <span className="rounded-full bg-brand px-2.5 py-0.5 text-[11px] font-extrabold text-on-brand shadow-xs">
+                    {plans[period].discount}
+                  </span>
+                )}
+              </div>
+              <h3 className="mt-4 text-xl font-bold">باقة رادار الاحترافية</h3>
+              <p className="mt-1 text-xs opacity-80">
+                وصول كامل لجميع الأدوات والأسعار اللحظية
+              </p>
+              <div className="mt-5 flex items-baseline gap-1">
+                <span className="num text-5xl font-extrabold">
+                  {plans[period].price}
+                </span>
+                <span className="text-sm font-bold opacity-80">
+                  ج.م / {plans[period].periodLabel}
+                </span>
+              </div>
+              <ul className="mt-6 space-y-2.5 border-t border-border-default/40 pt-5 text-xs">
+                {proFeatures.map((feat) => (
+                  <li key={feat} className="flex items-center gap-2">
+                    <CheckIcon className="size-4 shrink-0 text-brand-ink" />{" "}
+                    {feat}
                   </li>
                 ))}
               </ul>
             </div>
-
-            {/* The one place money can change hands, stated before anybody
-                installs and discovers it. */}
-            <div className="rounded-lg border border-border-default bg-surface-low p-6">
-              <ShieldIcon className="size-5 text-fg-muted" />
-              <h3 className="mt-4 font-bold">استثناء واحد نقوله بصراحة</h3>
-              <p className="mt-3 text-sm leading-relaxed text-fg-muted">
-                ميزة قراءة التوصية من صورة بتشتغل بمفتاح Gemini بتاعك انت، مش
-                بتاعنا. لو Google حاسبتك على استخدامه، ده بينك وبينهم — إحنا
-                مبناخدش منك حاجة. ومن غير المفتاح رادار شغّال عادي والميزة دي
-                بس هي المقفولة.
-              </p>
-            </div>
+            <Link
+              href="/dashboard#signup"
+              className="mt-8 rounded-lg bg-brand py-3 text-center text-xs font-bold text-on-brand transition-opacity hover:opacity-90"
+            >
+              ابدأ تجربتك المجانية (14 يوماً)
+            </Link>
           </div>
         </div>
       </div>

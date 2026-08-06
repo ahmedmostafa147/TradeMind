@@ -46,6 +46,8 @@ const CHECK_ONLY = process.argv.includes('--check');
 const SOURCE = join(ROOT, 'assets/logo.png');
 const OUT_DIR = join(ROOT, 'site/public/icons');
 const APPLE_ICON = join(ROOT, 'site/app/apple-icon.png');
+const APP_ICON = join(ROOT, 'site/app/icon.png');
+const LOGO_96 = join(ROOT, 'site/public/logo-96.png');
 
 /**
  * The mark's own background, sampled from the source rather than typed in, so
@@ -122,6 +124,8 @@ async function build() {
   const mark = await glyphOf(SOURCE, MASKABLE_INSET);
 
   return {
+    'logo-96.png': await sharp(SOURCE).resize(96, 96).png().toBuffer(),
+    'icon.png': await sharp(SOURCE).resize(512, 512).png().toBuffer(),
     'icon-192.png': await sharp(SOURCE).resize(192, 192).png().toBuffer(),
     'icon-512.png': await sharp(SOURCE).resize(512, 512).png().toBuffer(),
     'icon-maskable-512.png': await sharp({
@@ -146,9 +150,12 @@ async function build() {
 
 const files = await build();
 
-/** apple-icon.png is a Next metadata file and lives in app/, not public/. */
+/** Metadata and asset files in app/ and public/. */
 function pathOf(name) {
-  return name === 'apple-icon.png' ? APPLE_ICON : join(OUT_DIR, name);
+  if (name === 'apple-icon.png') return APPLE_ICON;
+  if (name === 'icon.png') return APP_ICON;
+  if (name === 'logo-96.png') return LOGO_96;
+  return join(OUT_DIR, name);
 }
 
 if (CHECK_ONLY) {

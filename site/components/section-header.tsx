@@ -27,7 +27,7 @@ export function SectionHeader({
         </p>
       )}
       <h2
-        className={`text-3xl font-bold tracking-tight text-balance sm:text-4xl lg:text-5xl ${
+        className={`text-3xl font-bold tracking-normal leading-relaxed sm:text-4xl sm:leading-snug lg:text-5xl lg:leading-snug ${
           eyebrow ? 'mt-5' : ''
         }`}
       >

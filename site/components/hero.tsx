@@ -4,6 +4,7 @@ import { DownloadButton } from '@/components/download-button';
 import { CheckIcon } from '@/components/icons';
 import { StockChart } from '@/components/stock-chart';
 import { TradeCardMock, type TradeMock } from '@/components/trade-card-mock';
+import { site } from '@/lib/site';
 
 /** Declared here so the chart takes a plain number rather than the card's nullable field. */
 const heroTakeProfit = 88.0;
@@ -39,29 +40,23 @@ const closes = [
   82.1, 83.6, 85.0, 84.4, 86.2,
 ];
 
-const promises = ['مجاني بالكامل', 'بياناتك محفوظة ليك', 'من غير إعلانات'];
+const promises = ['أسعار لحظية لأسهم البورصة', 'تجربة مجانية 14 يومًا', 'بياناتك محفوظة لك'];
 
 export function Hero() {
   return (
     <section className="border-b border-border-default">
       <div className="mx-auto max-w-3xl px-5 pt-16 text-center lg:pt-24">
         <p className="text-sm font-semibold text-brand-ink">
-          البورصة المصرية
+          البورصة المصرية · أسعار لحظية
         </p>
 
-        {/* The two halves as one sentence, in the owner's own words.
-            The headline used to be «فاكر اشتريت السهم ده ليه؟» — a good line,
-            and still the opening of the journal section below, but it sold only
-            the half that every trade journal sells. What a visitor cannot get
-            elsewhere is the market half, and it was nowhere on this page. */}
-        <h1 className="mt-5 text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-          السوق ماشي فين، ودفترك ماشي فين.
+        <h1 className="mt-5 text-4xl font-bold tracking-normal leading-relaxed sm:text-5xl sm:leading-snug lg:text-6xl lg:leading-snug">
+          {site.tagline}
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-lg text-fg-muted">
-          كل جلسة، رادار بيوريك مين كان بيشتري ومين كان بيبيع فعلًا — مؤسسات ولا
-          أفراد، مصريين ولا أجانب. وعلى الناحية التانية بيمسك دفترك: كل صفقة
-          بسببها وحجمها المحسوب قبل ما تشتري، وأداءك رايح على فين.
+          متابعة لحظية لأسعار الأسهم وتتبّع دقيق لسيولة صانع السوق (مؤسسات وأفراد)، 
+          مع حاسبة إدارة المخاطرة وتخطيط الأهداف المالية لصفقاتك.
         </p>
 
         {/* The two account actions lead, because they are the two things on
@@ -113,11 +108,9 @@ export function Hero() {
         </ul>
       </div>
 
-      {/* One framed block, not two floating visuals: the chart and the row
-          below it are the same trade, and separating them into sibling cards
-          would ask the reader to work out that they belong together. */}
-      <div className="mx-auto max-w-5xl px-5 pb-16 pt-14 lg:pb-24">
-        <div className="rounded-lg border border-border-default bg-surface-low p-5 sm:p-7">
+      {/* Compact framed block with lower height */}
+      <div className="mx-auto max-w-xl px-4 pb-6 pt-4 lg:pb-8">
+        <div className="rounded-lg border border-border-default bg-surface-low p-3 sm:p-4">
           <StockChart
             ticker={heroTrade.ticker}
             closes={closes}
@@ -128,14 +121,11 @@ export function Hero() {
             takeProfitPrice={heroTakeProfit}
           />
 
-          <div className="mt-7 border-t border-border-default pt-7">
-            <p className="mb-4 text-center text-xs font-semibold text-fg-muted">
+          <div className="mt-3 border-t border-border-default pt-3">
+            <p className="mb-2 text-center text-xs font-semibold text-fg-muted">
               نفس الصفقة، زي ما بتتسجّل في رادار
             </p>
-            {/* Decorative in the accessibility sense: the card repeats
-                information the chart's own label already carries, and reading
-                five derived figures aloud would be noise rather than content. */}
-            <div className="mx-auto max-w-xl" aria-hidden>
+            <div className="mx-auto max-w-md" aria-hidden>
               <TradeCardMock
                 trade={heroTrade}
                 capital={100000}

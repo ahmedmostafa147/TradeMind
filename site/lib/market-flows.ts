@@ -181,17 +181,17 @@ export function parseTable(html: string, tableId: string): FlowTable | null {
   const headerCells = table
     .find('th')
     .toArray()
-    .map((th) => $(th).text());
+    .map((th: Parameters<typeof $>[0]) => $(th).text());
   const columns = readColumns(headerCells);
   if (columns === null) return null;
 
   const out: Partial<FlowTable> = {};
 
-  table.find('tr').each((_, tr) => {
+  table.find('tr').each((_: number, tr: Parameters<typeof $>[0]) => {
     const cells = $(tr)
       .find('td')
       .toArray()
-      .map((td) => $(td).text());
+      .map((td: Parameters<typeof $>[0]) => $(td).text());
 
     // Header rows carry <th>, and the GridView emits a footer row with a
     // different column count. Anything without every mapped column is not a

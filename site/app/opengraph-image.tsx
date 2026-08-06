@@ -163,14 +163,14 @@ export default async function OpengraphImage() {
               is built on. Gaps re-measured for these words: every value below
               belongs to the specific pair of letters that meet at that join. */}
           <ArabicLine
-            text="السوق ماشي فين"
+            text="اقرأ حركة السيولة"
             gaps={[-40, -60]}
-            style={{ fontSize: '84px', fontWeight: 700, lineHeight: 1.15 }}
+            style={{ fontSize: '76px', fontWeight: 700, lineHeight: 1.15 }}
           />
           <ArabicLine
-            text="ودفترك ماشي فين"
-            gaps={[-40, -60]}
-            style={{ fontSize: '84px', fontWeight: 700, lineHeight: 1.15 }}
+            text="واحسب مخاطرتك قبل كل صفقة"
+            gaps={[-35, -40, -45, -50]}
+            style={{ fontSize: '76px', fontWeight: 700, lineHeight: 1.15 }}
           />
           <ArabicLine
             text="البورصة المصرية"

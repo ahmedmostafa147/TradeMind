@@ -1,7 +1,7 @@
 import { ClosingCta } from '@/components/closing-cta';
 import { Discipline } from '@/components/discipline';
-import { Faq, faq } from '@/components/faq';
 import { Features } from '@/components/features';
+import { GoalPlanner } from '@/components/goal-planner';
 import { Hero } from '@/components/hero';
 import { Market } from '@/components/market';
 import { Pricing } from '@/components/pricing';
@@ -12,14 +12,6 @@ import { disclaimer, site } from '@/lib/site';
 
 /**
  * Structured data for the page.
- *
- * The FAQ entries are generated from the same array the visible section
- * renders, so the two can never drift — and search engines treat marked-up
- * answers that differ from the on-page text as cloaking.
- *
- * `offers` is stated at price 0 rather than omitted: without it the listing can
- * be shown with no price at all, and "free" is the single most load-bearing
- * claim on this page.
  */
 const structuredData = {
   '@context': 'https://schema.org',
@@ -39,14 +31,6 @@ const structuredData = {
       },
       disclaimer,
     },
-    {
-      '@type': 'FAQPage',
-      mainEntity: faq.map((item) => ({
-        '@type': 'Question',
-        name: item.q,
-        acceptedAnswer: { '@type': 'Answer', text: item.a },
-      })),
-    },
   ],
 };
 
@@ -59,16 +43,13 @@ export default function HomePage() {
       />
       <Hero />
       <StatsStrip />
-      {/* Before the journal sections, not after. It is the half a visitor
-          cannot get anywhere else, and burying it under four screens of
-          journal copy would repeat the mistake this section exists to fix. */}
       <Market />
       <Problem />
       <Features />
+      <GoalPlanner />
       <Tools />
       <Discipline />
       <Pricing />
-      <Faq />
       <ClosingCta />
     </>
   );

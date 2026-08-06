@@ -1,129 +1,52 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-
+import { Field, MetricRow, ToggleField, WarningIcon } from '@/components/calculator-fields';
+import { useCalculatorState } from '@/components/calculator-state';
 import { money, percent, quantity as formatQuantity } from '@/lib/format';
-import {
-  exceedsRiskLimit,
-  maxLossPerTrade,
-  parseNumber,
-  safeDiv,
-  suggestedQuantity,
-} from '@/lib/risk-math';
-
-/**
- * The app's position-size calculator, running for real on the landing page.
- *
- * Two reasons it is live rather than a screenshot. It is the product's whole
- * argument — that the size is decided BEFORE the trade — and an argument you
- * can operate in ten seconds beats one you have to install to evaluate. And it
- * is what a competitor puts behind a paid trial; giving away the arithmetic
- * costs nothing, because the arithmetic was never the moat. The journal is.
- *
- * It imports lib/risk-math.ts, which is a faithful port of the Dart original
- * including both epsilons — so the number here is the number the app gives.
- */
 
 const RISK_PRESETS = [0.01, 0.015, 0.02, 0.03];
 
-export function CalculatorWidget({
-  initialCapital,
-  initialRisk,
-  /**
-   * Signed-in use. The landing page shows a worked example — a visitor facing
-   * four empty boxes has to invent a trade before the widget can argue
-   * anything. Someone who already has an account has their own trade in mind,
-   * and prefilled prices are then just two fields to clear.
-   */
-  blankPrices = false,
-}: {
+export function CalculatorWidget(props: {
   initialCapital?: number;
   initialRisk?: number;
   blankPrices?: boolean;
 } = {}) {
-  const [capital, setCapital] = useState(
-    initialCapital != null ? String(initialCapital) : '100000'
-  );
-  const [maxRisk, setMaxRisk] = useState(initialRisk ?? 0.02);
-  const [entry, setEntry] = useState(blankPrices ? '' : '78.40');
-  const [stop, setStop] = useState(blankPrices ? '' : '74.50');
-
-  /** null until the visitor overrides it, so the suggestion drives the display. */
-  const [override, setOverride] = useState<string | null>(null);
-
-  const result = useMemo(() => {
-    const c = parseNumber(capital) ?? 0;
-    const e = parseNumber(entry) ?? 0;
-    const s = parseNumber(stop) ?? 0;
-
-    const budget = maxLossPerTrade(c, maxRisk);
-    const suggested = suggestedQuantity(budget, e, s);
-
-    const typed = override === null ? null : parseNumber(override);
-    const qty = typed !== null && typed >= 0 ? Math.floor(typed) : suggested;
-
-    if (qty === null || qty === 0) {
-      return {
-        suggested,
-        qty,
-        riskEgp: null,
-        riskPct: null,
-        positionValue: null,
-        over: false,
-        budget,
-        // A stop above the entry is the one input mistake worth naming, since
-        // it silently produces "no answer" rather than a wrong one.
-        invertedStop: e > 0 && s > 0 && s >= e,
-      };
-    }
-
-    const riskEgp = (e - s) * qty;
-    const riskPct = safeDiv(riskEgp, c);
-    const positionValue = e * qty;
-
-    return {
-      suggested,
-      qty,
-      riskEgp,
-      riskPct,
-      positionValue,
-      over: riskPct !== null && exceedsRiskLimit(riskPct, maxRisk),
-      budget,
-      invertedStop: false,
-    };
-  }, [capital, maxRisk, entry, stop, override]);
-
-  const qtyValue = override ?? (result.suggested === null ? '' : String(result.suggested));
+  const {
+    capital, setCapital,
+    maxRisk, setMaxRisk,
+    entry, setEntry,
+    stopMode, setStopMode,
+    stopVal, setStopVal,
+    targetMode, setTargetMode,
+    targetVal, setTargetVal,
+    setOverride,
+    res, qtyVal,
+  } = useCalculatorState(props);
 
   return (
-    <div className="grid gap-px overflow-hidden rounded-lg border border-border-default bg-border-default lg:grid-cols-2">
-      <div className="bg-surface p-6">
+    <div className="grid gap-px overflow-hidden rounded-xl border border-border-default bg-border-default lg:grid-cols-2">
+      {/* Right Column: Inputs */}
+      <div className="bg-surface p-5 sm:p-6 space-y-4">
         <Field
           id="calc-capital"
-          label="رأس المال"
+          label="مبلغ الصفقة / رأس المال المخصص"
           suffix="ج.م"
           value={capital}
-          onChange={(v) => {
-            setCapital(v);
-            setOverride(null);
-          }}
+          onChange={(v) => { setCapital(v); setOverride(null); }}
         />
 
-        <fieldset className="mt-5">
-          <legend className="text-sm font-semibold">أقصى مخاطرة في الصفقة</legend>
-          <div className="mt-2 flex flex-wrap gap-2">
+        <fieldset>
+          <legend className="text-xs font-semibold text-fg">أقصى نسبة مخاطرة مسموحة</legend>
+          <div className="mt-1.5 flex flex-wrap gap-2">
             {RISK_PRESETS.map((preset) => (
               <button
                 key={preset}
                 type="button"
-                onClick={() => {
-                  setMaxRisk(preset);
-                  setOverride(null);
-                }}
+                onClick={() => { setMaxRisk(preset); setOverride(null); }}
                 aria-pressed={maxRisk === preset}
-                className={`num rounded-md border px-3 py-1.5 text-sm font-semibold transition-colors ${
+                className={`num rounded-md border px-3 py-1 text-xs font-bold transition-all ${
                   maxRisk === preset
-                    ? 'border-transparent bg-brand text-on-brand'
+                    ? 'border-transparent bg-brand text-on-brand shadow-xs'
                     : 'border-border-default text-fg-muted hover:bg-surface-high'
                 }`}
               >
@@ -133,165 +56,111 @@ export function CalculatorWidget({
           </div>
         </fieldset>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <Field
-            id="calc-entry"
-            label="سعر الدخول"
-            suffix="ج.م"
-            value={entry}
-            onChange={(v) => {
-              setEntry(v);
-              setOverride(null);
-            }}
-          />
-          <Field
-            id="calc-stop"
-            label="الاستوب"
-            suffix="ج.م"
-            value={stop}
-            onChange={(v) => {
-              setStop(v);
-              setOverride(null);
-            }}
-          />
-        </div>
-
-        {result.invertedStop && (
-          <p role="status" className="mt-4 text-sm font-semibold text-loss">
-            الاستوب لازم يكون أقل من سعر الدخول.
-          </p>
-        )}
-      </div>
-
-      <div className="bg-surface-low p-6">
-        <p className="text-sm text-fg-muted">الكمية المقترحة</p>
-        <p className="num mt-1 text-5xl font-bold">
-          {result.suggested === null ? '—' : formatQuantity(result.suggested)}
-          {result.suggested !== null && (
-            <span className="ms-2 text-base font-semibold text-fg-muted">سهم</span>
-          )}
-        </p>
-        {result.suggested === 0 && (
-          <p className="mt-2 text-sm text-fg-muted">
-            رأس المال مش كفاية لمسافة الاستوب دي — مسافة أقرب أو رأس مال أكبر.
-          </p>
-        )}
-
-        <div className="mt-6 border-t border-border-default pt-5">
-          <label
-            htmlFor="calc-qty"
-            className="text-sm font-semibold"
-          >
-            جرّب تزوّد الكمية
-          </label>
-          <p className="mt-1 text-xs text-fg-muted">
-            ده اللي رادار بيعمله وانت بتكتب — أي كمية فوق الحد بتتعلّم فورًا.
-          </p>
-          <input
-            id="calc-qty"
-            type="text"
-            inputMode="numeric"
-            dir="ltr"
-            value={qtyValue}
-            onChange={(event) => setOverride(event.target.value)}
-            className="num mt-2 w-full rounded-md border border-border-default bg-surface px-3 py-2 text-start font-semibold outline-none focus:border-brand-ink"
-          />
-        </div>
-
-        <dl className="mt-5 space-y-3 text-sm">
-          <Row label="المبلغ المعرّض للخطر" value={money(result.riskEgp)} />
-          <Row
-            label="نسبة المخاطرة"
-            value={percent(result.riskPct)}
-            tone={result.over ? 'loss' : undefined}
-          />
-          <Row label="قيمة المركز" value={money(result.positionValue)} />
-        </dl>
-
-        {/* An icon and a sentence, not colour alone — the same rule the app's
-            over-limit marker follows so it survives a colour-blind reader. */}
-        {result.over && (
-          <p
-            role="status"
-            className="mt-4 flex items-start gap-2 rounded-md border border-loss-border bg-loss-surface p-3 text-sm font-semibold text-loss"
-          >
-            <WarningIcon />
-            <span>
-              المخاطرة أعلى من الحد المسموح ({percent(maxRisk)}). التطبيق بيعلّم
-              الصفقة دي بالأحمر.
-            </span>
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Field({
-  id,
-  label,
-  suffix,
-  value,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  suffix: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className="text-sm font-semibold">
-        {label}
-      </label>
-      <div className="mt-2 flex items-center gap-2 rounded-md border border-border-default bg-surface-low px-3 focus-within:border-brand-ink">
-        {/* dir=ltr on the input only: the app does the same, because a minus
-            sign or a decimal point lands on the visually wrong end of a number
-            typed into an RTL field. */}
-        <input
-          id={id}
-          type="text"
-          inputMode="decimal"
-          dir="ltr"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className="num w-full bg-transparent py-2 text-start font-semibold outline-none"
+        <Field
+          id="calc-entry"
+          label="سعر الدخول للسهم"
+          suffix="ج.م"
+          value={entry}
+          onChange={(v) => { setEntry(v); setOverride(null); }}
         />
-        <span className="shrink-0 text-xs text-fg-muted">{suffix}</span>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ToggleField
+            id="calc-stop"
+            label="الاستوب (إيقاف الخسارة)"
+            mode={stopMode}
+            value={stopVal}
+            onModeChange={(m) => { setStopMode(m); setOverride(null); }}
+            onValueChange={(v) => { setStopVal(v); setOverride(null); }}
+          />
+          <ToggleField
+            id="calc-target"
+            label="الهدف المتوقع"
+            mode={targetMode}
+            value={targetVal}
+            onModeChange={(m) => { setTargetMode(m); setOverride(null); }}
+            onValueChange={(v) => { setTargetVal(v); setOverride(null); }}
+          />
+        </div>
+
+        {res.invStop && (
+          <p role="status" className="text-xs font-semibold text-loss">
+            ⚠️ سعر الاستوب يجب أن يكون أقل من سعر الدخول.
+          </p>
+        )}
+      </div>
+
+      {/* Left Column: Trade Summary */}
+      <div className="bg-surface-low p-5 sm:p-6 flex flex-col justify-between">
+        <div className="space-y-4">
+          <div className="flex items-baseline justify-between rounded-lg bg-surface p-4 border border-border-default shadow-xs">
+            <div>
+              <p className="text-xs font-medium text-fg-subtle">الأسهم المقترحة للصفقة</p>
+              <p className="num mt-1 text-4xl font-extrabold text-fg">
+                {res.suggested === null ? '—' : formatQuantity(res.suggested)}
+                {res.suggested !== null && (
+                  <span className="ms-2 text-sm font-semibold text-fg-muted">سهم</span>
+                )}
+              </p>
+            </div>
+            {res.rrRatio !== null && (
+              <div className="text-end">
+                <span className="text-[11px] text-fg-subtle block">العائد للمخاطرة</span>
+                <span className="num text-lg font-bold text-win">{res.rrRatio.toFixed(2)}R</span>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5 border-t border-border-default pt-3">
+            <p className="text-xs font-bold text-fg mb-2">ملخص أرقام الصفقة:</p>
+            <MetricRow
+              label="الخسارة المتوقعة عند الاستوب"
+              value={res.riskEgp ? `-${money(res.riskEgp)}` : '—'}
+              tone="loss"
+            />
+            {res.profitEgp != null && (
+              <MetricRow
+                label="الربح المتوقع عند الهدف"
+                value={`+${money(res.profitEgp)}`}
+                tone="win"
+              />
+            )}
+            <MetricRow
+              label="نسبة المخاطرة الفعالة"
+              value={percent(res.riskPct)}
+              tone={res.over ? 'loss' : undefined}
+            />
+            <MetricRow
+              label="قيمة الصفقة الإجمالية"
+              subtitle={res.posPct != null ? `${(res.posPct * 100).toFixed(1)}% من رأس المال` : undefined}
+              value={money(res.posVal)}
+            />
+          </div>
+
+          <div className="border-t border-border-default pt-3">
+            <label htmlFor="calc-qty" className="text-xs font-semibold text-fg">
+              تعديل يدوي للكمية (اختباري):
+            </label>
+            <input
+              id="calc-qty"
+              type="text"
+              inputMode="numeric"
+              dir="ltr"
+              value={qtyVal}
+              onChange={(e) => setOverride(e.target.value)}
+              className="num mt-1.5 w-full rounded-md border border-border-default bg-surface px-3 py-1.5 text-start font-semibold text-xs outline-none focus:border-brand-ink"
+              placeholder="اكتب عدد أسهم للتجربة..."
+            />
+          </div>
+        </div>
+
+        {res.over && (
+          <p role="status" className="mt-3 flex items-start gap-2 rounded-md border border-loss-border bg-loss-surface p-2.5 text-xs font-bold text-loss">
+            <WarningIcon />
+            <span>المخاطرة تتجاوز الحد المسموح ({percent(maxRisk)}).</span>
+          </p>
+        )}
       </div>
     </div>
-  );
-}
-
-function Row({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: 'loss';
-}) {
-  return (
-    <div className="flex items-baseline justify-between gap-4">
-      <dt className="text-fg-muted">{label}</dt>
-      <dd className={`num font-bold ${tone === 'loss' ? 'text-loss' : ''}`}>
-        {value}
-      </dd>
-    </div>
-  );
-}
-
-function WarningIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className="mt-0.5 size-4 shrink-0"
-      aria-hidden
-    >
-      <path d="M12 2.8 1.6 20.4h20.8L12 2.8Zm0 5.6a.9.9 0 0 1 .9.9v4.6a.9.9 0 1 1-1.8 0V9.3a.9.9 0 0 1 .9-.9Zm0 8.1a1.05 1.05 0 1 1 0 2.1 1.05 1.05 0 0 1 0-2.1Z" />
-    </svg>
   );
 }

@@ -36,7 +36,7 @@ export const site = {
    * else. The OG image is the one consumer that needs a second look after any
    * edit: its Arabic word spacing is hand-measured per word pair.
    */
-  tagline: 'السوق ماشي فين، ودفترك ماشي فين',
+  tagline: 'اقرأ حركة السيولة، واحسب مخاطرتك قبل كل صفقة.',
 
   description:
     'شوف مين بيشتري ومين بيبيع في البورصة المصرية — مؤسسات ولا أفراد، ' +
@@ -102,10 +102,10 @@ export const site = {
  */
 export const nav = [
   { href: '#market', label: 'السوق' },
-  { href: '#why', label: 'دفترك' },
+  { href: '#why', label: 'صفقاتك' },
+  { href: '#goal', label: 'حاسبة الهدف' },
   { href: '#tools', label: 'الأدوات' },
   { href: '#pricing', label: 'السعر' },
-  { href: '#faq', label: 'أسئلة' },
 ] as const;
 
 /**

@@ -34,20 +34,13 @@ const stats = [
     label: 'أداة',
     detail: 'من حاسبة الحجم لتحليل الأداء حسب المصدر',
   },
-  {
-    // The one figure that is a promise rather than a count, and the only one a
-    // user can verify by watching their own network traffic.
-    value: '0',
-    label: 'إعلانات ومتتبّعات',
-    detail: 'مفيش تتبّع، مفيش تحليلات استخدام، مفيش معرّف إعلاني',
-  },
 ];
 
 export function StatsStrip() {
   return (
     <section className="border-b border-border-default">
-      <div className="mx-auto max-w-6xl px-5 py-14 lg:py-20">
-        <dl className="grid grid-cols-2 gap-x-8 gap-y-12 lg:grid-cols-4">
+      <div className="mx-auto max-w-5xl px-5 py-12 lg:py-16">
+        <dl className="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-3">
           {stats.map(({ value, label, detail }) => (
             <div key={label} className="text-center">
               <dd className="num text-5xl font-bold tracking-tight lg:text-6xl">

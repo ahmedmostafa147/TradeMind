@@ -27,8 +27,8 @@ type StockChartProps = {
 };
 
 const VIEW_W = 720;
-const VIEW_H = 300;
-const PAD = { top: 18, right: 62, bottom: 26, left: 10 };
+const VIEW_H = 180;
+const PAD = { top: 14, right: 56, bottom: 20, left: 10 };
 
 const PLOT_W = VIEW_W - PAD.left - PAD.right;
 const PLOT_H = VIEW_H - PAD.top - PAD.bottom;
