@@ -33,10 +33,14 @@ class TradesHubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('صفقاتي'),
+          // NO TITLE. The bottom navigation bar already labels this
+          // destination «صفقاتي», so an app bar repeating it spent a row of a
+          // phone screen saying the same word twice — and the tab strip below
+          // says which view you are on anyway.
+          toolbarHeight: 44,
           actions: [
             IconButton(
               icon: Icon(Icons.auto_awesome, color: context.palette.aiAccent),
@@ -94,8 +98,9 @@ class TradesHubScreen extends StatelessWidget {
             isScrollable: true,
             tabAlignment: TabAlignment.start,
             tabs: [
-              Tab(text: 'اليوم'),
-              Tab(text: 'كل الصفقات'),
+              Tab(text: 'قرار اليوم'),
+              Tab(text: 'صفقاتي'),
+              Tab(text: 'تخطيط'),
               Tab(text: 'الأداء'),
               Tab(text: 'التحليلات'),
               Tab(text: 'الهدف'),
@@ -110,7 +115,8 @@ class TradesHubScreen extends StatelessWidget {
         body: const TabBarView(
           children: [
             TodayView(),
-            TradesView(),
+            TradesView(filter: TradesFilter.real),
+            TradesView(filter: TradesFilter.planned),
             PerformanceView(),
             AnalyticsView(),
             GoalView(),

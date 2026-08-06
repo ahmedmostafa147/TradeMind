@@ -1,7 +1,5 @@
 import Link from 'next/link';
 
-import { InstallButton, StandaloneBack } from '@/components/pwa';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { disclaimer, site } from '@/lib/site';
 
 /**
@@ -21,11 +19,14 @@ const legalLinks = [
 /**
  * Shell for the signed-in surfaces.
  *
- * Deliberately almost bare. The landing page's header is a set of anchors into
- * its own sections; carrying it here would offer a signed-in user five links
- * that scroll to nothing. What is left is the one thing they might actually
- * want — a way back out — plus the wordmark so the page still identifies
- * itself.
+ * NO HEADER. There used to be one — wordmark, install offer, theme toggle, and
+ * the standalone back control — and it sat directly on top of the dashboard's
+ * own header, which already carries the page title, the account and the
+ * actions. Two stacked bars on a phone is most of the first screen spent
+ * saying the app's name twice.
+ *
+ * The controls did not go away, they moved INTO the dashboard header where
+ * they belong beside the other actions. Only the second bar is gone.
  */
 export default function AppLayout({
   children,
@@ -40,31 +41,6 @@ export default function AppLayout({
       >
         تخطَّ إلى المحتوى
       </a>
-
-      <header className="border-b border-border-default bg-surface">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-5">
-          <StandaloneBack />
-          <Link
-            href="/"
-            className="text-sm font-bold tracking-tight transition-colors hover:text-brand-ink"
-          >
-            {site.name}
-          </Link>
-          {/* The journal is the surface worth installing — it is what
-              `start_url` opens — so the offer belongs here as much as on the
-              landing page. Renders nothing unless the browser offered it. */}
-          <div className="ms-auto flex items-center gap-2">
-            <InstallButton />
-            {/* The toggle lived only in the marketing header, so a user who
-                opened /dashboard directly — which is what the installed app
-                does, and what every returning user does — had no way to change
-                theme. The preference is one localStorage key shared by both
-                surfaces, so switching here is remembered on the landing page
-                too. */}
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
 
       <main id="main">{children}</main>
 

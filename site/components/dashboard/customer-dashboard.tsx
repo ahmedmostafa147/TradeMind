@@ -16,6 +16,8 @@ import { EquityChart, MonthlyBars } from '@/components/dashboard/charts';
 import { GoalPanel } from '@/components/dashboard/goal-panel';
 import { MarketFlowsPanel } from '@/components/dashboard/market-flows-panel';
 import { SignInPanel } from '@/components/dashboard/sign-in-panel';
+import { InstallButton } from '@/components/pwa';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { TodayPanel } from '@/components/dashboard/today-panel';
 import { TradeForm, type TradeDraft } from '@/components/dashboard/trade-form';
 import { WatchlistPanel } from '@/components/dashboard/watchlist-panel';
@@ -267,7 +269,7 @@ function Journal() {
   const tabs: { id: Tab; label: string; badge?: number }[] = [
     { id: 'today', label: 'قرار اليوم' },
     { id: 'market', label: 'السوق' },
-    { id: 'overview', label: 'نظرة عامة' },
+    { id: 'overview', label: 'الأداء' },
     { id: 'analytics', label: 'التحليلات' },
     { id: 'goal', label: 'الهدف' },
     { id: 'trades', label: 'صفقاتي', badge: realTrades.length },
@@ -313,6 +315,10 @@ function Journal() {
           >
             خروج
           </button>
+          {/* Moved here when the shell's own header was removed — it stacked a
+              second bar on top of this one and said the app's name twice. */}
+          <InstallButton />
+          <ThemeToggle />
         </div>
       </header>
 

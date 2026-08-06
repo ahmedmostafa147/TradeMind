@@ -122,10 +122,11 @@ void main() {
   ) async {
     await pumpApp(tester);
 
-    // «اليوم» is the leading tab of «صفقاتي», which is the leading destination,
-    // so the daily view is still what a launch lands on — it is just no longer
-    // a top-level destination of its own.
-    expect(find.widgetWithText(Tab, 'اليوم'), findsOneWidget);
+    // «قرار اليوم» is the leading tab of «صفقاتي», which is the leading
+    // destination, so the daily view is still what a launch lands on — it is
+    // just no longer a top-level destination of its own. The label matches the
+    // web dashboard's, because the two surfaces are one product.
+    expect(find.widgetWithText(Tab, 'قرار اليوم'), findsOneWidget);
     expect(find.text('ابدأ أول صفقة'), findsOneWidget);
     // The spec asks for a ✅; the screen renders the Material equivalent so it
     // themes and scales with the rest of the UI.
@@ -163,7 +164,7 @@ void main() {
           .widgetList<Tab>(find.byType(Tab))
           .map((t) => t.text)
           .toList(),
-      ['اليوم', 'كل الصفقات', 'الأداء', 'التحليلات', 'الهدف'],
+      ['قرار اليوم', 'صفقاتي', 'تخطيط', 'الأداء', 'التحليلات', 'الهدف'],
     );
   });
 

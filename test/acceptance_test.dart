@@ -147,14 +147,15 @@ void main() {
   /// how the shell happens to be wired this week.
   Future<void> openTab(WidgetTester tester, String label) async {
     const hubTabs = {
-      'قرار اليوم': 'اليوم',
-      'سجل الصفقات': 'كل الصفقات',
+      'قرار اليوم': 'قرار اليوم',
+      'سجل الصفقات': 'صفقاتي',
       'لوحة التحكم': 'الأداء',
     };
 
     if (hubTabs[label] case final subTab?) {
-      // Scoped to the NavigationBar: 'صفقاتي' is both the bar's label and the
-      // AppBar's title, so a bare find.text matches two widgets.
+      // Scoped to the NavigationBar: 'صفقاتي' is both the bar's label and,
+      // since the journal split into «صفقاتي» and «تخطيط», one of the hub's
+      // own tabs — so a bare find.text matches two widgets.
       await tester.tap(
         find.descendant(
           of: find.byType(NavigationBar),
@@ -232,16 +233,26 @@ void main() {
     expect(Directionality.of(tester.element(find.byType(NavigationBar))),
         TextDirection.rtl);
 
-    // Three destinations, each a different job — not five, three of which were
-    // the same trades shown differently.
+    // Each destination a different job — not five, three of which were the
+    // same trades shown differently.
     expect(find.text('صفقاتي'), findsWidgets);
+    expect(find.text('السوق'), findsWidgets);
     expect(find.text('حاسبة الصفقة'), findsWidgets);
     expect(find.text('الإعدادات'), findsWidgets);
 
-    // The three views of the journal are tabs inside صفقاتي now.
-    expect(find.widgetWithText(Tab, 'اليوم'), findsOneWidget);
-    expect(find.widgetWithText(Tab, 'كل الصفقات'), findsOneWidget);
-    expect(find.widgetWithText(Tab, 'الأداء'), findsOneWidget);
+    // The journal's views are tabs inside صفقاتي, and they carry the SAME
+    // labels the web dashboard uses — the two surfaces are one product, so a
+    // screen must not be called «اليوم» here and «قرار اليوم» there.
+    for (final tab in const [
+      'قرار اليوم',
+      'صفقاتي',
+      'تخطيط',
+      'الأداء',
+      'التحليلات',
+      'الهدف',
+    ]) {
+      expect(find.widgetWithText(Tab, tab), findsOneWidget, reason: tab);
+    }
   });
 
   testWidgets('settings show max loss of 340.00 at the defaults', (

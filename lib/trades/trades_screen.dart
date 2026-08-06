@@ -5,6 +5,7 @@ import '../core/calc/trade_metrics.dart';
 import '../settings/settings_providers.dart';
 import 'trade.dart';
 import 'trade_detail_screen.dart';
+import 'trade_status.dart';
 import 'trades_providers.dart';
 import 'widgets/quick_add_trade_sheet.dart';
 import 'widgets/trade_tile.dart';
@@ -14,12 +15,36 @@ import 'widgets/trade_tile.dart';
 /// A tab body under [TradesHubScreen], so it has no Scaffold, AppBar or FAB of
 /// its own; the hub owns all three, which is what stopped the add button from
 /// existing twice on one screen.
+/// Which half of the journal a [TradesView] lists.
+///
+/// THE SAME SPLIT THE WEB MAKES, for the same reason. `open` and `closed` are
+/// trades that exist — money moved, or is moving. `planned` and `cancelled` are
+/// intentions, one live and one abandoned. Listing them together made the count
+/// meaningless: nine ideas and three trades read as «12», a number that answers
+/// no question anybody has.
+enum TradesFilter {
+  real,
+  planned;
+
+  bool matches(TradeStatus status) => switch (this) {
+    TradesFilter.real =>
+      status == TradeStatus.open || status == TradeStatus.closed,
+    TradesFilter.planned =>
+      status == TradeStatus.planned || status == TradeStatus.cancelled,
+  };
+}
+
 class TradesView extends ConsumerWidget {
-  const TradesView({super.key});
+  final TradesFilter filter;
+
+  const TradesView({super.key, this.filter = TradesFilter.real});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final trades = ref.watch(sortedTradesProvider);
+    final trades = [
+      for (final trade in ref.watch(sortedTradesProvider))
+        if (filter.matches(trade.status)) trade,
+    ];
     final settings = ref.watch(settingsProvider);
 
     return trades.isEmpty

@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react';
 
 import { ManualFlowsForm } from '@/components/dashboard/manual-flows-form';
 import { SignInPanel } from '@/components/dashboard/sign-in-panel';
+import { InstallButton } from '@/components/pwa';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { firestore } from '@/lib/firebase';
 import { fetchFlowsFromApi, saveFlows } from '@/lib/market-flows-store';
@@ -99,6 +101,10 @@ function Console() {
           >
             خروج
           </button>
+          {/* Moved here when the shell's own header was removed — it stacked a
+              second bar on top of this one and said the app's name twice. */}
+          <InstallButton />
+          <ThemeToggle />
         </div>
       </header>
 
