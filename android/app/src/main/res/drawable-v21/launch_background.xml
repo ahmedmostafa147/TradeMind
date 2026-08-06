@@ -7,11 +7,21 @@
   still most EGX users' phones. Both paths are handed the same mark and the
   same background so they cannot drift apart.
 
-  `<item>` with gravity and an explicit size, NOT `<bitmap>`: splash_logo is a
-  VECTOR, and <bitmap> only accepts a raster — pointing it at a vector fails to
-  inflate at launch, which is the one moment there is no UI left to report it.
-  Item gravity and sizing need API 23; minSdk here is 24, so every device that
-  can install this app supports them.
+  splash_logo IS THE REAL BRAND MARK NOW, not a stand-in. It used to be a
+  hand-drawn radar scope — three rings and a sweep — justified by a comment
+  claiming assets/logo.png "still reads TradeMind" and was "a JPEG with no
+  alpha". Neither was true any more: the file is a 1024px PNG of the actual
+  lime R. So the launch screen showed one logo and the launcher icon showed a
+  different one, which is the sort of thing nobody reports and everybody
+  notices.
+
+  It is now generated from that same PNG by tool/gen-splash-logo.mjs, which
+  drops the dark plate so the mark sits directly on the charcoal field, and
+  pads it to 62% so Android 12's circular mask cannot clip it.
+
+  `<item>` with gravity and an explicit size, NOT `<bitmap>`: this keeps
+  working whether splash_logo is a raster or a vector. Item gravity and sizing
+  need API 23; minSdk here is 24.
 -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/splash_background" />

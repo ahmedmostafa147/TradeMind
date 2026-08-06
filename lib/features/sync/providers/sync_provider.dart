@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../settings/settings_providers.dart';
@@ -69,6 +70,26 @@ class SyncController extends Notifier<SyncStatus> {
     });
 
     if (!user.isLoggedIn || user.id == 'guest') {
+      return const SyncStatus();
+    }
+
+    // NOTHING TO SYNC WITH, SO NOTHING IS STARTED.
+    //
+    // FirestoreSyncService already refuses every individual call without a
+    // Firebase app, but refusing at the call was too late: build() still
+    // attached three listeners, still ran restore(), and restore() still wrote
+    // to `state`. Anything watching this notifier — HomeShell does — then
+    // rebuilt, which scheduled a frame, and the listeners re-armed a
+    // three-second debounce Timer. Under flutter_test's fake clock
+    // pumpAndSettle advances time, fires that timer, gets another state write,
+    // gets another frame, and never settles: every widget test that pumped the
+    // shell hung until the harness gave up. auth_gate_test and acceptance_test
+    // both did, which is why `flutter test` never finished.
+    //
+    // Guarding here is also the honest production behaviour. With no Firebase
+    // there is no cloud to restore from or push to, so arming a repeating
+    // upload timer was work that could never succeed.
+    if (Firebase.apps.isEmpty) {
       return const SyncStatus();
     }
 

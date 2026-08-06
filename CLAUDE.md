@@ -13,7 +13,7 @@
 | | |
 |---|---|
 | الفرع | `main` — كل الشغل اتدمج فيه، ومفيش فروع تانية |
-| الاختبارات | `flutter analyze` نضيف · `tsc` نضيف · `flutter test` **٣٧٣ نجحوا، وبيعلّق** — شوف تحت |
+| الاختبارات | `flutter analyze` نضيف · `tsc` نضيف · `flutter test` **٤٦١ كلهم بينجحوا** |
 | النشر | **الموقع نازل** على <https://radar-one-phi.vercel.app> (مشروع Vercel `radar`) · قواعد Firestore منشورة · التطبيق لسه مانزلش على Play |
 | مشروع Firebase | `trademind-6222c` (اسم العرض Radar) — مربوط في `.firebaserc` فمش محتاج `--project`. بقى للـ Auth وFirestore بس |
 
@@ -301,12 +301,6 @@ firebase deploy --only firestore:rules
 
 ## حاجات معروفة وناقصة
 
-- **`flutter test` بيعلّق على أي اختبار بيبني `HomeShell`.** الاختبار
-  `auth_gate_test.dart` عند «a stored session goes straight to the journal»،
-  و`acceptance_test.dart` عند «app opens RTL» — الاتنين بيقفوا للأبد.
-  **ده موجود قبل شغل ٦ أغسطس**: اتأكدت بـ`git stash` وتشغيل الاختبار على الكود
-  الأصلي، وعلّق بالظبط في نفس المكان. باقي السويت (**٣٧٣ اختبار**) بينجح، يعني
-  الشغل الجديد سليم — بس السويت كاملة مش بتخلص. لازم يتصلّح.
 - **Flutter بيتثبّت في الجلسة دي.** الشبكة بتسمح بـ`storage.googleapis.com`،
   فـ`flutter analyze` و`flutter test` **بيشتغلوا فعلًا** دلوقتي:
   ```bash

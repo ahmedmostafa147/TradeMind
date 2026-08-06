@@ -146,19 +146,24 @@ void main() {
     // were the same trades shown three ways — indistinguishable as siblings in
     // a bar. Those collapsed into tabs inside «صفقاتي», which left three.
     //
-    // «المستجدات» then made it four, and that is fine under the same rule:
-    // reading what the operator published is not journaling a trade, not sizing
-    // one, and not changing a setting. What this test is defending is that no
-    // destination is another destination wearing a different label — so before
-    // adding a fifth, the question to answer is which of these jobs it is not.
-    expect(labels, ['صفقاتي', 'حاسبة الصفقة', 'المستجدات', 'الإعدادات']);
+    // «المستجدات» held the fourth slot until its feed was removed — both
+    // collections behind it are denied by firestore.rules now — and «السوق»
+    // took it. That passes the same rule: reading what the exchange published
+    // about who was buying is not journaling a trade, not sizing one, and not
+    // changing a setting. What this test defends is that no destination is
+    // another destination wearing a different label, so before adding a fifth,
+    // answer which of these jobs it is not.
+    expect(labels, ['صفقاتي', 'السوق', 'حاسبة الصفقة', 'الإعدادات']);
 
+    // «التحليلات» was reachable only from the hub's overflow menu and «الهدف»
+    // did not exist. Both are tabs now, because the web carries them as
+    // top-level tabs and the two surfaces are meant to be the same product.
     expect(
       tester
           .widgetList<Tab>(find.byType(Tab))
           .map((t) => t.text)
           .toList(),
-      ['اليوم', 'كل الصفقات', 'الأداء'],
+      ['اليوم', 'كل الصفقات', 'الأداء', 'التحليلات', 'الهدف'],
     );
   });
 
