@@ -75,6 +75,23 @@ class FirebaseAuthService {
     }
   }
 
+  /// Sends a password reset email to [email]. Throws [AuthException] on failure.
+  static Future<void> sendPasswordResetEmail(String email) async {
+    if (!isAvailable) throw AuthException.backendUnavailable;
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException catch (e) {
+      throw AuthException.fromCode(e.code);
+    } on AuthException {
+      rethrow;
+    } catch (_) {
+      throw const AuthException(
+        AuthFailure.unknown,
+        'تعذّر إرسال رابط إعادة التعيين. جرّب تاني.',
+      );
+    }
+  }
+
   /// Signs out. Safe to call when Firebase never initialised.
   static Future<void> signOut() async {
     if (!isAvailable) return;

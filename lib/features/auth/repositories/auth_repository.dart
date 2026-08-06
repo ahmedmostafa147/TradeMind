@@ -92,6 +92,11 @@ class AuthRepository extends Notifier<UserAccount> {
     );
   }
 
+  /// Sends a password reset email.
+  Future<void> sendPasswordResetEmail(String email) async {
+    await FirebaseAuthService.sendPasswordResetEmail(email);
+  }
+
   /// Signs in with Google. Throws [AuthException] if it fails or is cancelled.
   Future<void> loginWithGoogle() async {
     final credential = await GoogleAuthService.signIn();

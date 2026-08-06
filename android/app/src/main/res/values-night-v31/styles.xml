@@ -19,9 +19,13 @@
         <!-- Hands over to the app's own window theme the moment Flutter is
              ready, so the charcoal does not linger behind a light-theme UI. -->
         <item name="android:windowSplashScreenIconBackgroundColor">@color/splash_background</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
     </style>
 
     <style name="NormalTheme" parent="@android:style/Theme.DeviceDefault.DayNight">
         <item name="android:windowBackground">?android:colorBackground</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
     </style>
 </resources>

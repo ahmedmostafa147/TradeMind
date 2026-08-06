@@ -195,9 +195,30 @@ class _AuthFormState extends ConsumerState<AuthForm> {
               tooltip: _obscurePassword ? 'إظهار كلمة السر' : 'إخفاء كلمة السر',
               onPressed: () =>
                   setState(() => _obscurePassword = !_obscurePassword),
-            ),
           ),
         ),
+
+        if (!_isSignUp) ...[
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: disabled ? null : _resetPassword,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                'نسيت كلمة السر؟',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
 
         if (_error != null) ...[
           const SizedBox(height: 14),
@@ -252,22 +273,21 @@ class _AuthFormState extends ConsumerState<AuthForm> {
         // belongs to the primary button directly above, and repeating it would
         // give the screen two things claiming to be the main action.
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
-            color: theme.colorScheme.secondaryContainer,
-            borderRadius: BorderRadius.circular(14),
+            color: theme.colorScheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Flexible(
-                child: Text(
-                  _isSignUp ? 'لديك حساب بالفعل؟' : 'ليس لديك حساب؟',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSecondaryContainer,
-                  ),
+              Text(
+                _isSignUp ? 'لديك حساب بالفعل؟' : 'ليس لديك حساب؟',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
+              const SizedBox(width: 4),
               TextButton(
                 onPressed: _loading
                     ? null
@@ -277,20 +297,15 @@ class _AuthFormState extends ConsumerState<AuthForm> {
                         _error = null;
                       }),
                 style: TextButton.styleFrom(
-                  // The palette's readable ink. `primary` is the lime fill and
-                  // measures 1.15:1 as text — the generator's contrast gate
-                  // exists to catch exactly this, and ColorScheme.primary is
-                  // bound to `accent` for the same reason.
                   foregroundColor: theme.colorScheme.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  minimumSize: const Size(0, 40),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  minimumSize: const Size(0, 36),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: Text(
                   _isSignUp ? 'سجّل الدخول' : 'أنشئ حساباً جديداً',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.underline,
                   ),
                 ),
               ),
@@ -298,7 +313,7 @@ class _AuthFormState extends ConsumerState<AuthForm> {
           ),
         ),
 
-        ?widget.footer,
+        if (widget.footer != null) widget.footer!,
       ],
     );
   }
