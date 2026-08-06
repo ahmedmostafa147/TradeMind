@@ -2,13 +2,21 @@
 
 import { useState } from 'react';
 
-import { SparkIcon } from '@/components/icons';
+import {
+  CheckCircleIcon,
+  HourglassIcon,
+  LightbulbIcon,
+  SparkIcon,
+  TrendingUpIcon,
+  WarningIcon,
+} from '@/components/icons';
 import { decisionsOf, type DecisionItem } from '@/lib/decisions';
 import {
   dateLabel,
+  EMPTY_VALUE,
   money,
   percent,
-  rMultiple,
+  quantity as formatQuantity,
   signedMoney,
   signedPercent,
 } from '@/lib/format';
@@ -153,6 +161,7 @@ export function TodayPanel({
           in particular. The note button lives on the cards instead. */}
       <Section
         title="تجاوز حد المخاطرة"
+        Icon={WarningIcon}
         note="بتكسر القاعدة اللي انت حاططها بنفسك — دي أول حاجة تتحل"
         items={d.overRisk}
         tone="loss"
@@ -175,6 +184,7 @@ export function TodayPanel({
 
       <Section
         title="منتظرة من زمان"
+        Icon={HourglassIcon}
         note={`مفتوحة من أكتر من ${waitingThresholdDays} يوم`}
         items={d.waitingTooLong}
         capital={capital}
@@ -197,6 +207,7 @@ export function TodayPanel({
 
       <Section
         title="الصفقات المفتوحة"
+        Icon={TrendingUpIcon}
         note="الأقدم الأول — اللي مستني من زمان هو اللي محتاج قرار"
         items={d.open}
         capital={capital}
@@ -222,6 +233,7 @@ export function TodayPanel({
 
       <Section
         title="الصفقات المخططة"
+        Icon={LightbulbIcon}
         note="لسه ماخدتش، فمش داخلة في أي إحصائية"
         items={d.planned}
         capital={capital}
@@ -244,6 +256,8 @@ export function TodayPanel({
 
       <Section
         title="أُقفلت مؤخرًا"
+        Icon={CheckCircleIcon}
+        tone="win"
         note="سجل، مش مهمة"
         items={d.recentlyClosed}
         capital={capital}
@@ -351,6 +365,7 @@ function Section({
   note,
   items,
   tone,
+  Icon,
   capital,
   quotes,
   showLivePrices,
@@ -359,7 +374,8 @@ function Section({
   title: string;
   note: string;
   items: DecisionItem[];
-  tone?: 'loss';
+  tone?: 'loss' | 'win';
+  Icon: (props: { className?: string }) => React.ReactElement;
   capital: number;
   quotes: Map<string, Quote>;
   showLivePrices: boolean;
@@ -370,104 +386,138 @@ function Section({
   if (items.length === 0) return null;
 
   return (
-    <section
-      className={`rounded-lg border bg-surface p-4 sm:p-5 ${
-        tone === 'loss' ? 'border-loss-border' : 'border-border-default'
-      }`}
-    >
+    <section>
+      {/* The app's ActionSection header: a tinted icon square, the title in the
+          accent colour, then the count as a filled chip. The browser had three
+          words of plain bold text, which is why the same screen read as two
+          different products side by side. */}
       <div className="mb-4">
-        <h2
-          className={`flex items-center gap-2 font-bold ${
-            tone === 'loss' ? 'text-loss' : ''
-          }`}
-        >
-          {title}
-          <span className="num font-normal text-fg-subtle">{items.length}</span>
-        </h2>
-        <p className="mt-1 text-xs text-fg-subtle">{note}</p>
+        <div className="flex items-center gap-2.5">
+          <span
+            className={`flex size-8 shrink-0 items-center justify-center rounded-[10px] ${
+              tone === 'loss'
+                ? 'bg-loss-surface text-loss'
+                : tone === 'win'
+                  ? 'bg-win-surface text-win'
+                  : 'bg-brand/25 text-brand-ink'
+            }`}
+          >
+            <Icon className="size-4" />
+          </span>
+          <h2
+            className={`font-bold ${
+              tone === 'loss'
+                ? 'text-loss'
+                : tone === 'win'
+                  ? 'text-win'
+                  : 'text-brand-ink'
+            }`}
+          >
+            {title}
+          </h2>
+          <span
+            className={`num rounded-full px-2.5 py-0.5 text-xs font-bold ${
+              tone === 'loss'
+                ? 'bg-loss-surface text-loss'
+                : tone === 'win'
+                  ? 'bg-win-surface text-win'
+                  : 'bg-brand/25 text-brand-ink'
+            }`}
+          >
+            {items.length}
+          </span>
+        </div>
+        <p className="mt-1.5 text-xs text-fg-subtle">{note}</p>
       </div>
 
       <ul className="space-y-3">
         {items.map((item) => (
           <li
             key={`${title}-${item.trade.id}`}
-            className="rounded-md border border-border-default bg-surface-low p-4"
+            className={`rounded-2xl border bg-surface-low p-4 ${
+              item.overRisk ? 'border-loss-border' : 'border-border-default'
+            }`}
           >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="flex items-center gap-2">
-                  <span className="num font-bold">
-                    {item.trade.ticker || '—'}
-                  </span>
-                  {/* The app puts the type on every card. Two of these sections
-                      can hold either kind, and «إقفال» versus «افتحها» only
-                      makes sense once you know which you are looking at. */}
-                  <StatusChip status={item.trade.status} />
-                  {item.overRisk && (
-                    <span className="rounded-full border border-loss-border bg-loss-surface px-2 py-0.5 text-[11px] font-bold text-loss">
-                      فوق الحد
-                    </span>
-                  )}
-                </p>
-                <p className="mt-1 text-xs text-fg-muted">
-                  دخول <span className="num">{money(item.trade.entryPrice)}</span>{' '}
-                  · استوب{' '}
-                  <span className="num">{money(item.trade.stopPrice)}</span>
-                  {capital > 0 && item.metrics.riskPct !== null && (
-                    <>
-                      {' '}· مخاطرة{' '}
-                      <span className="num">{percent(item.metrics.riskPct)}</span>
-                    </>
-                  )}
-                </p>
-                <p className="mt-1 text-xs text-fg-subtle">
-                  {item.trade.exitDate ? (
-                    <>
-                      قفلت{' '}
-                      <span className="num">
-                        {dateLabel(item.trade.exitDate)}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      من <span className="num">{item.daysSinceEntry}</span> يوم ·{' '}
-                      <span className="num">
-                        {dateLabel(item.trade.entryDate)}
-                      </span>
-                    </>
-                  )}
-                </p>
-              </div>
-
-              {item.metrics.pnl !== null && (
-                <span
-                  className={`num whitespace-nowrap font-bold ${
-                    item.metrics.result === 'win'
-                      ? 'text-win'
-                      : item.metrics.result === 'loss'
-                        ? 'text-loss'
-                        : ''
-                  }`}
-                >
-                  {signedMoney(item.metrics.pnl)}
-                  {item.metrics.rMultiple !== null && (
-                    <span className="ps-2 text-xs font-normal text-fg-subtle">
-                      {rMultiple(item.metrics.rMultiple)}
-                    </span>
-                  )}
-                </span>
+            {/* Ticker and the trade's own state, exactly as the app's card
+                opens. */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="num text-lg font-bold">
+                {item.trade.ticker || '—'}
+              </span>
+              <StatusChip status={item.trade.status} result={item.metrics.result} />
+              {item.trade.isFavorite && (
+                <span className="text-xs text-fg-subtle">★</span>
               )}
             </div>
 
-            {item.trade.status === 'open' && showLivePrices && (
-              <LivePnl
-                quote={quotes.get(normalizeTicker(item.trade.ticker))}
-                entryPrice={item.trade.entryPrice}
-                quantity={item.trade.quantity}
-              />
+            {item.overRisk && (
+              <p className="mt-2.5 rounded-xl bg-loss-surface px-3 py-2 text-xs font-bold text-loss">
+                تحذير: المخاطرة أعلى من الحد المسموح
+              </p>
             )}
 
-            <div className="mt-3 flex flex-wrap gap-2">{actions(item)}</div>
+            {/* TradeLevels, one for one. Missing values render «—» rather than
+                vanishing, so the five slots keep their order and place on every
+                card — a target that disappears reads as "no target" only if you
+                already knew a slot was there. */}
+            <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+              <Level label="الدخول" value={money(item.trade.entryPrice)} />
+              <Level label="الاستوب" value={money(item.trade.stopPrice)} />
+              <Level label="الهدف" value={money(item.trade.takeProfitPrice)} />
+              <Level
+                label="عدد الأسهم"
+                value={
+                  item.trade.quantity > 0
+                    ? formatQuantity(item.trade.quantity)
+                    : EMPTY_VALUE
+                }
+              />
+              <Level
+                label="قيمة المركز"
+                value={money(item.metrics.positionValue)}
+              />
+            </dl>
+
+            <dl className="mt-2.5 flex flex-wrap gap-x-4 gap-y-2">
+              <Level
+                label="المخاطرة"
+                value={percent(item.metrics.riskPct)}
+                tone={item.overRisk ? 'loss' : undefined}
+              />
+              <Level
+                label="الأيام"
+                value={formatQuantity(item.daysSinceEntry)}
+              />
+              {item.metrics.pnl !== null && (
+                <Level
+                  label="الناتج"
+                  value={signedMoney(item.metrics.pnl)}
+                  tone={
+                    item.metrics.result === 'win'
+                      ? 'win'
+                      : item.metrics.result === 'loss'
+                        ? 'loss'
+                        : undefined
+                  }
+                />
+              )}
+            </dl>
+
+            {/* Only an open position has a running result. A planned idea has
+                not risked money yet — the app's own rule. */}
+            {item.trade.status === 'open' &&
+              item.trade.ticker.trim() !== '' &&
+              showLivePrices && (
+                <LivePnl
+                  quote={quotes.get(normalizeTicker(item.trade.ticker))}
+                  entryPrice={item.trade.entryPrice}
+                  quantity={item.trade.quantity}
+                />
+              )}
+
+            {/* Equal width, like the app's Row of Expanded buttons — the row
+                reads as one control strip instead of three loose chips. */}
+            <div className="mt-3.5 flex gap-2">{actions(item)}</div>
           </li>
         ))}
       </ul>
@@ -475,17 +525,78 @@ function Section({
   );
 }
 
-const STATUS_CHIPS: Record<TradeStatus, string> = {
-  open: 'مفتوحة',
-  closed: 'مغلقة',
-  planned: 'مخططة',
-  cancelled: 'ملغاة',
-};
-
-function StatusChip({ status }: { status: TradeStatus }) {
+/** One slot of the levels grid. «—» keeps the place rather than collapsing. */
+function Level({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: 'win' | 'loss';
+}) {
+  const unset = value === EMPTY_VALUE;
   return (
-    <span className="rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-semibold text-fg-muted">
-      {STATUS_CHIPS[status]}
+    <div className="min-w-[62px]">
+      <dt className="text-[11px] leading-tight text-fg-muted">{label}</dt>
+      <dd
+        className={`num mt-0.5 text-sm font-bold ${
+          unset
+            ? 'text-fg-subtle'
+            : tone === 'loss'
+              ? 'text-loss'
+              : tone === 'win'
+                ? 'text-win'
+                : ''
+        }`}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+/**
+ * The trade's state, and it reads the STATUS first.
+ *
+ * The app shows a ResultBadge here, which only knows win/loss/breakeven/open —
+ * so a PLANNED idea, having no exit, comes out labelled «مفتوحة». That is how
+ * the same trade ended up captioned «مخططة» by its section and «مفتوحة» by its
+ * own badge on one screen. A plan is not an open position, and the chip says so
+ * before it says anything about a result.
+ */
+function StatusChip({
+  status,
+  result,
+}: {
+  status: TradeStatus;
+  result: 'win' | 'loss' | 'breakeven' | 'open';
+}) {
+  const label =
+    status === 'planned'
+      ? 'مخططة'
+      : status === 'cancelled'
+        ? 'ملغاة'
+        : status === 'open'
+          ? 'مفتوحة'
+          : result === 'win'
+            ? 'ربح'
+            : result === 'loss'
+              ? 'خسارة'
+              : 'تعادل';
+
+  const tone =
+    status === 'closed' && result === 'win'
+      ? 'border-win-border bg-win-surface text-win'
+      : status === 'closed' && result === 'loss'
+        ? 'border-loss-border bg-loss-surface text-loss'
+        : 'border-border-strong text-fg-muted';
+
+  return (
+    <span
+      className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${tone}`}
+    >
+      {label}
     </span>
   );
 }
@@ -514,7 +625,7 @@ function Action({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-md px-4 py-2 text-xs font-semibold transition-opacity ${cls}`}
+      className={`flex-1 rounded-md px-3 py-2.5 text-xs font-semibold transition-opacity ${cls}`}
     >
       {children}
     </button>

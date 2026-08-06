@@ -58,7 +58,7 @@ class TradeActionCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    ResultBadge(metrics.result),
+                    ResultBadge(metrics.result, status: trade.status),
                     const Spacer(),
                     if (trade.isFavorite)
                       Icon(Icons.star_rounded, size: 20, color: colors.breakeven),

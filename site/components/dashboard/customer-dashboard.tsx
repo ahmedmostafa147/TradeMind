@@ -16,6 +16,7 @@ import {
   CalculatorIcon,
   ChartIcon,
   PlusIcon,
+  MoreIcon,
   ReceiptIcon,
   SettingsIcon,
   SparkIcon,
@@ -58,7 +59,7 @@ import {
   type PortfolioScenarios,
 } from '@/lib/portfolio-scenarios';
 import { readGeminiKey, writeGeminiKey } from '@/lib/gemini-key';
-import { can, type Entitlement } from '@/lib/subscription';
+import { can, FREE_ENTITLEMENT, type Entitlement } from '@/lib/subscription';
 import { useSubscription } from '@/lib/use-subscription';
 import { exceedsRiskLimit, parseNumber } from '@/lib/risk-math';
 import {
@@ -170,6 +171,9 @@ function Journal() {
 
   /** «اطلب الاشتراك» — the manual purchase path, opened from every gate. */
   const [subscribing, setSubscribing] = useState(false);
+
+  /** The hub's overflow, mirroring the app's PopupMenuButton. */
+  const [hubMenu, setHubMenu] = useState(false);
 
   /**
    * LIVE, not a one-shot read.
@@ -467,6 +471,87 @@ function Journal() {
           {SECTIONS.find((d) => d.id === section)?.label ?? 'دفتر صفقاتك'}
         </h1>
 
+        {/* The app's hub AppBar actions, in the app's place: above the tab
+            strip, not inside it. Inline with the tabs they sat on top of a row
+            that scrolls horizontally, so the last label slid under them. */}
+        {section === 'journal' && (
+          <div className="flex items-center gap-1 sm:order-3">
+            <button
+              type="button"
+              onClick={() =>
+                can(entitlement ?? FREE_ENTITLEMENT, 'aiReader')
+                  ? setAiSheet(true)
+                  : setSubscribing(true)
+              }
+              title={
+                can(entitlement ?? FREE_ENTITLEMENT, 'aiReader')
+                  ? 'تحليل توصيات بالـ AI'
+                  : 'تحليل توصيات بالـ AI — محتاج اشتراك'
+              }
+              aria-label="تحليل توصيات بالـ AI"
+              className={`rounded-md p-2 transition-colors hover:bg-surface-high ${
+                can(entitlement ?? FREE_ENTITLEMENT, 'aiReader')
+                  ? 'text-brand-ink'
+                  : 'text-fg-subtle'
+              }`}
+            >
+              <SparkIcon className="size-5" />
+            </button>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setHubMenu((v) => !v)}
+                aria-expanded={hubMenu}
+                aria-haspopup="menu"
+                title="المزيد"
+                aria-label="المزيد"
+                className="rounded-md p-2 text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
+              >
+                <MoreIcon className="size-5" />
+              </button>
+
+              {hubMenu && (
+                <>
+                  {/* Catches the next click anywhere, the way a native menu
+                      dismisses. */}
+                  <button
+                    type="button"
+                    aria-hidden
+                    tabIndex={-1}
+                    onClick={() => setHubMenu(false)}
+                    className="fixed inset-0 z-30 cursor-default"
+                  />
+                  <ul
+                    role="menu"
+                    className="absolute end-0 z-40 mt-1 w-56 overflow-hidden rounded-md border border-border-strong bg-surface py-1 shadow-lg"
+                  >
+                    {[
+                      { label: 'الإحصائيات التفصيلية', go: () => setTab('analytics') },
+                      { label: 'قائمة المراقبة', go: () => setTab('watchlist') },
+                      { label: 'الإعدادات', go: () => setSection('settings') },
+                    ].map((entry) => (
+                      <li key={entry.label}>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            entry.go();
+                            setHubMenu(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-start text-sm transition-colors hover:bg-surface-high"
+                        >
+                          {entry.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="hidden flex-wrap items-center gap-2 sm:flex">
           <button
             type="button"
@@ -538,13 +623,9 @@ function Journal() {
                   seven labels wrapped onto three rows of pills is most of a
                   phone's first screen spent on navigation. The underline marks
                   the current view the way the app's indicator does. */}
-              {/* The sparkle action sits beside the tab strip, which is where
-                  the app's hub AppBar puts it — reachable from every view of
-                  the journal and belonging to none of them. */}
-              <div className="mt-3 flex items-end gap-2 border-b border-border-default sm:mt-4">
               <nav
                 aria-label="أقسام الدفتر"
-                className="-mx-4 flex-1 overflow-x-auto px-4 sm:mx-0 sm:px-0"
+                className="-mx-4 mt-3 overflow-x-auto border-b border-border-default px-4 sm:mx-0 sm:mt-4 sm:px-0"
               >
                 <ul className="flex w-max gap-1">
                   {tabs.map((item) => (
@@ -572,29 +653,6 @@ function Journal() {
                   ))}
                 </ul>
               </nav>
-
-              <button
-                type="button"
-                onClick={() =>
-                  can(entitlement, 'aiReader')
-                    ? setAiSheet(true)
-                    : setTab('overview')
-                }
-                title={
-                  can(entitlement, 'aiReader')
-                    ? 'تحليل توصيات بالـ AI'
-                    : 'تحليل توصيات بالـ AI — محتاج اشتراك'
-                }
-                aria-label="تحليل توصيات بالـ AI"
-                className={`mb-1 shrink-0 rounded-md p-2 transition-colors hover:bg-surface-high ${
-                  can(entitlement, 'aiReader')
-                    ? 'text-brand-ink'
-                    : 'text-fg-subtle'
-                }`}
-              >
-                <SparkIcon className="size-5" />
-              </button>
-              </div>
 
               <div className="mt-4">
                 {tab === 'today' && (

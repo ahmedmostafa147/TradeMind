@@ -23,6 +23,14 @@ class EgxMarketService {
     'Accept': 'application/json',
   };
 
+  /// The site's quote route — the single source of last-close prices for the
+  /// app AND the browser. See fetchStockInfo for why it is not Yahoo directly.
+  ///
+  /// Points at production rather than being configurable: there is one
+  /// deployment, and a build flag nobody sets is a way to ship a debug URL.
+  static const String _quoteApi =
+      'https://radar-one-phi.vercel.app/api/quote';
+
   /// Known Egyptian stocks with Arabic names, for offline suggestions and to
   /// label a ticker before any quote arrives.
   ///
@@ -100,39 +108,110 @@ class EgxMarketService {
     }
 
     try {
-      // The range/interval are required, not cosmetic: without them Yahoo
-      // returns empty `indicators` and the only price left is the stale `meta`
-      // block. A year of daily candles is what makes [EgxStockInfo.high52] and
-      // `low52` mean what their names say — a month of them did not — and it
-      // is still only ~250 numbers.
-      final url = Uri.parse(
-        'https://query1.finance.yahoo.com/v8/finance/chart/$cleanSymbol.CA'
-        '?range=1y&interval=1d',
-      );
+      // ONE SOURCE FOR BOTH SURFACES.
+      //
+      // This used to call Yahoo's chart endpoint directly while the browser
+      // called it through /api/quote, so the same open position could show two
+      // different last-close prices on the phone and on the site — and the
+      // owner saw exactly that. The browser CANNOT call Yahoo (no CORS
+      // headers), so the only endpoint both can share is ours.
+      //
+      // The cost is a dependency on our own deployment being up. That is the
+      // right trade for a number the user compares across two screens: a price
+      // that is briefly unavailable reads as «مفيش سعر», which is honest, while
+      // two prices that disagree read as a broken product.
+      final url = Uri.parse('$_quoteApi?symbols=$cleanSymbol');
       final response = await http
           .get(url, headers: _headers)
           .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode != 200) return null;
+      if (response.statusCode != 200) {
+        return _cacheOrNull(cleanSymbol, await _fetchDirect(cleanSymbol));
+      }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final result = data['chart']?['result'] as List?;
-      if (result == null || result.isEmpty) return null;
+      final quotes = data['quotes'] as List?;
+      if (quotes == null || quotes.isEmpty) {
+        return _cacheOrNull(cleanSymbol, await _fetchDirect(cleanSymbol));
+      }
 
-      final info = EgxStockInfo.fromYahooJson(
-        cleanSymbol,
-        result.first as Map<String, dynamic>,
-        // Yahoo has no Arabic names and often no longName for EGX at all, so
-        // the curated directory wins when it knows the ticker.
-        preferredName: egxDirectory[cleanSymbol],
+      final quote = quotes.first as Map<String, dynamic>;
+      final price = (quote['price'] as num?)?.toDouble();
+      // Null rather than a zero-priced placeholder, the same rule the route
+      // follows: a missing price must never be arithmetic-ed into a 100% loss.
+      if (price == null || !price.isFinite || price <= 0) return null;
+
+      final change = (quote['change'] as num?)?.toDouble() ?? 0;
+      final changePercent =
+          ((quote['changePercent'] as num?)?.toDouble() ?? 0) * 100;
+
+      final info = EgxStockInfo(
+        symbol: cleanSymbol,
+        name: egxDirectory[cleanSymbol] ??
+            (quote['name'] as String? ?? cleanSymbol),
+        price: price,
+        change: change.isFinite ? change : 0,
+        changePercent: changePercent.isFinite ? changePercent : 0,
+        // NOT CARRIED BY THE SHARED ROUTE, and nothing reads them. The route
+        // asks for five days rather than a year, because the only figure either
+        // surface renders is the last close and the change against the session
+        // before it. If a 52-week range is ever shown, widen the route's range
+        // and fill these — do not fetch a second source for them.
+        high52: 0,
+        low52: 0,
+        lastUpdated: DateTime.tryParse(quote['asOf'] as String? ?? '') ??
+            DateTime.now(),
       );
-      // Null when the symbol has no candles at all (ESRS behaves this way).
-      if (info == null || info.price <= 0) return null;
 
       _cache[cleanSymbol] = info;
       return info;
     } catch (_) {
-      return null;
+      // Our deployment is unreachable — offline, or down. The phone falls back
+      // to the upstream source rather than losing its prices with it.
+      try {
+        return _cacheOrNull(cleanSymbol, await _fetchDirect(cleanSymbol));
+      } catch (_) {
+        return null;
+      }
     }
+  }
+
+  static EgxStockInfo? _cacheOrNull(String symbol, EgxStockInfo? info) {
+    if (info != null) _cache[symbol] = info;
+    return info;
+  }
+
+  /// Yahoo, directly — the FALLBACK, not the normal path.
+  ///
+  /// The shared route is what keeps the phone and the browser showing the same
+  /// number, so this only runs when that route cannot be reached at all. The
+  /// browser has no equivalent (Yahoo sends no CORS headers), which is why a
+  /// disagreement is impossible here: when this runs, the site is showing
+  /// nothing rather than something different.
+  ///
+  /// Asks for a year because [EgxStockInfo.fromYahooJson] derives the 52-week
+  /// range from it, and because omitting range/interval makes Yahoo return
+  /// empty `indicators` and leave only a stale `meta` price.
+  static Future<EgxStockInfo?> _fetchDirect(String symbol) async {
+    final url = Uri.parse(
+      'https://query1.finance.yahoo.com/v8/finance/chart/$symbol.CA'
+      '?range=1y&interval=1d',
+    );
+    final response = await http
+        .get(url, headers: _headers)
+        .timeout(const Duration(seconds: 10));
+    if (response.statusCode != 200) return null;
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final result = data['chart']?['result'] as List?;
+    if (result == null || result.isEmpty) return null;
+
+    final info = EgxStockInfo.fromYahooJson(
+      symbol,
+      result.first as Map<String, dynamic>,
+      preferredName: egxDirectory[symbol],
+    );
+    if (info == null || info.price <= 0) return null;
+    return info;
   }
 }

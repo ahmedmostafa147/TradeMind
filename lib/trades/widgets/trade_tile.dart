@@ -66,7 +66,7 @@ class TradeTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  ResultBadge(metrics.result),
+                  ResultBadge(metrics.result, status: trade.status),
                   const Spacer(),
                   NumericText(
                     dateLabel(trade.entryDate),

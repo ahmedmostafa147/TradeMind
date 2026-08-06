@@ -19,6 +19,11 @@ export type Quote = {
   /** Arabic name from the bundled directory, when the code is one we know. */
   name: string | null;
   price: number;
+  /** The close before [price]. Null when the series holds only one session. */
+  previousClose: number | null;
+  /** price − previousClose, and the same as a fraction. Null together. */
+  change: number | null;
+  changePercent: number | null;
   /** When that price was struck, from the candle's own timestamp. */
   asOf: Date;
 };
@@ -33,10 +38,16 @@ export function decodeQuote(wire: unknown): Quote | null {
   if (!Number.isFinite(w.price) || w.price <= 0) return null;
   const asOf = typeof w.asOf === 'string' ? new Date(w.asOf) : null;
   if (asOf === null || Number.isNaN(asOf.getTime())) return null;
+  const num = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isFinite(v) ? v : null;
+
   return {
     symbol: w.symbol,
     name: typeof w.name === 'string' ? w.name : null,
     price: w.price,
+    previousClose: num(w.previousClose),
+    change: num(w.change),
+    changePercent: num(w.changePercent),
     asOf,
   };
 }
@@ -87,9 +98,9 @@ export function parseYahooChart(body: unknown, symbol: string): Quote | null {
   const closes = (quoteBlocks[0] as Record<string, unknown> | undefined)?.close;
   if (!Array.isArray(closes)) return null;
 
-  // Walk back from the end: Yahoo pads the series with nulls for sessions that
-  // have no print yet, and taking the last element blindly yields null on any
-  // day the exchange has not traded.
+  /** Real closes only, newest first — Yahoo pads the series with nulls for
+   *  sessions that have not printed, so the last element is routinely null. */
+  const usable: { close: number; at: number }[] = [];
   for (let i = closes.length - 1; i >= 0; i -= 1) {
     const close = closes[i];
     const at = timestamps[i];
@@ -97,14 +108,30 @@ export function parseYahooChart(body: unknown, symbol: string): Quote | null {
       continue;
     }
     if (typeof at !== 'number' || !Number.isFinite(at)) continue;
-    return {
-      symbol,
-      name: nameForTicker(symbol),
-      price: close,
-      asOf: new Date(at * 1000),
-    };
+    usable.push({ close, at });
+    if (usable.length === 2) break;
   }
-  return null;
+  if (usable.length === 0) return null;
+
+  const [latest, previous] = usable;
+  const previousClose = previous?.close ?? null;
+  const change = previousClose === null ? null : latest.close - previousClose;
+  // Guarded rather than assumed non-zero: a previous close of 0 would divide
+  // to Infinity and render as a nonsense percentage.
+  const changePercent =
+    change === null || previousClose === null || previousClose === 0
+      ? null
+      : change / previousClose;
+
+  return {
+    symbol,
+    name: nameForTicker(symbol),
+    price: latest.close,
+    previousClose,
+    change,
+    changePercent,
+    asOf: new Date(latest.at * 1000),
+  };
 }
 
 /** `.CA` is Yahoo's suffix for the Egyptian exchange. */

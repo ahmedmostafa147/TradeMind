@@ -88,7 +88,7 @@ class TradeDetailScreen extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      ResultBadge(metrics.result),
+                      ResultBadge(metrics.result, status: trade.status),
                       const SizedBox(width: 8),
                       Chip(
                         label: Text(trade.status.label),

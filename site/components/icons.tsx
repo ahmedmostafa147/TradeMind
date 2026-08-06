@@ -248,8 +248,11 @@ export function ReceiptIcon({ className }: IconProps) {
 export function SettingsIcon({ className }: IconProps) {
   return (
     <svg {...base} className={cls(className)}>
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6M18.7 18.7l-1.6-1.6M6.9 6.9 5.3 5.3" />
+      <circle cx="12" cy="12" r="3.1" />
+      {/* A cogwheel, not a sun. The previous drawing was a circle with eight
+          straight rays, which is the brightness glyph — next to a theme toggle
+          it read as a second one. */}
+      <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a1.9 1.9 0 1 1-2.7 2.7l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5v.2a1.9 1.9 0 1 1-3.8 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a1.9 1.9 0 1 1-2.7-2.7l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1h-.2a1.9 1.9 0 1 1 0-3.8h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a1.9 1.9 0 1 1 2.7-2.7l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5v-.2a1.9 1.9 0 1 1 3.8 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a1.9 1.9 0 1 1 2.7 2.7l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1h.2a1.9 1.9 0 1 1 0 3.8h-.1a1.6 1.6 0 0 0-1.5 1Z" />
     </svg>
   );
 }
@@ -258,6 +261,68 @@ export function PlusIcon({ className }: IconProps) {
   return (
     <svg {...base} className={cls(className)}>
       <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+/**
+ * The daily-decision section marks, mapping to the app's ActionSection icons —
+ * warning_amber, hourglass_bottom, trending_up, lightbulb_outline,
+ * check_circle_outline — plus a real gear.
+ */
+export function WarningIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <path d="M10.3 3.8 2.6 17.2A2 2 0 0 0 4.3 20.2h15.4a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0Z" />
+      <path d="M12 9v4.5M12 17h.01" />
+    </svg>
+  );
+}
+
+export function HourglassIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <path d="M6 2.5h12M6 21.5h12" />
+      <path d="M7.5 2.5v3.6c0 1.2.5 2.3 1.4 3.1L12 12l-3.1 2.8c-.9.8-1.4 1.9-1.4 3.1v3.6" />
+      <path d="M16.5 2.5v3.6c0 1.2-.5 2.3-1.4 3.1L12 12l3.1 2.8c.9.8 1.4 1.9 1.4 3.1v3.6" />
+    </svg>
+  );
+}
+
+export function TrendingUpIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <path d="M3 16.5 9 10.5l3.5 3.5L21 5.5" />
+      <path d="M15.5 5.5H21v5.5" />
+    </svg>
+  );
+}
+
+export function LightbulbIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <path d="M9.5 18h5M10 21h4" />
+      <path d="M12 2.5a6 6 0 0 0-3.6 10.8c.6.5.9 1.2.9 1.9V18h5.4v-2.8c0-.7.3-1.4.9-1.9A6 6 0 0 0 12 2.5Z" />
+    </svg>
+  );
+}
+
+export function CheckCircleIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <circle cx="12" cy="12" r="9.2" />
+      <path d="m8 12.3 2.7 2.7L16 9.7" />
+    </svg>
+  );
+}
+
+/** A three-dot overflow, the app's PopupMenuButton. */
+export function MoreIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <circle cx="12" cy="5" r="1.3" />
+      <circle cx="12" cy="12" r="1.3" />
+      <circle cx="12" cy="19" r="1.3" />
     </svg>
   );
 }
