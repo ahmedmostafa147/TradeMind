@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/formatters.dart';
 import '../../../core/theme.dart';
+import '../../../billing/billing_providers.dart';
+import '../../../billing/entitlements.dart';
 import '../market_providers.dart';
 
 /// Live, unrealised profit/loss for an OPEN position, from the last market
@@ -28,6 +30,18 @@ class LivePnlView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colors = context.resultColors;
+    // GATED HERE RATHER THAN AT THE TWO CALL SITES, so a third one cannot
+    // forget. Rendering nothing is deliberate: a lock icon on every open trade
+    // row would turn the journal into an advert, and the paywall the user needs
+    // to see is the one on «السوق», not six of them in a list.
+    //
+    // The provider is not watched at all on the free plan, so no request is
+    // made — fetching a price nobody may see is the kind of waste that only
+    // shows up on a bill.
+    if (!ref.watch(entitlementProvider).can(Feature.livePrices)) {
+      return const SizedBox.shrink();
+    }
+
     final quote = ref.watch(livePriceProvider(ticker));
 
     Widget muted(String text) => Text(

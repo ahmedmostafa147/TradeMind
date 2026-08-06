@@ -130,7 +130,7 @@ export function Pricing() {
           {/* Pro Card */}
           <div className="relative flex flex-col justify-between rounded-xl border-2 border-brand bg-inverse-surface p-6 text-on-inverse-surface sm:p-8 shadow-lg">
             <div className="absolute -top-3.5 left-6 rounded-full bg-brand px-3 py-1 text-[11px] font-bold text-on-brand">
-              🎉 14 يوماً تجربة مجانية بدون أية رسوم
+              14 يوماً تجربة مجانية بدون أية رسوم
             </div>
             <div>
               <div className="flex items-center justify-between">

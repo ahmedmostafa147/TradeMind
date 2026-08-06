@@ -42,6 +42,33 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    /// True when the caller's subscription is current — paid and unexpired, or
+    /// inside the fourteen-day trial.
+    ///
+    /// `kTrialDays` in lib/billing/entitlements.dart and TRIAL_DAYS in
+    /// site/lib/subscription.ts have to agree with the 14 below. Three copies
+    /// of one number is two too many, but a rule cannot import anything.
+    function subscription() {
+      return get(
+        /databases/$(database)/documents/users/$(request.auth.uid)/billing/subscription
+      ).data;
+    }
+
+    function hasActivePlan() {
+      return isSignedIn()
+        && exists(
+             /databases/$(database)/documents/users/$(request.auth.uid)/billing/subscription
+           )
+        && (
+             (subscription().plan == 'pro'
+               && (!('proUntil' in subscription())
+                   || subscription().proUntil > request.time))
+             || (subscription().plan == 'trial'
+                 && subscription().trialStartedAt + duration.value(14, 'd')
+                      > request.time)
+           );
+    }
+
     // The admin roster. Console-only, by construction.
     //
     // Read is limited to your own document so a client can ask "am I an
@@ -70,6 +97,66 @@ service cloud.firestore {
         && request.resource.data.displayName.size() <= 120;
 
       allow delete: if isOwner(userId);
+
+      // SUBSCRIPTION STATE. Read by its owner and by an admin; written by
+      // almost nobody.
+      //
+      // WHY THE ADMIN CAN READ THIS AND CANNOT READ ANYTHING ELSE DOWN HERE
+      // Trades, the watchlist and the risk rule are the user's own record and
+      // the operator has no business in them. A subscription is a contract
+      // BETWEEN the user and the operator: activating a payment, extending a
+      // trial or answering "why am I locked out" is impossible without seeing
+      // it. It carries no portfolio data — a plan name and two dates.
+      //
+      // The privacy policy had to say so before this shipped, and it does.
+      //
+      // THE TRIAL CANNOT BE FORGED, AND THAT IS THE WHOLE POINT OF DOING THIS
+      // HERE INSTEAD OF IN THE CLIENT.
+      //   - A user may CREATE this document exactly once, and only in the trial
+      //     shape. Firestore only evaluates `create` when the document does not
+      //     exist, so "once" needs no extra check.
+      //   - `trialStartedAt` must equal `request.time` — the SERVER's clock at
+      //     the moment of the write. A client sending its own timestamp, or a
+      //     date in the past to shorten someone else's trial, or in the future
+      //     to extend their own, is rejected. This is why the end date is NOT
+      //     stored: there is no sentinel for "server time plus fourteen days",
+      //     so a stored end date would have to come from the device's clock and
+      //     would be trivially editable. The end is computed from this start
+      //     plus the constant both clients share.
+      //   - Users cannot UPDATE it at all. Upgrading yourself to `pro` is a
+      //     write only an admin can make.
+      //
+      // Delete is allowed to the owner because account deletion must remove
+      // everything the account owns — the privacy policy promises that in plain
+      // words and test/account_deletion_test.dart guards it. The cost is that
+      // deleting your account and signing up again grants a fresh trial; the
+      // price of that loophole is your entire journal, which is steep enough.
+      match /billing/{docId} {
+        allow read: if isOwner(userId) || isAdmin();
+
+        allow create: if isOwner(userId)
+          && docId == 'subscription'
+          && request.resource.data.keys().hasOnly(['plan', 'trialStartedAt'])
+          && request.resource.data.plan == 'trial'
+          && request.resource.data.trialStartedAt == request.time;
+
+        // Operator-only, and the trial's start is immutable even here: it is
+        // evidence of when the clock started, and an admin who needs to give
+        // somebody more time sets `proUntil` rather than rewriting history.
+        allow update: if isAdmin()
+          && request.resource.data.keys().hasOnly([
+               'plan', 'trialStartedAt', 'proUntil', 'note'
+             ])
+          && request.resource.data.plan in ['trial', 'free', 'pro']
+          && request.resource.data.trialStartedAt == resource.data.trialStartedAt
+          && (!('proUntil' in request.resource.data)
+              || request.resource.data.proUntil is timestamp)
+          && (!('note' in request.resource.data)
+              || (request.resource.data.note is string
+                  && request.resource.data.note.size() <= 500));
+
+        allow delete: if isOwner(userId) || isAdmin();
+      }
 
       // Trades and watchlist stay owner-only. An admin is not an owner.
       match /trades/{tradeId} {
@@ -177,8 +264,37 @@ service cloud.firestore {
     // The shape is pinned like the profile is. Without a whitelist an admin
     // account could park arbitrary fields on a document every signed-in user
     // renders.
+    // WHICH PAID FEATURES CAN ACTUALLY BE ENFORCED HERE, AND WHICH CANNOT
+    //
+    // Only one of the four things the paid plan sells is data WE hold, and it
+    // is this one — so this is the only one a rule can defend. The others are
+    // client-side gates and nothing more, which is not a gap being hidden:
+    //
+    //   • «الأداء» and «التحليلات» are computed on the device from the user's
+    //     own trades. There is no request to authorise; the numbers never
+    //     leave the machine that made them. A rule cannot reach this and never
+    //     will.
+    //   • The AI reader runs on the USER'S own Gemini key and bills them, not
+    //     us. Gating it protects no cost of ours.
+    //   • Closing prices come through /api/quote, which takes no credential
+    //     today. Locking it needs the route to verify a Firebase ID token,
+    //     which needs firebase-admin and a service account — deliberately not
+    //     in this project yet. Written down as owed rather than assumed done.
     match /marketFlows/{sessionDate} {
-      allow read: if isSignedIn();
+      // A SESSION IS NO LONGER ENOUGH. This is the accumulated history the
+      // pricing page sells, and a client flag is the wrong place to defend it:
+      // the browser's copy of that flag is editable in a console, and the app's
+      // is editable in an APK.
+      //
+      // The trial counts, and it is computed the same way both clients compute
+      // it — the stored start plus fourteen days — so a document with no
+      // `proUntil` and a fresh start reads as full access here exactly as it
+      // does on screen. Costs one document read per query, which is the price
+      // of the rule meaning anything.
+      // The admin is exempt: they publish this data by hand from the console
+      // and have to see what is already there, and requiring the operator to
+      // subscribe to their own product is a way to lock yourself out.
+      allow read: if isAdmin() || (isSignedIn() && hasActivePlan());
       allow create, update: if isAdmin()
         && request.resource.data.keys().hasOnly([
              'date', 'scope', 'all', 'institutions', 'individuals',

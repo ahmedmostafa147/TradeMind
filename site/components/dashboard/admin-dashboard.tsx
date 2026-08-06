@@ -1,6 +1,6 @@
 'use client';
 
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -11,6 +11,8 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { firestore } from '@/lib/firebase';
 import { fetchFlowsFromApi, saveFlows } from '@/lib/market-flows-store';
+import { entitlementOf } from '@/lib/subscription';
+import type { Subscription } from '@/lib/use-subscription';
 
 export function AdminDashboard() {
   return (
@@ -226,6 +228,8 @@ type UserRow = {
   tradeCount: number | null;
   platform: string | null;
   appVersion: string | null;
+  /** From users/{uid}/billing/subscription. Null until that read lands. */
+  subscription: Subscription | null;
 };
 
 /** Firestore hands back a Timestamp; the app's own dates are ISO strings. */
@@ -247,6 +251,67 @@ function toDate(value: unknown): Date | null {
 function UsersPanel() {
   const [rows, setRows] = useState<UserRow[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [busyUid, setBusyUid] = useState<string | null>(null);
+
+  /**
+   * Activates or ends a subscription by hand.
+   *
+   * THIS IS THE ONLY WAY TO BECOME A PAYING CUSTOMER RIGHT NOW, and it is
+   * deliberate rather than a stopgap that leaked into production: there is no
+   * payment gateway wired up, and a checkout button that cannot take money is
+   * worse than none. The rules already say only an admin may write this
+   * document, so the manual path and the eventual automated one land in exactly
+   * the same place through exactly the same check.
+   */
+  async function setPlan(row: UserRow, plan: 'pro' | 'free', months: number) {
+    const label =
+      plan === 'pro'
+        ? `تفعّل Radar Pro لـ${row.email} لمدة ${months} شهر؟`
+        : `توقف اشتراك ${row.email}؟`;
+    if (!window.confirm(label)) return;
+
+    setBusyUid(row.uid);
+    try {
+      const until = new Date();
+      until.setMonth(until.getMonth() + months);
+      await setDoc(
+        doc(firestore(), 'users', row.uid, 'billing', 'subscription'),
+        {
+          plan,
+          // The trial's start is immutable and the rules enforce it, so it has
+          // to go back exactly as it came. A user who never started one has no
+          // document — and no document means there is nothing to update, which
+          // is why this refuses rather than creating one.
+          trialStartedAt: row.subscription?.trialStartedAt ?? null,
+          ...(plan === 'pro' ? { proUntil: until } : {}),
+          note: plan === 'pro' ? `فُعّل يدويًا · ${months} شهر` : 'أُوقف يدويًا',
+        },
+        { merge: false }
+      );
+      setRows(
+        (current) =>
+          current?.map((r) =>
+            r.uid === row.uid
+              ? {
+                  ...r,
+                  subscription: {
+                    plan,
+                    trialStartedAt: r.subscription?.trialStartedAt ?? null,
+                    proUntil: plan === 'pro' ? until : null,
+                    note: null,
+                  },
+                }
+              : r
+          ) ?? null
+      );
+    } catch {
+      window.alert(
+        'مقدرش يحفظ. لو المستخدم ده لسه ما فتحش رادار ولا مرة، مفيش مستند اشتراك يتعدّل.'
+      );
+    } finally {
+      setBusyUid(null);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -267,7 +332,34 @@ function UsersPanel() {
             platform: typeof data.platform === 'string' ? data.platform : null,
             appVersion:
               typeof data.appVersion === 'string' ? data.appVersion : null,
+            subscription: null,
           };
+        });
+
+        // One read per user, in parallel. Fine at this size and honest about
+        // it: if the roster ever gets long enough for this to hurt, the answer
+        // is a collectionGroup query, not a cache.
+        const subs = await Promise.all(
+          list.map(async (row) => {
+            try {
+              const sub = await getDoc(
+                doc(firestore(), 'users', row.uid, 'billing', 'subscription')
+              );
+              if (!sub.exists()) return null;
+              const data = sub.data();
+              return {
+                plan: typeof data.plan === 'string' ? data.plan : null,
+                trialStartedAt: toDate(data.trialStartedAt),
+                proUntil: toDate(data.proUntil),
+                note: typeof data.note === 'string' ? data.note : null,
+              } satisfies Subscription;
+            } catch {
+              return null;
+            }
+          })
+        );
+        subs.forEach((sub, i) => {
+          list[i].subscription = sub;
         });
         list.sort(
           (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0)
@@ -336,7 +428,8 @@ function UsersPanel() {
                 <Th>اشترك</Th>
                 <Th>آخر ظهور</Th>
                 <Th>صفقات</Th>
-                <Th>النسخة</Th>
+                <Th>الباقة</Th>
+                <Th>تفعيل</Th>
               </tr>
             </thead>
             <tbody>
@@ -349,7 +442,32 @@ function UsersPanel() {
                   <Td className="num text-fg-muted">{fmtDate(row.createdAt)}</Td>
                   <Td className="num text-fg-muted">{fmtDate(row.lastSeenAt)}</Td>
                   <Td className="num">{row.tradeCount ?? '—'}</Td>
-                  <Td className="num text-fg-muted">{row.appVersion ?? '—'}</Td>
+                  <Td>
+                    <PlanBadge subscription={row.subscription} />
+                  </Td>
+                  <Td>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[1, 6, 12].map((months) => (
+                        <button
+                          key={months}
+                          type="button"
+                          disabled={busyUid === row.uid}
+                          onClick={() => void setPlan(row, 'pro', months)}
+                          className="num rounded border border-border-strong px-2 py-1 text-xs font-semibold transition-colors hover:bg-surface-high disabled:opacity-40"
+                        >
+                          +{months}ش
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        disabled={busyUid === row.uid}
+                        onClick={() => void setPlan(row, 'free', 0)}
+                        className="rounded border border-loss-border px-2 py-1 text-xs font-semibold text-loss transition-colors hover:bg-loss-surface disabled:opacity-40"
+                      >
+                        أوقف
+                      </button>
+                    </div>
+                  </Td>
                 </tr>
               ))}
             </tbody>
@@ -357,6 +475,41 @@ function UsersPanel() {
         </div>
       )}
     </>
+  );
+}
+
+/** What the account is on right now, computed the same way both clients do. */
+function PlanBadge({ subscription }: { subscription: Subscription | null }) {
+  const e = entitlementOf({
+    storedPlan: subscription?.plan ?? null,
+    trialStartedAt: subscription?.trialStartedAt ?? null,
+    proUntil: subscription?.proUntil ?? null,
+    now: new Date(),
+  });
+
+  if (e.plan === 'pro') {
+    return (
+      <span className="rounded-full bg-brand px-2 py-0.5 text-[11px] font-bold text-on-brand">
+        Pro
+        {subscription?.proUntil && (
+          <span className="num ps-1 font-normal opacity-80">
+            {fmtDate(subscription.proUntil)}
+          </span>
+        )}
+      </span>
+    );
+  }
+  if (e.plan === 'trial') {
+    return (
+      <span className="rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-semibold">
+        تجربة · <span className="num">{e.trialDaysLeft}</span>ي
+      </span>
+    );
+  }
+  return (
+    <span className="text-[11px] text-fg-subtle">
+      {e.trialExpired ? 'انتهت التجربة' : 'مجاني'}
+    </span>
   );
 }
 

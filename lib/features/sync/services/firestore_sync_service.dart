@@ -37,6 +37,10 @@ class FirestoreSyncService {
   static CollectionReference<Map<String, dynamic>> _settings(String userId) =>
       _db.collection('users').doc(userId).collection('settings');
 
+  /// Subscription state. One document, `subscription`.
+  static CollectionReference<Map<String, dynamic>> _billing(String userId) =>
+      _db.collection('users').doc(userId).collection('billing');
+
   /// The single settings document's id. Fixed, so the write is an idempotent
   /// overwrite instead of accumulating one document per save.
   static const String _riskSettingsDoc = 'risk';
@@ -151,10 +155,16 @@ class FirestoreSyncService {
     // account goes, and capital is personal financial data. Leaving it behind
     // would strand a document nobody can ever reach again — its only reader is
     // an owner who is about to stop existing.
+    //
+    // `billing` is here for the same promise, and Firestore does not cascade:
+    // deleting users/{uid} leaves every subcollection under it intact and
+    // unreachable. It would also be the one record of a deleted account that
+    // an admin could still read, which the policy does not allow for.
     for (final collection in [
       _trades(userId),
       _watchlist(userId),
       _settings(userId),
+      _billing(userId),
     ]) {
       final snapshot = await collection.get();
       const chunkSize = 400;
@@ -195,6 +205,40 @@ class FirestoreSyncService {
       ];
     } catch (_) {
       return const [];
+    }
+  }
+
+  /// The subscription document, or null when there is none yet.
+  ///
+  /// Returns the raw fields rather than an [Entitlement] so the pure decision
+  /// in `lib/billing/entitlements.dart` stays the only place that interprets
+  /// them — the browser reads the same three values and must reach the same
+  /// answer.
+  static Future<Map<String, dynamic>?> pullSubscription(String userId) async {
+    if (_rejects(userId)) return null;
+    try {
+      final snapshot = await _billing(userId).doc('subscription').get();
+      return snapshot.exists ? snapshot.data() : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Asks for the fourteen-day trial. Succeeds exactly once per account.
+  ///
+  /// The rules decide whether the ask is honest — the document must not exist,
+  /// the plan must be `trial`, and `trialStartedAt` must equal the SERVER's
+  /// clock. So a rejected write here is not an error worth surfacing: it means
+  /// the trial was already granted, which is the state the caller wanted.
+  static Future<void> startTrial(String userId) async {
+    if (_rejects(userId)) return;
+    try {
+      await _billing(userId).doc('subscription').set({
+        'plan': 'trial',
+        'trialStartedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {
+      // Already granted, or offline. Both are handled by the next read.
     }
   }
 

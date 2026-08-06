@@ -30,6 +30,7 @@ import { useQuotes } from '@/lib/use-quotes';
 export function TodayPanel({
   trades,
   watchlistCount,
+  showLivePrices,
   capital,
   maxRiskPercent,
   waitingThresholdDays,
@@ -38,6 +39,12 @@ export function TodayPanel({
 }: {
   trades: Trade[];
   watchlistCount: number;
+  /**
+   * Off on the free plan. The request is not made at all rather than made and
+   * hidden — the route costs us an upstream call, and fetching a price nobody
+   * is allowed to see is the kind of waste that only shows up on a bill.
+   */
+  showLivePrices: boolean;
   capital: number;
   maxRiskPercent: number;
   waitingThresholdDays: number;
@@ -58,9 +65,11 @@ export function TodayPanel({
    * too: LivePnlView renders for open positions and nothing else.
    */
   const { quotes } = useQuotes(
-    trades
-      .filter((t) => t.status === 'open' && t.quantity > 0)
-      .map((t) => normalizeTicker(t.ticker))
+    showLivePrices
+      ? trades
+          .filter((t) => t.status === 'open' && t.quantity > 0)
+          .map((t) => normalizeTicker(t.ticker))
+      : []
   );
 
   // `today` is passed rather than read inside, so the pure function stays
@@ -149,6 +158,7 @@ export function TodayPanel({
         tone="loss"
         capital={capital}
         quotes={quotes}
+        showLivePrices={showLivePrices}
         actions={(item) => (
           <>
             <Action kind="ghost" onClick={() => onEdit(item.trade)}>
@@ -169,6 +179,7 @@ export function TodayPanel({
         items={d.waitingTooLong}
         capital={capital}
         quotes={quotes}
+        showLivePrices={showLivePrices}
         actions={(item) => (
           <>
             <Action kind="primary" onClick={() => close(item.trade)}>
@@ -190,6 +201,7 @@ export function TodayPanel({
         items={d.open}
         capital={capital}
         quotes={quotes}
+        showLivePrices={showLivePrices}
         actions={(item) => (
           <>
             <Action
@@ -214,6 +226,7 @@ export function TodayPanel({
         items={d.planned}
         capital={capital}
         quotes={quotes}
+        showLivePrices={showLivePrices}
         actions={(item) => (
           <>
             <Action kind="primary" onClick={() => void markOpen(item.trade)}>
@@ -235,6 +248,7 @@ export function TodayPanel({
         items={d.recentlyClosed}
         capital={capital}
         quotes={quotes}
+        showLivePrices={showLivePrices}
         actions={(item) => (
           <Action
             kind="tonal"
@@ -339,6 +353,7 @@ function Section({
   tone,
   capital,
   quotes,
+  showLivePrices,
   actions,
 }: {
   title: string;
@@ -347,6 +362,7 @@ function Section({
   tone?: 'loss';
   capital: number;
   quotes: Map<string, Quote>;
+  showLivePrices: boolean;
   actions: (item: DecisionItem) => React.ReactNode;
 }) {
   // An empty section is not rendered at all. A screen of "0" headings is what
@@ -443,7 +459,7 @@ function Section({
               )}
             </div>
 
-            {item.trade.status === 'open' && (
+            {item.trade.status === 'open' && showLivePrices && (
               <LivePnl
                 quote={quotes.get(normalizeTicker(item.trade.ticker))}
                 entryPrice={item.trade.entryPrice}

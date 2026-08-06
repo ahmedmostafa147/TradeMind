@@ -23,6 +23,11 @@ import {
 import { EquityChart, MonthlyBars } from '@/components/dashboard/charts';
 import { GoalPanel } from '@/components/dashboard/goal-panel';
 import { AiTradeSheet } from '@/components/dashboard/ai-trade-sheet';
+import {
+  Paywall,
+  PlanCard,
+  TrialBanner,
+} from '@/components/dashboard/paywall';
 import { MarketFlowsPanel } from '@/components/dashboard/market-flows-panel';
 import {
   ADD_TRADE_LABEL,
@@ -52,6 +57,8 @@ import {
   type PortfolioScenarios,
 } from '@/lib/portfolio-scenarios';
 import { readGeminiKey, writeGeminiKey } from '@/lib/gemini-key';
+import { can, type Entitlement } from '@/lib/subscription';
+import { useSubscription } from '@/lib/use-subscription';
 import { exceedsRiskLimit, parseNumber } from '@/lib/risk-math';
 import {
   averageRiskScore,
@@ -137,6 +144,7 @@ type View = { kind: 'list' } | { kind: 'new'; seed?: Trade } | { kind: 'edit'; t
 function Journal() {
   const { user, logout, isAdmin } = useAuth();
   const { settings, update, source: settingsSource } = useAccountSettings(user);
+  const { entitlement, subscription } = useSubscription(user);
 
   const [trades, setTrades] = useState<Trade[] | null>(null);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
@@ -509,9 +517,16 @@ function Journal() {
         </p>
       )}
 
-      {!failed && trades === null && <Loading />}
+      {!failed && (trades === null || entitlement === null) && <Loading />}
 
-      {trades !== null && (
+      {entitlement !== null && (
+        <TrialBanner
+          entitlement={entitlement}
+          trialStartedAt={subscription?.trialStartedAt ?? null}
+        />
+      )}
+
+      {trades !== null && entitlement !== null && (
         <>
           {section === 'journal' && (
             <>
@@ -556,10 +571,22 @@ function Journal() {
 
               <button
                 type="button"
-                onClick={() => setAiSheet(true)}
-                title="تحليل توصيات بالـ AI"
+                onClick={() =>
+                  can(entitlement, 'aiReader')
+                    ? setAiSheet(true)
+                    : setTab('overview')
+                }
+                title={
+                  can(entitlement, 'aiReader')
+                    ? 'تحليل توصيات بالـ AI'
+                    : 'تحليل توصيات بالـ AI — محتاج اشتراك'
+                }
                 aria-label="تحليل توصيات بالـ AI"
-                className="mb-1 shrink-0 rounded-md p-2 text-brand-ink transition-colors hover:bg-surface-high"
+                className={`mb-1 shrink-0 rounded-md p-2 transition-colors hover:bg-surface-high ${
+                  can(entitlement, 'aiReader')
+                    ? 'text-brand-ink'
+                    : 'text-fg-subtle'
+                }`}
               >
                 <SparkIcon className="size-5" />
               </button>
@@ -570,6 +597,7 @@ function Journal() {
                   <TodayPanel
                     trades={trades}
                     watchlistCount={watchlist.length}
+                    showLivePrices={can(entitlement, 'livePrices')}
                     capital={settings.capital}
                     maxRiskPercent={settings.maxRiskPercent}
                     waitingThresholdDays={settings.waitingThresholdDays}
@@ -579,7 +607,13 @@ function Journal() {
                 )}
 
                 {tab === 'overview' &&
-                  (hasTrades && stats ? (
+                  (!can(entitlement, 'analytics') ? (
+                    <Paywall
+                      title="الأداء"
+                      what="صافي الربح ونسبة النجاح والتوقّع الرياضي ومنحنى رأس المال وسيناريوهات المحفظة — محسوبة من صفقاتك المقفولة."
+                      entitlement={entitlement}
+                    />
+                  ) : hasTrades && stats ? (
                     <Overview
                       stats={stats}
                       avgDiscipline={avgDiscipline}
@@ -590,7 +624,13 @@ function Journal() {
                   ))}
 
                 {tab === 'analytics' &&
-                  (hasTrades && stats ? (
+                  (!can(entitlement, 'analytics') ? (
+                    <Paywall
+                      title="التحليلات"
+                      what="معامل الربح ومتوسط R وسلاسل الربح والخسارة ومتوسط مدة الاحتفاظ وأكتر سهم بتتداوله."
+                      entitlement={entitlement}
+                    />
+                  ) : hasTrades && stats ? (
                     <AnalyticsTab stats={stats} avgDiscipline={avgDiscipline} />
                   ) : (
                     <EmptyJournal onAdd={() => setQuickAdd(true)} />
@@ -669,7 +709,15 @@ function Journal() {
               trade has been logged. */}
           {section === 'market' && (
             <div className="mt-4">
-              <MarketFlowsPanel />
+              {can(entitlement, 'marketFlows') ? (
+                <MarketFlowsPanel />
+              ) : (
+                <Paywall
+                  title="السوق"
+                  what="مين اشترى ومين باع في كل جلسة — مؤسسات ولا أفراد، مصريين ولا عرب ولا أجانب، وصافي كل فئة."
+                  entitlement={entitlement}
+                />
+              )}
             </div>
           )}
 
@@ -686,6 +734,8 @@ function Journal() {
           {section === 'settings' && (
             <div className="mt-4">
               <SettingsSection
+                entitlement={entitlement}
+                subscription={subscription}
                 settings={settings}
                 onChange={update}
                 source={settingsSource}
@@ -797,6 +847,8 @@ function Journal() {
  * made the old browser-only version misleading.
  */
 function SettingsSection({
+  entitlement,
+  subscription,
   settings,
   onChange,
   source,
@@ -804,6 +856,8 @@ function SettingsSection({
   isAdmin,
   onLogout,
 }: {
+  entitlement: Entitlement;
+  subscription: ReturnType<typeof useSubscription>['subscription'];
   settings: ReturnType<typeof useAccountSettings>['settings'];
   onChange: (next: Partial<typeof settings>) => void;
   source: SettingsSource;
@@ -819,6 +873,12 @@ function SettingsSection({
 
   return (
     <div className="space-y-5">
+      <PlanCard
+        entitlement={entitlement}
+        trialStartedAt={subscription?.trialStartedAt ?? null}
+        proUntil={subscription?.proUntil ?? null}
+      />
+
       <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-fg-muted">

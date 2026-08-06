@@ -153,4 +153,32 @@ void main() {
           'throws too.',
     );
   });
+
+  /// The subscription document is subject to the same promise, and it is the
+  /// one record of a deleted account an ADMIN could still read — the rules
+  /// grant `isAdmin()` a read on it so support can activate a payment. Left
+  /// behind, it would outlive the account it describes, unreachable by its
+  /// owner and visible to the operator forever.
+  ///
+  /// Firestore does not cascade: deleting `users/{uid}` leaves every
+  /// subcollection under it intact.
+  test('deleteAllData clears the billing subcollection too', () {
+    final sync = File(
+      'lib/features/sync/services/firestore_sync_service.dart',
+    ).readAsStringSync();
+
+    final start = sync.indexOf('static Future<void> deleteAllData(');
+    expect(start, isNot(-1), reason: 'deleteAllData disappeared');
+    final end = sync.indexOf('\n  }', start);
+    final body = sync.substring(start, end);
+
+    expect(
+      body.contains('_billing(userId)'),
+      isTrue,
+      reason:
+          'deleteAllData must delete users/{uid}/billing — the privacy policy '
+          'promises the whole account goes, and this is the only leftover an '
+          'admin can read.',
+    );
+  });
 }

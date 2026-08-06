@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:egx_trade_journal/app.dart';
+import 'package:egx_trade_journal/billing/billing_providers.dart';
+import 'package:egx_trade_journal/billing/entitlements.dart';
 import 'package:egx_trade_journal/core/hive_keys.dart';
 import 'package:egx_trade_journal/features/auth/providers/auth_providers.dart';
 import 'package:egx_trade_journal/features/auth/repositories/auth_repository.dart';
@@ -24,6 +26,16 @@ import 'package:hive_ce/hive.dart';
 /// Drives the section 9 acceptance criteria through the real widget tree, so
 /// the numbers are verified as the user actually sees them — after formatting,
 /// not just as raw doubles.
+/// Grants an active subscription for the widget tests. Named rather than a
+/// closure because AsyncNotifierProvider wants a constructor.
+class _ProTrial extends AsyncNotifier<Entitlement> implements BillingController {
+  @override
+  Future<Entitlement> build() async => const Entitlement(plan: Plan.pro);
+
+  @override
+  Future<void> refresh() async {}
+}
+
 void main() {
   late Directory tempDir;
   late Box settingsBox;
@@ -97,6 +109,12 @@ void main() {
           // Keep the open-trade live-price lookup offline and instant, so no
           // test hits the network or spins on the loading indicator.
           livePriceProvider.overrideWith((ref, symbol) async => null),
+          // FULL ACCESS, because these tests are about the journal and not
+          // about billing. Without Firebase the controller resolves to `free`
+          // — correctly — and «الأداء» and «التحليلات» then render the paywall
+          // instead of the figures each test is asserting on. Gating is covered
+          // by entitlements_test.dart, which needs no widgets at all.
+          billingProvider.overrideWith(_ProTrial.new),
         ],
         child: const EgxJournalApp(),
       ),

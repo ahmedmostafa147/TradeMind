@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../billing/billing_providers.dart';
+import '../billing/entitlements.dart';
+import '../billing/widgets/paywall.dart';
 import '../calculator/calculator_screen.dart';
 import '../features/sync/providers/sync_provider.dart';
 import '../features/market/screens/market_screen.dart';
@@ -51,16 +54,35 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     // no trade was ever uploaded.
     ref.watch(syncControllerProvider);
 
+    // Watched here so the whole shell reflects a plan change the moment the
+    // subscription lands, rather than only the screen that happens to be open.
+    final entitlement = ref.watch(entitlementProvider);
+
     return Scaffold(
-      // IndexedStack, not a rebuild-on-switch: it preserves scroll position and
-      // half-typed calculator input across tab changes.
-      body: IndexedStack(
-        index: _index,
-        children: const [
-          TradesHubScreen(),
-          MarketScreen(),
-          CalculatorScreen(),
-          SettingsScreen(),
+      body: Column(
+        children: [
+          const TrialBanner(),
+          Expanded(
+            // IndexedStack, not a rebuild-on-switch: it preserves scroll
+            // position and half-typed calculator input across tab changes.
+            child: IndexedStack(
+              index: _index,
+              children: [
+                const TradesHubScreen(),
+                if (entitlement.can(Feature.marketFlows))
+                  const MarketScreen()
+                else
+                  const Paywall(
+                    title: 'السوق',
+                    what:
+                        'مين اشترى ومين باع في كل جلسة — مؤسسات ولا أفراد، '
+                        'مصريين ولا عرب ولا أجانب، وصافي كل فئة.',
+                  ),
+                const CalculatorScreen(),
+                const SettingsScreen(),
+              ],
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: NavigationBar(

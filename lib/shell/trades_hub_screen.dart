@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../billing/billing_providers.dart';
+import '../billing/entitlements.dart';
+import '../billing/widgets/paywall.dart';
 import '../core/theme.dart';
 import '../dashboard/analytics_screen.dart';
 import '../dashboard/dashboard_screen.dart';
@@ -27,11 +31,12 @@ import '../watchlist/watchlist_form_screen.dart';
 /// One Scaffold owns the AppBar and the add button for all three tabs, so
 /// "add a trade" is reachable from every view and cannot drift apart between
 /// them — it existed twice on one screen before this.
-class TradesHubScreen extends StatelessWidget {
+class TradesHubScreen extends ConsumerWidget {
   const TradesHubScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entitlement = ref.watch(entitlementProvider);
     return DefaultTabController(
       length: 6,
       child: Scaffold(
@@ -43,9 +48,24 @@ class TradesHubScreen extends StatelessWidget {
           toolbarHeight: 44,
           actions: [
             IconButton(
-              icon: Icon(Icons.auto_awesome, color: context.palette.aiAccent),
-              tooltip: 'تحليل توصيات بالـ AI',
-              onPressed: () => showModalBottomSheet(
+              icon: Icon(
+                Icons.auto_awesome,
+                color: entitlement.can(Feature.aiReader)
+                    ? context.palette.aiAccent
+                    : Theme.of(context).colorScheme.outline,
+              ),
+              tooltip: entitlement.can(Feature.aiReader)
+                  ? 'تحليل توصيات بالـ AI'
+                  : 'تحليل توصيات بالـ AI — محتاج اشتراك',
+              onPressed: () => !entitlement.can(Feature.aiReader)
+                  ? ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'قراءة التوصيات بالـ AI من مميزات رادار Pro.',
+                        ),
+                      ),
+                    )
+                  : showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
                 // The sheet lists every trade found across several images, so
@@ -112,14 +132,34 @@ class TradesHubScreen extends StatelessWidget {
           icon: const Icon(Icons.add_rounded),
           label: const Text(kAddTradeLabel),
         ),
-        body: const TabBarView(
+        body: TabBarView(
           children: [
-            TodayView(),
-            TradesView(filter: TradesFilter.real),
-            TradesView(filter: TradesFilter.planned),
-            PerformanceView(),
-            AnalyticsView(),
-            GoalView(),
+            const TodayView(),
+            const TradesView(filter: TradesFilter.real),
+            const TradesView(filter: TradesFilter.planned),
+            // «الأداء» and «التحليلات» are the paid pair. Recording and
+            // reviewing trades — the three tabs above — stays free, because the
+            // free plan promises exactly that and a journal you cannot write in
+            // is not a limited plan.
+            if (entitlement.can(Feature.analytics))
+              const PerformanceView()
+            else
+              const Paywall(
+                title: 'الأداء',
+                what:
+                    'صافي الربح ونسبة النجاح والتوقّع الرياضي ومنحنى رأس المال '
+                    'وسيناريوهات المحفظة — محسوبة من صفقاتك المقفولة.',
+              ),
+            if (entitlement.can(Feature.analytics))
+              const AnalyticsView()
+            else
+              const Paywall(
+                title: 'التحليلات',
+                what:
+                    'معامل الربح ومتوسط R وسلاسل الربح والخسارة ومتوسط مدة '
+                    'الاحتفاظ وأكتر سهم بتتداوله.',
+              ),
+            const GoalView(),
           ],
         ),
       ),

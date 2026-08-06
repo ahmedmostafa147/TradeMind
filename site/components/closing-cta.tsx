@@ -38,13 +38,13 @@ export function ClosingCta() {
               href="/dashboard#signup"
               className="inline-flex items-center justify-center rounded-md bg-brand px-7 py-3.5 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90"
             >
-              ابدأ مجانًا دلوقتي
+              ابدأ تجربتك المجانية
             </Link>
             <DownloadButton variant="inverse" />
           </div>
 
           <p className="mt-6 text-xs opacity-60">
-            مجاني بالكامل · من غير إعلانات · بياناتك محفوظة على حسابك
+            14 يوم تجربة من غير بطاقة · دفتر مجاني للأبد · من غير إعلانات
           </p>
         </div>
       </div>
