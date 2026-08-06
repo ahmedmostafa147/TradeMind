@@ -251,6 +251,27 @@ function Journal() {
    * Merge also means the fields this form does not touch (timeline entries,
    * screenshot paths) survive an edit made from the browser.
    */
+  /**
+   * Writes a changed trade in place — no navigation, no form.
+   *
+   * The decision buttons on «قرار اليوم» flip a status or append a timeline
+   * entry and stay where they are; `saveTrade` closes the form when it
+   * returns, which is right there and wrong here. The live listener puts the
+   * result back on screen, so neither needs to re-read.
+   */
+  async function updateTrade(trade: Trade) {
+    if (!user) return;
+    try {
+      await setDoc(
+        doc(firestore(), 'users', user.uid, 'trades', trade.id),
+        { ...encodeTrade(trade), updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+    } catch {
+      setFailed(true);
+    }
+  }
+
   async function saveTrade(draft: TradeDraft) {
     if (!user) return;
     await setDoc(
@@ -505,10 +526,12 @@ function Journal() {
                 {tab === 'today' && (
                   <TodayPanel
                     trades={trades}
+                    watchlistCount={watchlist.length}
                     capital={settings.capital}
                     maxRiskPercent={settings.maxRiskPercent}
                     waitingThresholdDays={settings.waitingThresholdDays}
                     onEdit={(trade) => setView({ kind: 'edit', trade })}
+                    onUpdate={updateTrade}
                   />
                 )}
 

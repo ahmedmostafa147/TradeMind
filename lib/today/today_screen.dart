@@ -23,7 +23,6 @@ class TodayView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final decisions = ref.watch(dailyDecisionsProvider);
     final watchlist = ref.watch(sortedWatchlistProvider);
-    final theme = Theme.of(context);
 
     final noActions = decisions.isEmpty && watchlist.isEmpty;
     final nothingAtAll = noActions && decisions.recentlyClosed.isEmpty;
@@ -47,14 +46,6 @@ class TodayView extends ConsumerWidget {
         TodaySectionsList(
           decisions: decisions,
           watchlist: watchlist,
-        ),
-        Center(
-          child: Text(
-            'كل الحسابات محلية على جهازك',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.outline,
-            ),
-          ),
         ),
       ],
     );

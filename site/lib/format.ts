@@ -49,6 +49,19 @@ export function percent(fraction: number | null | undefined): string {
   return `${oneDecimalFormat.format(fraction * 100)}%`;
 }
 
+/**
+ * "+4.14%" — signed, two decimals, for an unrealised move.
+ *
+ * A port of LivePnlView._signedPct, and deliberately NOT `percent`: that one is
+ * for a risk ratio, where a sign would be noise and one decimal is the
+ * convention. This one sits next to a profit figure and has to agree with it.
+ */
+export function signedPercent(fraction: number | null | undefined): string {
+  if (fraction == null || !Number.isFinite(fraction)) return EMPTY_VALUE;
+  const pct = fraction * 100;
+  return `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`;
+}
+
 /** "2.4R" */
 export function rMultiple(r: number | null | undefined): string {
   if (r == null || !Number.isFinite(r)) return EMPTY_VALUE;
