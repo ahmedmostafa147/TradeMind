@@ -47,6 +47,10 @@ Future<void> main() async {
     final tradesBox = await Hive.openBox<Trade>(kTradesBox);
     final watchlistBox = await Hive.openBox<WatchlistItem>(kWatchlistBox);
     final authBox = await Hive.openBox(kAuthBox);
+    // Opened here rather than injected: SyncController reaches for it through
+    // Hive.isBoxOpen, so a test that never opens it simply syncs with no
+    // recorded ancestor — which the merge already treats as "keep local".
+    await Hive.openBox(kSyncStateBox);
 
     runApp(
       ProviderScope(

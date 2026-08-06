@@ -50,8 +50,14 @@ class FirestoreSyncService {
   /// Batched rather than a write per record: the previous per-item loop fired
   /// one request for every trade on every change to any trade, which is both
   /// slow and a direct multiplier on the Firestore bill.
-  static Future<void> pushTrades(String userId, List<Trade> trades) async {
-    if (_rejects(userId) || trades.isEmpty) return;
+  /// Returns whether the write actually landed, so the caller can decide
+  /// whether to record these records as agreed with the cloud. It used to
+  /// swallow the failure and return void, which was fine when the only
+  /// consequence was "the backup is a bit behind" — it is not fine now that a
+  /// successful push is what advances the merge's ancestor.
+  static Future<bool> pushTrades(String userId, List<Trade> trades) async {
+    if (_rejects(userId)) return false;
+    if (trades.isEmpty) return true;
     try {
       final batch = _db.batch();
       for (final trade in trades) {
@@ -65,16 +71,19 @@ class FirestoreSyncService {
         );
       }
       await batch.commit();
+      return true;
     } catch (_) {
       // Backup is best-effort; the local journal remains the source of truth.
+      return false;
     }
   }
 
-  static Future<void> pushWatchlist(
+  static Future<bool> pushWatchlist(
     String userId,
     List<WatchlistItem> items,
   ) async {
-    if (_rejects(userId) || items.isEmpty) return;
+    if (_rejects(userId)) return false;
+    if (items.isEmpty) return true;
     try {
       final batch = _db.batch();
       for (final item in items) {
@@ -88,7 +97,10 @@ class FirestoreSyncService {
         );
       }
       await batch.commit();
-    } catch (_) {}
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Uploads the risk rule. Best-effort like the rest of the upload path.

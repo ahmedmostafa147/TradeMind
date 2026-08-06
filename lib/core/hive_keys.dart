@@ -49,3 +49,18 @@ const String kWatchlistBox = 'watchlist';
 
 /// User authentication and session box.
 const String kAuthBox = 'auth';
+
+/// What this device last agreed with the cloud about, per record.
+///
+/// Two untyped maps of `recordId -> fingerprint`, one for trades and one for
+/// the watchlist. They are the COMMON ANCESTOR the three-way merge in
+/// `sync_merge.dart` compares against, and the only reason an edit made in the
+/// browser can be told apart from an edit made here.
+///
+/// Deliberately not part of the Trade adapter: it is sync bookkeeping about a
+/// record, not a field of it, and putting it in the model would have meant a
+/// typeId migration on a shipped schema.
+const String kSyncStateBox = 'syncState';
+
+const String kTradeFingerprintsKey = 'tradeFingerprints';
+const String kWatchlistFingerprintsKey = 'watchlistFingerprints';
