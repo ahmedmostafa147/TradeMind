@@ -15,6 +15,7 @@ import { CalculatorWidget } from '@/components/calculator-widget';
 import { EquityChart, MonthlyBars } from '@/components/dashboard/charts';
 import { GoalPanel } from '@/components/dashboard/goal-panel';
 import { MarketFlowsPanel } from '@/components/dashboard/market-flows-panel';
+import { ScenariosPanel } from '@/components/dashboard/scenarios-panel';
 import { SignInPanel } from '@/components/dashboard/sign-in-panel';
 import { InstallButton } from '@/components/pwa';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -33,6 +34,10 @@ import { checklistCompletion } from '@/lib/checklist';
 import { firestore } from '@/lib/firebase';
 import { dateLabel, money, percent, rMultiple, signedMoney } from '@/lib/format';
 import { useAccountSettings, type SettingsSource } from '@/lib/account-settings';
+import {
+  portfolioScenarios,
+  type PortfolioScenarios,
+} from '@/lib/portfolio-scenarios';
 import { exceedsRiskLimit, parseNumber } from '@/lib/risk-math';
 import {
   averageRiskScore,
@@ -227,6 +232,19 @@ function Journal() {
     [trades]
   );
 
+  /**
+   * Best case, worst case, and the one-winner question — over the OPEN book.
+   *
+   * Not gated on `hasTrades` the way the analytics are: this reads open
+   * positions, not closed ones, so somebody whose first trade is still running
+   * has exactly the book this answers a question about. The panel hides itself
+   * when nothing is open.
+   */
+  const scenarios: PortfolioScenarios = useMemo(
+    () => portfolioScenarios(trades ?? []),
+    [trades]
+  );
+
   const avgDiscipline = useMemo(
     () =>
       trades === null
@@ -378,7 +396,11 @@ function Journal() {
 
             {tab === 'overview' &&
               (hasTrades && stats ? (
-                <Overview stats={stats} avgDiscipline={avgDiscipline} />
+                <Overview
+                  stats={stats}
+                  avgDiscipline={avgDiscipline}
+                  scenarios={scenarios}
+                />
               ) : (
                 <EmptyJournal onAdd={() => setView({ kind: 'new' })} />
               ))}
@@ -607,9 +629,11 @@ function EmptyJournal({ onAdd }: { onAdd: () => void }) {
 function Overview({
   stats,
   avgDiscipline,
+  scenarios,
 }: {
   stats: Analytics;
   avgDiscipline: number | null;
+  scenarios: PortfolioScenarios;
 }) {
   return (
     <div className="space-y-8">
@@ -645,6 +669,11 @@ function Overview({
           note="بيقيس التزامك بالخطة، مش الربح"
         />
       </div>
+
+      {/* Above the closed-trade charts, and for the same reason the app puts it
+          near the top of «الأداء»: what is at stake right now outranks what
+          already happened. */}
+      <ScenariosPanel scenarios={scenarios} />
 
       <Panel title="الربح التراكمي" note="نقطة لكل صفقة مقفولة، مرتّبة بتاريخ الخروج">
         <EquityChart points={stats.equityCurve} />

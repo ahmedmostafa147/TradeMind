@@ -40,12 +40,15 @@ site/                   Next.js 16 + Tailwind 4 — على Vercel، مش تصد�
   app/(app)/            /dashboard و /admin (شل بسيط، من غير الهيدر التسويقي)
   lib/                  firebase, auth-context, trade, risk-math, format, site
                         + account-settings.ts (قاعدة المخاطرة من الحساب)
-                        + projection.ts (حاسبة الهدف — ويب بس، مفيش نسخة Dart)
+                        + projection.ts (حاسبة الهدف — مرآة goal_projection.dart)
+                        + portfolio-scenarios.ts (أحسن/أوحش حالة — مرآة
+                          portfolio_scenarios.dart)
                         + market-flows.ts (تحليل صفحة البورصة — pure، متختبر)
                         + egx-fetch.ts (الشبكة بس) + market-flows-store.ts
   app/api/egx-flows/    أول كود سيرفر في المشروع — بيجيب ويحلّل، مش بيكتب
   components/dashboard/ الداشبورد الاتنين + بانل تسجيل الدخول + محرّر التايم لاين
                         + goal-panel.tsx (تبويب «الهدف»)
+                        + scenarios-panel.tsx (سيناريوهات المحفظة، جوّه «الأداء»)
                         + market-flows-panel.tsx (تبويب «السوق»)
   app/manifest.ts       PWA manifest (راوت، مش ملف ثابت)
   public/sw.js          service worker — أوفلاين + شرط التثبيت
@@ -155,13 +158,22 @@ npm --prefix site run theme
    حذفه كان بيخلي «آخر لمسة» = تاريخ الدخول دايمًا، و«محتاجة ملاحظة» تشتغل على
    صفقات التطبيق شايفها متابَعة.)
 
-الحسابات كلها (`analytics.ts`، `risk-score.ts`، `decisions.ts`، `checklist.ts`)
-نسخ مطابقة من `lib/core/calc/`. **ومفيش أي اختبار على نسخ الويب** — مفيش
-`test` script في `site/package.json` ولا ملف اختبار واحد في `site/`. الحارس
-الوحيد هو اختبارات Dart المقابلة (`risk_score_test.dart`،
-`daily_decisions_test.dart`، `journal_analytics_test.dart`). يعني لو غيّرت
-معادلة في Dart، الاختبارات هتمسكها هناك بس، ونسخة الويب هتفضل غلط بصمت لحد ما
-حد يبص عليها بعينه. **غيّرها في الاتنين في نفس الكوميت.**
+الحسابات كلها (`analytics.ts`، `risk-score.ts`، `decisions.ts`، `checklist.ts`،
+`projection.ts`، `portfolio-scenarios.ts`) نسخ مطابقة من `lib/core/calc/`.
+**ومفيش أي اختبار على نسخ الويب** — مفيش `test` script في `site/package.json`
+ولا ملف اختبار واحد في `site/`. الحارس الوحيد هو اختبارات Dart المقابلة
+(`risk_score_test.dart`، `daily_decisions_test.dart`،
+`journal_analytics_test.dart`، `goal_projection_test.dart`،
+`portfolio_scenarios_test.dart`). يعني لو غيّرت معادلة في Dart، الاختبارات
+هتمسكها هناك بس، ونسخة الويب هتفضل غلط بصمت لحد ما حد يبص عليها بعينه.
+**غيّرها في الاتنين في نفس الكوميت.**
+
+**استثناء واحد معروف في `portfolio-scenarios.ts`:** نسبتَي الهدف والاستوب
+الافتراضيتين (`5%` و`2%`) **متحطوطين في الكود** على الويب، بينما التطبيق بيقراهم
+من `Settings` والمستخدم يقدر يغيّرهم. السبب إن `users/{uid}/settings/risk` فيه
+رأس المال وسقف المخاطرة وعتبة الانتظار وبس — مفيش قيمة متزامنة تتقرا. يعني
+الاتنين بيتفقوا مع أي حد ما غيّرش الافتراضيات، وبيختلفوا مع اللي غيّرها. الحل
+الدائم هو ضم الحقلين للمستند ده.
 
 ### ٦. تلات أنواع مختلفة — متخلطهمش تاني
 

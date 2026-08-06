@@ -108,3 +108,20 @@ export function parseNumber(input: string): number | null {
   const value = Number(normalised);
   return Number.isFinite(value) ? value : null;
 }
+
+/**
+ * Rounds a price to the piastre.
+ *
+ * Mirror of `roundToPiastre` in lib/core/calc/risk_math.dart, added when
+ * portfolio scenarios came to the web — its target and stop fallbacks round the
+ * derived price, and a browser that skipped the rounding would disagree with
+ * the phone in the second decimal on every trade lacking an explicit target.
+ *
+ * Null rather than NaN for a non-finite input, so a caller has to decide what
+ * "no answer" looks like instead of rendering one.
+ */
+export function roundToPiastre(value: number): number | null {
+  if (!Number.isFinite(value)) return null;
+  const rounded = Math.round(value * 100) / 100;
+  return Number.isFinite(rounded) ? rounded : null;
+}
