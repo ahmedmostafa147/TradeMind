@@ -20,13 +20,23 @@ const plans: Record<
   },
 };
 
+/**
+ * WHAT PRO OPENS — and nothing here may be something the free plan also lists.
+ *
+ * «نسخة سحابية متزامنة» used to be on this list and is now on the free one.
+ * Sign-in is mandatory and the cloud copy is HOW the journal works: the app and
+ * the site are the same account, so a free user whose trades stopped syncing
+ * would not have a limited product, they would have a broken one. It is a
+ * property of the architecture, not a tier.
+ *
+ * The risk and goal calculators came off this list for a duller reason: they
+ * were in both columns at once, which reads as either a mistake or a switch.
+ */
 const proFeatures = [
-  "أسعار لحظية متجددة لأسهم البورصة المصرية",
-  "تتبّع سيولة صانع السوق (مؤسسات وأفراد)",
-  "حاسبة إدارة المخاطرة وحاسبة الأهداف المالية",
-  "تحليل وتتبع صفقاتك وتحديد نقاط الخروج والدخول",
-  "قراءة التوصيات بالذكاء الاصطناعي (AI OCR)",
-  "نسخة سحابية متزامنة على الهاتف والمستعرض",
+  "أسعار الإغلاق اليومية للمراكز المفتوحة",
+  "تتبّع تدفّقات المستثمرين (مؤسسات وأفراد · مصريين وعرب وأجانب)",
+  "تحليل أداء صفقاتك: التوقّع الرياضي ومعامل الربح ومتوسط R",
+  "قراءة التوصيات من صورة بالذكاء الاصطناعي (AI OCR)",
 ];
 
 export function Pricing() {
@@ -41,7 +51,7 @@ export function Pricing() {
         <SectionHeader
           eyebrow="الاشتراكات والأسعار"
           title="ابدأ بتجربة مجانية 14 يوماً شاملة لكل المميزات"
-          lead="احصل على وصول كامل لكافة الأدوات والأسعار اللحظية وسيولة صانع السوق مجاناً لمدة 14 يوماً عند التسجيل، اختر الباقة المناسبة لك لاحقاً."
+          lead="احصل على وصول كامل لكافة الأدوات وأسعار الإغلاق وتدفّقات المستثمرين مجاناً لمدة 14 يوماً عند التسجيل، اختر الباقة المناسبة لك لاحقاً."
         />
 
         {/* Duration Toggle */}
@@ -117,6 +127,10 @@ export function Pricing() {
                   <CheckIcon className="size-4 text-fg" /> تسجيل ومتابعة الصفقات
                   الأساسية
                 </li>
+                <li className="flex items-center gap-2">
+                  <CheckIcon className="size-4 text-fg" /> نسخة سحابية متزامنة
+                  على الهاتف والمستعرض
+                </li>
               </ul>
             </div>
             <Link
@@ -145,7 +159,7 @@ export function Pricing() {
               </div>
               <h3 className="mt-4 text-xl font-bold">باقة رادار الاحترافية</h3>
               <p className="mt-1 text-xs opacity-80">
-                وصول كامل لجميع الأدوات والأسعار اللحظية
+                وصول كامل لجميع الأدوات وأسعار الإغلاق
               </p>
               <div className="mt-5 flex items-baseline gap-1">
                 <span className="num text-5xl font-extrabold">

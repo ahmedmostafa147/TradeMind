@@ -252,6 +252,7 @@ function UsersPanel() {
   const [rows, setRows] = useState<UserRow[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [busyUid, setBusyUid] = useState<string | null>(null);
+  const [activating, setActivating] = useState<UserRow | null>(null);
 
   /**
    * Activates or ends a subscription by hand.
@@ -263,31 +264,53 @@ function UsersPanel() {
    * document, so the manual path and the eventual automated one land in exactly
    * the same place through exactly the same check.
    */
-  async function setPlan(row: UserRow, plan: 'pro' | 'free', months: number) {
-    const label =
-      plan === 'pro'
-        ? `تفعّل Radar Pro لـ${row.email} لمدة ${months} شهر؟`
-        : `توقف اشتراك ${row.email}؟`;
-    if (!window.confirm(label)) return;
-
+  /**
+   * Activates or ends a subscription by hand, and RECORDS WHAT WAS PAID.
+   *
+   * This is the whole payment system right now, and deliberately so: no gateway
+   * is wired up, and on Android a digital subscription has to go through Play
+   * Billing rather than a card form of ours. The user asks by email, pays
+   * however was agreed, and this flips the plan.
+   *
+   * The note is not decoration. A manual process with no record of the amount,
+   * the method or the reference is one that cannot answer «أنا دفعت» three
+   * months later — and the rules already reserve a 500-character field for
+   * exactly this.
+   */
+  async function activate(row: UserRow, input: ActivationInput) {
     setBusyUid(row.uid);
     try {
       const until = new Date();
-      until.setMonth(until.getMonth() + months);
+      until.setMonth(until.getMonth() + input.months);
+
+      const stamp = new Date().toISOString().slice(0, 10);
+      const note =
+        input.months === 0
+          ? `أُوقف يدويًا · ${stamp}`
+          : [
+              `${input.months} شهر`,
+              input.amount > 0 ? `${input.amount} ج.م` : null,
+              input.method,
+              input.reference.trim() === '' ? null : input.reference.trim(),
+              stamp,
+            ]
+              .filter((part) => part !== null)
+              .join(' · ')
+              .slice(0, 500);
+
       await setDoc(
         doc(firestore(), 'users', row.uid, 'billing', 'subscription'),
         {
-          plan,
+          plan: input.months === 0 ? 'free' : 'pro',
           // The trial's start is immutable and the rules enforce it, so it has
-          // to go back exactly as it came. A user who never started one has no
-          // document — and no document means there is nothing to update, which
-          // is why this refuses rather than creating one.
+          // to go back exactly as it came.
           trialStartedAt: row.subscription?.trialStartedAt ?? null,
-          ...(plan === 'pro' ? { proUntil: until } : {}),
-          note: plan === 'pro' ? `فُعّل يدويًا · ${months} شهر` : 'أُوقف يدويًا',
+          ...(input.months === 0 ? {} : { proUntil: until }),
+          note,
         },
         { merge: false }
       );
+
       setRows(
         (current) =>
           current?.map((r) =>
@@ -295,15 +318,16 @@ function UsersPanel() {
               ? {
                   ...r,
                   subscription: {
-                    plan,
+                    plan: input.months === 0 ? 'free' : 'pro',
                     trialStartedAt: r.subscription?.trialStartedAt ?? null,
-                    proUntil: plan === 'pro' ? until : null,
-                    note: null,
+                    proUntil: input.months === 0 ? null : until,
+                    note,
                   },
                 }
               : r
           ) ?? null
       );
+      setActivating(null);
     } catch {
       window.alert(
         'مقدرش يحفظ. لو المستخدم ده لسه ما فتحش رادار ولا مرة، مفيش مستند اشتراك يتعدّل.'
@@ -446,27 +470,14 @@ function UsersPanel() {
                     <PlanBadge subscription={row.subscription} />
                   </Td>
                   <Td>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[1, 6, 12].map((months) => (
-                        <button
-                          key={months}
-                          type="button"
-                          disabled={busyUid === row.uid}
-                          onClick={() => void setPlan(row, 'pro', months)}
-                          className="num rounded border border-border-strong px-2 py-1 text-xs font-semibold transition-colors hover:bg-surface-high disabled:opacity-40"
-                        >
-                          +{months}ش
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        disabled={busyUid === row.uid}
-                        onClick={() => void setPlan(row, 'free', 0)}
-                        className="rounded border border-loss-border px-2 py-1 text-xs font-semibold text-loss transition-colors hover:bg-loss-surface disabled:opacity-40"
-                      >
-                        أوقف
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      disabled={busyUid === row.uid}
+                      onClick={() => setActivating(row)}
+                      className="rounded border border-border-strong px-3 py-1 text-xs font-semibold transition-colors hover:bg-surface-high disabled:opacity-40"
+                    >
+                      فعّل
+                    </button>
                   </Td>
                 </tr>
               ))}
@@ -474,7 +485,172 @@ function UsersPanel() {
           </table>
         </div>
       )}
+
+      {activating !== null && (
+        <ActivationDialog
+          row={activating}
+          busy={busyUid === activating.uid}
+          onCancel={() => setActivating(null)}
+          onConfirm={(input) => void activate(activating, input)}
+        />
+      )}
     </>
+  );
+}
+
+type ActivationInput = {
+  months: number;
+  amount: number;
+  method: string;
+  reference: string;
+};
+
+/** The published prices, so the amount field starts at the right number. */
+const PERIOD_OPTIONS = [
+  { months: 1, amount: 99, label: 'شهر' },
+  { months: 6, amount: 499, label: '6 شهور' },
+  { months: 12, amount: 799, label: 'سنة' },
+];
+
+const METHODS = ['إنستاباي', 'محفظة موبايل', 'تحويل بنكي', 'كاش', 'أخرى'];
+
+function ActivationDialog({
+  row,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  row: UserRow;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: (input: ActivationInput) => void;
+}) {
+  const [months, setMonths] = useState(12);
+  const [amount, setAmount] = useState('799');
+  const [method, setMethod] = useState(METHODS[0]);
+  const [reference, setReference] = useState('');
+
+  const until = new Date();
+  until.setMonth(until.getMonth() + months);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-5"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-border-default bg-surface p-4 shadow-2xl sm:rounded-2xl sm:p-5"
+      >
+        <h2 className="text-lg font-bold">تفعيل اشتراك</h2>
+        <p className="num mt-1 text-xs text-fg-muted" dir="ltr">
+          {row.email}
+        </p>
+
+        <fieldset className="mt-4">
+          <legend className="text-xs font-semibold text-fg-muted">المدة</legend>
+          <div className="mt-2 flex gap-2">
+            {PERIOD_OPTIONS.map((option) => (
+              <button
+                key={option.months}
+                type="button"
+                onClick={() => {
+                  setMonths(option.months);
+                  setAmount(String(option.amount));
+                }}
+                className={`flex-1 rounded-md border px-3 py-2 text-sm font-semibold transition-colors ${
+                  months === option.months
+                    ? 'border-brand-ink bg-surface-high'
+                    : 'border-border-default hover:bg-surface-high'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        <label className="mt-4 block text-xs font-semibold text-fg-muted">
+          المبلغ المدفوع (ج.م)
+          <input
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            inputMode="decimal"
+            dir="ltr"
+            className="num mt-1.5 w-full rounded-md border border-border-default bg-surface-low px-3 py-2 text-sm outline-none focus:border-brand-ink"
+          />
+        </label>
+
+        <label className="mt-3 block text-xs font-semibold text-fg-muted">
+          طريقة الدفع
+          <select
+            value={method}
+            onChange={(e) => setMethod(e.target.value)}
+            className="mt-1.5 w-full rounded-md border border-border-default bg-surface-low px-3 py-2 text-sm outline-none focus:border-brand-ink"
+          >
+            {METHODS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="mt-3 block text-xs font-semibold text-fg-muted">
+          مرجع التحويل (اختياري)
+          <input
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
+            dir="ltr"
+            placeholder="رقم العملية"
+            className="num mt-1.5 w-full rounded-md border border-border-default bg-surface-low px-3 py-2 text-sm outline-none focus:border-brand-ink"
+          />
+        </label>
+
+        <p className="mt-4 rounded-md bg-surface-low px-3 py-2 text-xs text-fg-muted">
+          هيشتغل لحد{' '}
+          <span className="num font-bold text-fg">{fmtDate(until)}</span>
+        </p>
+
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-md border border-border-default px-4 py-2 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
+          >
+            رجوع
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              onConfirm({ months: 0, amount: 0, method: '', reference: '' })
+            }
+            className="rounded-md border border-loss-border px-4 py-2 text-sm font-semibold text-loss transition-colors hover:bg-loss-surface disabled:opacity-40"
+          >
+            أوقف الاشتراك
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              onConfirm({
+                months,
+                amount: Number(amount.replace(/,/g, '')) || 0,
+                method,
+                reference,
+              })
+            }
+            className="rounded-md bg-brand px-5 py-2 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:opacity-40"
+          >
+            {busy ? 'بيتحفظ…' : 'فعّل'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

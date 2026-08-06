@@ -71,8 +71,9 @@ class Paywall extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'الاشتراك لسه مش متاح من التطبيق. كلّمنا وهنفعّله على حسابك، '
-                  'وهيتفتح هنا وعلى الموقع على طول.',
+                  'الاشتراك بيتم يدوي دلوقتي: ابعتلنا من الموقع أو على بريد '
+                  'التواصل، وأول ما تدفع بنفعّله على حسابك — وهيتفتح هنا وعلى '
+                  'الموقع بنفس الحساب على طول.',
                   style: theme.textTheme.bodySmall,
                   textAlign: TextAlign.center,
                 ),

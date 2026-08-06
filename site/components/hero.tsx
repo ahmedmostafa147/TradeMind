@@ -40,14 +40,14 @@ const closes = [
   82.1, 83.6, 85.0, 84.4, 86.2,
 ];
 
-const promises = ['أسعار لحظية لأسهم البورصة', 'تجربة مجانية 14 يومًا', 'بياناتك محفوظة لك'];
+const promises = ['تدفّقات المستثمرين كل جلسة', 'تجربة مجانية 14 يومًا', 'بياناتك محفوظة لك'];
 
 export function Hero() {
   return (
     <section className="border-b border-border-default">
       <div className="mx-auto max-w-3xl px-5 pt-16 text-center lg:pt-24">
         <p className="text-sm font-semibold text-brand-ink">
-          البورصة المصرية · أسعار لحظية
+          البورصة المصرية · تدفّقات المستثمرين
         </p>
 
         <h1 className="mt-5 text-4xl font-bold tracking-normal leading-relaxed sm:text-5xl sm:leading-snug lg:text-6xl lg:leading-snug">
@@ -55,7 +55,7 @@ export function Hero() {
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-lg text-fg-muted">
-          متابعة لحظية لأسعار الأسهم وتتبّع دقيق لسيولة صانع السوق (مؤسسات وأفراد)، 
+          متابعة أسعار الإغلاق وتتبّع تدفّقات المستثمرين (مؤسسات وأفراد · مصريين وعرب وأجانب)، 
           مع حاسبة إدارة المخاطرة وتخطيط الأهداف المالية لصفقاتك.
         </p>
 

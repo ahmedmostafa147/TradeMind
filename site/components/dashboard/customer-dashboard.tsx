@@ -28,6 +28,7 @@ import {
   PlanCard,
   TrialBanner,
 } from '@/components/dashboard/paywall';
+import { SubscribeDialog } from '@/components/dashboard/subscribe-dialog';
 import { MarketFlowsPanel } from '@/components/dashboard/market-flows-panel';
 import {
   ADD_TRADE_LABEL,
@@ -166,6 +167,9 @@ function Journal() {
 
   /** «تحليل توصيات بالـ AI» — the app's sparkle action, in the app's place. */
   const [aiSheet, setAiSheet] = useState(false);
+
+  /** «اطلب الاشتراك» — the manual purchase path, opened from every gate. */
+  const [subscribing, setSubscribing] = useState(false);
 
   /**
    * LIVE, not a one-shot read.
@@ -612,6 +616,7 @@ function Journal() {
                       title="الأداء"
                       what="صافي الربح ونسبة النجاح والتوقّع الرياضي ومنحنى رأس المال وسيناريوهات المحفظة — محسوبة من صفقاتك المقفولة."
                       entitlement={entitlement}
+                      onSubscribe={() => setSubscribing(true)}
                     />
                   ) : hasTrades && stats ? (
                     <Overview
@@ -629,6 +634,7 @@ function Journal() {
                       title="التحليلات"
                       what="معامل الربح ومتوسط R وسلاسل الربح والخسارة ومتوسط مدة الاحتفاظ وأكتر سهم بتتداوله."
                       entitlement={entitlement}
+                      onSubscribe={() => setSubscribing(true)}
                     />
                   ) : hasTrades && stats ? (
                     <AnalyticsTab stats={stats} avgDiscipline={avgDiscipline} />
@@ -716,6 +722,7 @@ function Journal() {
                   title="السوق"
                   what="مين اشترى ومين باع في كل جلسة — مؤسسات ولا أفراد، مصريين ولا عرب ولا أجانب، وصافي كل فئة."
                   entitlement={entitlement}
+                  onSubscribe={() => setSubscribing(true)}
                 />
               )}
             </div>
@@ -734,6 +741,7 @@ function Journal() {
           {section === 'settings' && (
             <div className="mt-4">
               <SettingsSection
+                onSubscribe={() => setSubscribing(true)}
                 entitlement={entitlement}
                 subscription={subscription}
                 settings={settings}
@@ -798,6 +806,14 @@ function Journal() {
         </ul>
       </nav>
 
+      {subscribing && user && (
+        <SubscribeDialog
+          email={user.email}
+          uid={user.uid}
+          onClose={() => setSubscribing(false)}
+        />
+      )}
+
       {aiSheet && (
         <AiTradeSheet
           key={`${settings.capital}-${settings.maxRiskPercent}`}
@@ -847,6 +863,7 @@ function Journal() {
  * made the old browser-only version misleading.
  */
 function SettingsSection({
+  onSubscribe,
   entitlement,
   subscription,
   settings,
@@ -856,6 +873,7 @@ function SettingsSection({
   isAdmin,
   onLogout,
 }: {
+  onSubscribe: () => void;
   entitlement: Entitlement;
   subscription: ReturnType<typeof useSubscription>['subscription'];
   settings: ReturnType<typeof useAccountSettings>['settings'];
@@ -877,6 +895,7 @@ function SettingsSection({
         entitlement={entitlement}
         trialStartedAt={subscription?.trialStartedAt ?? null}
         proUntil={subscription?.proUntil ?? null}
+        onSubscribe={onSubscribe}
       />
 
       <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">

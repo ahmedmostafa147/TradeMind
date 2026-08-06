@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 
-import { CheckIcon } from '@/components/icons';
 import { dateLabel } from '@/lib/format';
 import {
   PLAN_PRICES,
@@ -22,11 +21,13 @@ export function Paywall({
   title,
   what,
   entitlement,
+  onSubscribe,
 }: {
   title: string;
   /** One line on what this particular surface does. */
   what: string;
   entitlement: Entitlement;
+  onSubscribe: () => void;
 }) {
   return (
     <section className="rounded-lg border border-border-default bg-surface p-6 text-center sm:p-8">
@@ -48,12 +49,13 @@ export function Paywall({
         )}
       </p>
 
-      <Link
-        href="/#pricing"
+      <button
+        type="button"
+        onClick={onSubscribe}
         className="mt-6 inline-block rounded-md bg-brand px-6 py-3 text-sm font-bold text-on-brand transition-opacity hover:opacity-90"
       >
-        شوف الباقات
-      </Link>
+        اشترك
+      </button>
 
       <p className="num mt-3 text-xs text-fg-subtle">
         من {PLAN_PRICES.monthly.price} ج.م شهريًا
@@ -138,10 +140,12 @@ export function PlanCard({
   entitlement,
   trialStartedAt,
   proUntil,
+  onSubscribe,
 }: {
   entitlement: Entitlement;
   trialStartedAt: Date | null;
   proUntil: Date | null;
+  onSubscribe: () => void;
 }) {
   const endsAt =
     trialStartedAt === null
@@ -194,24 +198,21 @@ export function PlanCard({
         )}
       </p>
 
-      {!entitlement.hasFullAccess && (
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onSubscribe}
+          className="rounded-md bg-brand px-5 py-2 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90"
+        >
+          {entitlement.plan === 'pro' ? 'جدّد الاشتراك' : 'اشترك'}
+        </button>
         <Link
           href="/#pricing"
-          className="mt-4 inline-block rounded-md bg-brand px-5 py-2 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90"
+          className="rounded-md border border-border-default px-4 py-2 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
         >
           شوف الباقات
         </Link>
-      )}
-
-      {/* Said plainly rather than discovered at a checkout that does not exist
-          yet. Nothing here can take money, and pretending otherwise would be
-          the one thing a pricing page must never do. */}
-      <ul className="mt-4 space-y-1.5 border-t border-border-default pt-4 text-xs text-fg-subtle">
-        <li className="flex items-start gap-2">
-          <CheckIcon className="mt-0.5 size-3.5 shrink-0" />
-          الدفع لسه مش متاح أونلاين. لو عايز تشترك، كلّمنا وهنفعّلها على حسابك.
-        </li>
-      </ul>
+      </div>
     </section>
   );
 }
