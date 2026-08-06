@@ -93,7 +93,7 @@ export const site = {
    *  and both documents stopped saying «التطبيق» when they meant Radar — a
    *  reader on the website was being governed by terms that named something
    *  else. Widened, never narrowed. */
-  legalUpdatedAt: '5 أغسطس 2026',
+  legalUpdatedAt: '6 أغسطس 2026',
 } as const;
 
 /**

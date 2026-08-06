@@ -18,9 +18,11 @@ import {
   PlusIcon,
   ReceiptIcon,
   SettingsIcon,
+  SparkIcon,
 } from '@/components/icons';
 import { EquityChart, MonthlyBars } from '@/components/dashboard/charts';
 import { GoalPanel } from '@/components/dashboard/goal-panel';
+import { AiTradeSheet } from '@/components/dashboard/ai-trade-sheet';
 import { MarketFlowsPanel } from '@/components/dashboard/market-flows-panel';
 import {
   ADD_TRADE_LABEL,
@@ -49,6 +51,7 @@ import {
   portfolioScenarios,
   type PortfolioScenarios,
 } from '@/lib/portfolio-scenarios';
+import { readGeminiKey, writeGeminiKey } from '@/lib/gemini-key';
 import { exceedsRiskLimit, parseNumber } from '@/lib/risk-math';
 import {
   averageRiskScore,
@@ -152,6 +155,9 @@ function Journal() {
    * typed, so choosing the fast path never costs anything.
    */
   const [quickAdd, setQuickAdd] = useState(false);
+
+  /** «تحليل توصيات بالـ AI» — the app's sparkle action, in the app's place. */
+  const [aiSheet, setAiSheet] = useState(false);
 
   /**
    * LIVE, not a one-shot read.
@@ -267,6 +273,28 @@ function Journal() {
         { ...encodeTrade(trade), updatedAt: serverTimestamp() },
         { merge: true }
       );
+    } catch {
+      setFailed(true);
+    }
+  }
+
+  /**
+   * Writes several trades at once, for the AI reader.
+   *
+   * Sequential rather than Promise.all: a batch of ten is not worth the burst,
+   * and a rejection in the middle of an all-settled would be swallowed while
+   * the caller reported success.
+   */
+  async function saveTrades(batch: Trade[]) {
+    if (!user) return;
+    try {
+      for (const trade of batch) {
+        await setDoc(
+          doc(firestore(), 'users', user.uid, 'trades', trade.id),
+          { ...encodeTrade(trade), updatedAt: serverTimestamp() },
+          { merge: true }
+        );
+      }
     } catch {
       setFailed(true);
     }
@@ -491,9 +519,13 @@ function Journal() {
                   seven labels wrapped onto three rows of pills is most of a
                   phone's first screen spent on navigation. The underline marks
                   the current view the way the app's indicator does. */}
+              {/* The sparkle action sits beside the tab strip, which is where
+                  the app's hub AppBar puts it — reachable from every view of
+                  the journal and belonging to none of them. */}
+              <div className="mt-3 flex items-end gap-2 border-b border-border-default sm:mt-4">
               <nav
                 aria-label="أقسام الدفتر"
-                className="-mx-4 mt-3 overflow-x-auto border-b border-border-default px-4 sm:mx-0 sm:mt-4 sm:px-0"
+                className="-mx-4 flex-1 overflow-x-auto px-4 sm:mx-0 sm:px-0"
               >
                 <ul className="flex w-max gap-1">
                   {tabs.map((item) => (
@@ -521,6 +553,17 @@ function Journal() {
                   ))}
                 </ul>
               </nav>
+
+              <button
+                type="button"
+                onClick={() => setAiSheet(true)}
+                title="تحليل توصيات بالـ AI"
+                aria-label="تحليل توصيات بالـ AI"
+                className="mb-1 shrink-0 rounded-md p-2 text-brand-ink transition-colors hover:bg-surface-high"
+              >
+                <SparkIcon className="size-5" />
+              </button>
+              </div>
 
               <div className="mt-4">
                 {tab === 'today' && (
@@ -705,6 +748,20 @@ function Journal() {
         </ul>
       </nav>
 
+      {aiSheet && (
+        <AiTradeSheet
+          key={`${settings.capital}-${settings.maxRiskPercent}`}
+          capital={settings.capital}
+          maxRiskPercent={settings.maxRiskPercent}
+          onClose={() => setAiSheet(false)}
+          onSave={async (batch) => {
+            await saveTrades(batch);
+            setAiSheet(false);
+            setTab('planning');
+          }}
+        />
+      )}
+
       {quickAdd && (
         <QuickAddSheet
           // Keyed on the account values for the same reason the form and the
@@ -851,6 +908,8 @@ function SettingsSection({
       )}
       </section>
 
+      <GeminiKeyPanel />
+
       {/* The account itself — where the app keeps it, and where it stops
           costing the journal a header row on every screen. */}
       <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
@@ -880,6 +939,81 @@ function SettingsSection({
         </div>
       </section>
     </div>
+  );
+}
+
+/**
+ * The user's own Gemini key, for the AI reader.
+ *
+ * Mirrors the app's Settings field, with one difference the copy states
+ * outright: this copy lives in THIS BROWSER and does not sync. A live
+ * third-party credential that bills the user is the one thing worth keeping out
+ * of Firestore even though the rules would only let its owner read it — see
+ * lib/gemini-key.ts.
+ */
+function GeminiKeyPanel() {
+  const [key, setKey] = useState('');
+  const [saved, setSaved] = useState(false);
+  const [reveal, setReveal] = useState(false);
+
+  // Read once on mount: localStorage does not exist during the server render.
+  useEffect(() => setKey(readGeminiKey()), []);
+
+  return (
+    <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
+      <h2 className="font-bold">مفتاح Gemini</h2>
+      <p className="mt-1 text-xs leading-relaxed text-fg-muted">
+        بيشغّل «تحليل توصيات بالـ AI». اعمل واحد مجانًا من{' '}
+        <a
+          href="https://aistudio.google.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-brand-ink underline-offset-4 hover:underline"
+        >
+          Google AI Studio
+        </a>
+        .
+      </p>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <input
+          type={reveal ? 'text' : 'password'}
+          value={key}
+          onChange={(e) => {
+            setKey(e.target.value);
+            setSaved(false);
+          }}
+          dir="ltr"
+          placeholder="AIza…"
+          autoComplete="off"
+          className="num min-w-0 flex-1 rounded-md border border-border-default bg-surface-low px-3 py-2 text-sm outline-none focus:border-brand-ink"
+        />
+        <button
+          type="button"
+          onClick={() => setReveal((v) => !v)}
+          className="rounded-md border border-border-default px-3 py-2 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
+        >
+          {reveal ? 'إخفاء' : 'إظهار'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            writeGeminiKey(key);
+            setSaved(true);
+          }}
+          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90"
+        >
+          {saved ? 'اتحفظ' : 'احفظ'}
+        </button>
+      </div>
+
+      <p className="mt-2 text-xs leading-relaxed text-fg-subtle">
+        بيتخزّن على <strong>المتصفح ده بس</strong> — مش على حسابك ومش بيتزامن مع
+        التطبيق، فلو فتحت من جهاز تاني هتحتاج تحطّه تاني. ده مقصود: المفتاح
+        بيتحاسب عليه انت، وأأمن حاجة إنه ما يخرجش من الجهاز اللي اتكتب عليه.
+        الطلب بيروح من متصفحك لـGoogle على طول، ومبيعدّيش علينا.
+      </p>
+    </section>
   );
 }
 
