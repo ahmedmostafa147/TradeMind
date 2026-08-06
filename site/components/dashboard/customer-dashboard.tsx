@@ -4,12 +4,12 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDocs,
+  onSnapshot,
   serverTimestamp,
   setDoc,
 } from 'firebase/firestore';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { CalculatorWidget } from '@/components/calculator-widget';
 import {
@@ -153,45 +153,83 @@ function Journal() {
    */
   const [quickAdd, setQuickAdd] = useState(false);
 
-  const load = useCallback(async () => {
+  /**
+   * LIVE, not a one-shot read.
+   *
+   * This used to be a single `getDocs` on mount, which made the browser a
+   * snapshot of whatever the account held the moment the page loaded. A trade
+   * added on the phone reached Firestore three seconds later and then sat there
+   * until somebody pressed refresh — so «مش متزامنة» was the honest description
+   * of it, even though both surfaces were signed into the same account and
+   * writing to the same collection.
+   *
+   * `onSnapshot` also removes the reload after every local write: Firestore
+   * echoes the change back through this listener, and it does it optimistically
+   * before the server round-trip, so saving feels immediate and an edit made in
+   * another tab lands here without being asked for.
+   */
+  useEffect(() => {
     if (!user) return;
-    try {
-      const [tradeSnap, watchSnap] = await Promise.all([
-        getDocs(collection(firestore(), 'users', user.uid, 'trades')),
-        getDocs(collection(firestore(), 'users', user.uid, 'watchlist')),
-      ]);
-      // One malformed document must not empty the whole journal, so decoding
-      // is per-record and a failure drops just that record — the same rule the
-      // app's own restore path follows.
-      const decodedTrades = tradeSnap.docs
-        .map((d) => decodeTrade(d.data()))
-        .filter((t): t is Trade => t !== null)
-        .sort((a, b) => b.entryDate.getTime() - a.entryDate.getTime());
-      const decodedWatch = watchSnap.docs
-        .map((d) => decodeWatchlistItem(d.data()))
-        .filter((w): w is WatchlistItem => w !== null);
 
-      setTrades(decodedTrades);
-      setWatchlist(decodedWatch);
+    const db = firestore();
+    let latestTrades: Trade[] | null = null;
+    let latestWatch: WatchlistItem[] | null = null;
+    let lastCounts = '';
 
-      // Recomputed from the full collections on every load, so the admin's
-      // counters self-correct even for trades that were added on the phone —
-      // which is what finally makes that column show a number instead of «—».
-      // Not awaited: it is telemetry for the operator, not the user's request.
+    /**
+     * Recomputed from the full collections, so the admin's counters
+     * self-correct even for trades added on the phone. Guarded on the values
+     * actually changing: the listener fires on every write, and this is
+     * telemetry for the operator, not the user's request.
+     */
+    function pushCounts() {
+      if (!user || latestTrades === null || latestWatch === null) return;
+      const key = `${latestTrades.length}:${latestWatch.length}`;
+      if (key === lastCounts) return;
+      lastCounts = key;
       void updateCounts(
         user.uid,
         user,
-        decodedTrades.length,
-        decodedWatch.length
+        latestTrades.length,
+        latestWatch.length
       );
-    } catch {
-      setFailed(true);
     }
+
+    const stopTrades = onSnapshot(
+      collection(db, 'users', user.uid, 'trades'),
+      (snap) => {
+        // One malformed document must not empty the whole journal, so decoding
+        // is per-record and a failure drops just that record — the same rule
+        // the app's own restore path follows.
+        latestTrades = snap.docs
+          .map((d) => decodeTrade(d.data()))
+          .filter((t): t is Trade => t !== null)
+          .sort((a, b) => b.entryDate.getTime() - a.entryDate.getTime());
+        setTrades(latestTrades);
+        setFailed(false);
+        pushCounts();
+      },
+      () => setFailed(true)
+    );
+
+    const stopWatch = onSnapshot(
+      collection(db, 'users', user.uid, 'watchlist'),
+      (snap) => {
+        latestWatch = snap.docs
+          .map((d) => decodeWatchlistItem(d.data()))
+          .filter((w): w is WatchlistItem => w !== null);
+        setWatchlist(latestWatch);
+        pushCounts();
+      },
+      () => setFailed(true)
+    );
+
+    return () => {
+      stopTrades();
+      stopWatch();
+    };
   }, [user]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   /**
    * Registers the account, once per session.
@@ -220,7 +258,6 @@ function Journal() {
       { ...encodeTrade(draft), updatedAt: serverTimestamp() },
       { merge: true }
     );
-    await load();
     setView({ kind: 'list' });
   }
 
@@ -231,7 +268,6 @@ function Journal() {
       { ...encodeWatchlistItem(item), updatedAt: serverTimestamp() },
       { merge: true }
     );
-    await load();
   }
 
   async function removeDoc(
@@ -245,7 +281,6 @@ function Journal() {
     setBusyId(id);
     try {
       await deleteDoc(doc(firestore(), 'users', user.uid, kind, id));
-      await load();
     } catch {
       setFailed(true);
     } finally {
