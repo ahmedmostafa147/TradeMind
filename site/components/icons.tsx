@@ -316,6 +316,72 @@ export function CheckCircleIcon({ className }: IconProps) {
   );
 }
 
+/* The goal planner's set. The presets shipped as emoji — 🎓 🚗 🌴 🏠 — which
+   this file exists to keep off the page: they render as a different picture on
+   every platform and cannot take `currentColor`, so a selected chip kept its
+   colour while its label inverted. */
+
+export function TargetIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="4.5" />
+      <circle cx="12" cy="12" r="1" />
+    </svg>
+  );
+}
+
+export function WalletIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <path d="M3.5 7.5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1" />
+      <rect x="3.5" y="7.5" width="17" height="12" rx="2.5" />
+      <path d="M20.5 11.5h-3.2a2.25 2.25 0 0 0 0 4.5h3.2" />
+    </svg>
+  );
+}
+
+export function GraduationIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <path d="M12 4 2.5 8.5 12 13l9.5-4.5L12 4Z" />
+      <path d="M6.5 10.8v4.9c0 1.5 2.5 2.8 5.5 2.8s5.5-1.3 5.5-2.8v-4.9" />
+      <path d="M21.5 8.5v5" />
+    </svg>
+  );
+}
+
+export function CarIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <path d="M4 12.5 5.7 7.8A2 2 0 0 1 7.6 6.5h8.8a2 2 0 0 1 1.9 1.3L20 12.5" />
+      <path d="M3 12.5h18v4.2a1 1 0 0 1-1 1h-1.5v-1.5h-11v1.5H4a1 1 0 0 1-1-1v-4.2Z" />
+      <path d="M6.5 15h.01M17.5 15h.01" />
+    </svg>
+  );
+}
+
+export function PalmIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <path d="M12 8.5v12" />
+      <path d="M12 8.5C9.6 6.9 6.6 7.3 5 9.4M12 8.5c2.4-1.6 5.4-1.2 7 .9" />
+      <path d="M12 8.5C11 5.9 8.6 4.2 6 4.4M12 8.5c1-2.6 3.4-4.3 6-4.1" />
+      <path d="M8.5 20.5h7" />
+    </svg>
+  );
+}
+
+export function HomeIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <path d="M3.5 10.5 12 3.5l8.5 7" />
+      <path d="M5.5 9.2v10.3a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9.2" />
+      <path d="M9.8 20.5v-5.8h4.4v5.8" />
+    </svg>
+  );
+}
+
 /** A three-dot overflow, the app's PopupMenuButton. */
 export function MoreIcon({ className }: IconProps) {
   return (

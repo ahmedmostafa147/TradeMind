@@ -13,7 +13,7 @@
 | | |
 |---|---|
 | الفرع | `main` — كل الشغل اتدمج فيه، ومفيش فروع تانية |
-| الاختبارات | `flutter analyze` نضيف · `tsc` نضيف · `flutter test` **٥١٧ كلهم بينجحوا** |
+| الاختبارات | `flutter analyze` نضيف · `tsc` نضيف · `flutter test` **٥٤١ كلهم بينجحوا** |
 | النشر | **الموقع نازل** على <https://radar-one-phi.vercel.app> (مشروع Vercel `radar`) · قواعد Firestore منشورة · التطبيق لسه مانزلش على Play |
 | مشروع Firebase | `trademind-6222c` (اسم العرض Radar) — مربوط في `.firebaserc` فمش محتاج `--project`. بقى للـ Auth وFirestore بس |
 
@@ -41,7 +41,9 @@ site/                   Next.js 16 + Tailwind 4 — على Vercel، مش تصد�
   app/(app)/            /dashboard و /admin (شل بسيط، من غير الهيدر التسويقي)
   lib/                  firebase, auth-context, trade, risk-math, format, site
                         + account-settings.ts (قاعدة المخاطرة من الحساب)
-                        + projection.ts (حاسبة الهدف — مرآة goal_projection.dart)
+                        + projection.ts (توصل إمتى بالتداول — مرآة
+                          goal_projection.dart)
+                        + goal-plan.ts (تحطّ كام بالادخار — مرآة goal_plan.dart)
                         + portfolio-scenarios.ts (أحسن/أوحش حالة — مرآة
                           portfolio_scenarios.dart)
                         + sizing.ts (حجم المركز — مرآة sizing_result.dart)
@@ -178,8 +180,8 @@ npm --prefix site run theme
    صفقات التطبيق شايفها متابَعة.)
 
 الحسابات كلها (`analytics.ts`، `risk-score.ts`، `decisions.ts`، `checklist.ts`،
-`projection.ts`، `portfolio-scenarios.ts`، `sizing.ts`) نسخ مطابقة من
-`lib/core/calc/`.
+`projection.ts`، `goal-plan.ts`، `portfolio-scenarios.ts`، `sizing.ts`) نسخ
+مطابقة من `lib/core/calc/`.
 **ومفيش أي اختبار على نسخ الويب** — مفيش `test` script في `site/package.json`
 ولا ملف اختبار واحد في `site/`. الحارس الوحيد هو اختبارات Dart المقابلة
 (`risk_score_test.dart`، `daily_decisions_test.dart`،
@@ -504,6 +506,29 @@ endpoint غير رسمي. الادعاء ده كان في ٥ أماكن واتص
 الأيقونات مولّدة بـ `npm --prefix site run icons` من `assets/logo.png`.
 **مش مربوطة بالـ build** بعكس الثيم — الشرح في `site/package.json`.
 والـ maskable ملف منفصل عن قصد؛ السبب مشروح في `site/README.md`.
+
+### ١٥. «الهدف» حاجتين مختلفتين — وممنوع تندمج
+
+تبويب «الهدف» فيه سؤالين مش سؤال:
+
+| | بيجاوب على | العائد جاي منين |
+|---|---|---|
+| **بالتداول** (`goal_projection.dart` / `projection.ts`) | «بأداء دفترك، توصل إمتى» | **متقاس** من الصفقات المقفولة — expectancy × صفقات/شهر |
+| **بالادخار** (`goal_plan.dart` / `goal-plan.ts`) | «لو العائد كذا، أحطّ كام شهريًا» | **فرضية بيكتبها المستخدم** |
+
+التانية هي حاسبة الهدف اللي في اللاندينج بيدج، وبقت مشتركة: نفس
+`GoalPlannerBody` في الصفحة الرئيسية وفي الداشبورد، ونفس الحساب في التطبيق.
+
+**الرقم المتقاس مبيتحطش في خانة الفرضية لوحده.** لما الدفتر يكون فيه edge،
+بيتعرض كـ«من دفترك: X%» بضغطة واحدة — مش كقيمة ابتدائية. حقن قياس مكان فرضية
+من غير ما تقول، هو بالظبط اللي `goal_projection` اتكتبت عشان تتجنبه.
+
+**وخانة العائد بتبدأ فاضية في كل مكان، ومفيش preset بيحطّ فيها رقم.** كانت
+`20%` افتراضية والـpresets بتاعتها بتعيد كتابتها — يعني اختيار «مستقبل الأبناء»
+كان بيدّعي ضمنًا إن البورصة بتدي ٢٠٪ في السنة. ده رقم عائد مستقبلي **مننا**،
+واللي `RELEASE.md` و`disclaimer` ماشيين بعيد عنه. الحدود مفروضة في الحساب نفسه:
+العائد `0..100` والمدة `1..50` سنة، والسالب بيتعامل كصفر (سايبه بإشارته بيطلّع
+قسط شهري **سالب** — خطة بتدفع لصاحبها).
 
 ---
 

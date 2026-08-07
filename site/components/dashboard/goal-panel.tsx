@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 
+import { GoalPlannerBody } from '@/components/goal-planner-body';
 import { money, signedMoney } from '@/lib/format';
+import { annualReturnFromMonthlyRate } from '@/lib/goal-plan';
 import {
   MIN_CLOSED_TRADES,
   monthsLabel,
@@ -12,16 +14,25 @@ import {
 import { parseNumber } from '@/lib/risk-math';
 
 /**
- * «رايح على فين» — the target, and what the journal says about reaching it.
+ * «الهدف» — two questions about the same target, kept apart on purpose.
  *
- * THE RULE THIS SCREEN IS BUILT AROUND: it never invents a return rate. Every
- * number here is derived from closed trades the user logged themselves, and
- * when those trades say the target is unreachable the screen says so plainly
- * instead of producing a large, survivable-looking month count. A projection
- * tool that always returns an encouraging answer is a slot machine with a
- * spreadsheet on it.
+ * 1. «بالتداول» — how long the JOURNAL says the target takes. It never invents
+ *    a return rate: every number comes from closed trades the user logged
+ *    themselves, and when those trades say the target is unreachable it says so
+ *    plainly rather than producing a large, survivable-looking month count. A
+ *    projection tool that always returns an encouraging answer is a slot
+ *    machine with a spreadsheet on it.
  *
- * The working is shown under the answer for the same reason the discipline
+ * 2. «بالادخار» — the landing page's planner: pick a horizon and a rate, get
+ *    the monthly deposit. The rate here IS an assumption, which is why it is
+ *    labelled as one everywhere it appears.
+ *
+ * THE TWO ARE NOT MERGED, AND MUST NOT BE. Feeding the journal's measured rate
+ * into the planner as an unmarked default would turn a measurement into a
+ * forecast — the exact move the projection was written to avoid. It is offered
+ * as one tap, with its source on the label, and the user can ignore it.
+ *
+ * The working is shown under each answer for the same reason the discipline
  * badge lists its five components: a figure a user cannot audit is a figure
  * they can only argue with.
  */
@@ -52,10 +63,19 @@ export function GoalPanel({
       ? null
       : project({ closed, capital, target, expectancy });
 
+  // Offered to the planner below, never applied silently. Null whenever the
+  // journal has no usable edge, and a house number is NOT substituted: a
+  // default that looks measured but is not is worse than an obviously
+  // arbitrary one.
+  const measuredAnnualReturn =
+    result !== null && result.kind === 'reachable'
+      ? annualReturnFromMonthlyRate(result.monthlyRate)
+      : null;
+
   return (
     <div className="space-y-5">
       <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
-        <h2 className="font-bold">الهدف</h2>
+        <h2 className="font-bold">بالتداول: هتوصل إمتى</h2>
         <p className="mt-1 text-xs text-fg-subtle">
           اكتب المبلغ اللي عايز توصله، والحساب بيتعمل على أداءك الحقيقي في الدفتر
           — مش على نسبة عائد مفترضة.
@@ -82,6 +102,21 @@ export function GoalPanel({
       </section>
 
       {result && <Answer result={result} capital={capital} />}
+
+      <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
+        <h2 className="font-bold">بالادخار: تحطّ كام كل شهر</h2>
+        <p className="mt-1 text-xs text-fg-subtle">
+          سؤال تاني خالص: مش «دفترك بيقول إيه» — ده «لو العائد طلع كذا، المطلوب
+          مني كام». نسبة العائد هنا <strong>فرضية بتكتبها انت</strong>.
+        </p>
+
+        <div className="mt-4">
+          <GoalPlannerBody
+            suggestedAnnualReturn={measuredAnnualReturn}
+            initialCapital={capital}
+          />
+        </div>
+      </section>
     </div>
   );
 }
