@@ -18,8 +18,18 @@
 class GoogleAuthConfig {
   const GoogleAuthConfig._();
 
-  /// Empty means "not configured". Fill in before shipping Google sign-in.
-  static const String serverClientId = '';
+  /// The project's web client id, copied from `android/app/google-services.json`
+  /// (the `oauth_client` entry with `client_type: 3`).
+  ///
+  /// Passed to `GoogleSignIn.initialize` explicitly rather than left blank. The
+  /// Android plugin CAN fall back to the `default_web_client_id` string the
+  /// google-services Gradle plugin generates from that same file — but a
+  /// generated resource that silently disappears (a broken merge, a flavour
+  /// without the json) fails as `MISSING_SERVER_CLIENT_ID`, which surfaces as a
+  /// sign-in that ends with no explanation. Naming it here makes the value
+  /// reviewable and the failure impossible.
+  static const String serverClientId =
+      '680175215-eaj9ea5etm3h5du0il3r7ipmcol4ltc4.apps.googleusercontent.com';
 
   static bool get isConfigured => serverClientId.isNotEmpty;
 }

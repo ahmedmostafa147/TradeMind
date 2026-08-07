@@ -108,6 +108,20 @@ class AuthException implements Exception {
     'تسجيل جوجل مش متظبط في النسخة دي. استخدم البريد وكلمة السر.',
   );
 
+  /// The app is not registered on the Firebase project for this signing key.
+  ///
+  /// Distinct from [googleMisconfigured] because the fix is somewhere else
+  /// entirely: the web client id is present and correct, but no ANDROID OAuth
+  /// client exists for this package + SHA-1, so Credential Manager opens the
+  /// picker and then has nothing it is allowed to return. The user sees an
+  /// account chooser that leads nowhere, which is why this must never be
+  /// silent.
+  static const googleNotRegistered = AuthException(
+    AuthFailure.unknown,
+    'حساب جوجل مش مربوط بالنسخة دي من التطبيق. استخدم البريد وكلمة السر '
+    'دلوقتي — أو سجّل بصمة التطبيق (SHA-1) في Firebase.',
+  );
+
   @override
   String toString() => message;
 }

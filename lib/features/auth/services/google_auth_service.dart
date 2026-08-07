@@ -61,11 +61,45 @@ class GoogleAuthService {
       final credential = GoogleAuthProvider.credential(idToken: idToken);
       return await FirebaseAuth.instance.signInWithCredential(credential);
     } on GoogleSignInException catch (e) {
+      // EVERY NON-CANCEL FAILURE USED TO BE REPORTED AS A NETWORK PROBLEM.
+      //
+      // That is the one message guaranteed to be wrong here: the flow that
+      // actually breaks on a fresh install is a CONFIGURATION one — no Android
+      // OAuth client for this package, so Credential Manager finds nothing to
+      // hand back — and telling the user to check their internet sends them to
+      // look at the only thing that was never at fault.
       throw switch (e.code) {
+        // A deliberate dismissal. Stays silent; see the caller.
         GoogleSignInExceptionCode.canceled => AuthException.cancelled,
-        _ => const AuthException(
+
+        // The SHA-1 of the signing key is not registered on the Firebase
+        // project, or the account cannot mint a token for this app. The picker
+        // opens, the user chooses, and nothing comes back.
+        GoogleSignInExceptionCode.unknownError
+            when (e.description ?? '').contains('No credential available') =>
+          AuthException.googleNotRegistered,
+
+        GoogleSignInExceptionCode.clientConfigurationError ||
+        GoogleSignInExceptionCode.providerConfigurationError =>
+          AuthException.googleMisconfigured,
+
+        // Play services missing or disabled, or no activity to draw on.
+        GoogleSignInExceptionCode.uiUnavailable => const AuthException(
+          AuthFailure.unknown,
+          'مقدرش يفتح شاشة جوجل. اتأكد إن Google Play Services متسطّبة وشغّالة.',
+        ),
+
+        GoogleSignInExceptionCode.interrupted => const AuthException(
           AuthFailure.network,
-          'تعذّر تسجيل الدخول بجوجل. اتأكد من النت وجرّب تاني.',
+          'اتقطع تسجيل الدخول بجوجل. جرّب تاني.',
+        ),
+
+        _ => AuthException(
+          AuthFailure.unknown,
+          // The SDK's own words are kept: this branch exists for the codes
+          // nobody predicted, and swallowing the description there leaves the
+          // next person with nothing to search for.
+          'تعذّر تسجيل الدخول بجوجل${_detail(e.description)}',
         ),
       };
     } on FirebaseAuthException catch (e) {
@@ -78,6 +112,17 @@ class GoogleAuthService {
         'تعذّر تسجيل الدخول بجوجل. جرّب تاني.',
       );
     }
+  }
+
+  /// A short, safe tail for an unexpected SDK message.
+  ///
+  /// Truncated because these strings can carry a stack trace, and a dialog that
+  /// grows to fill the screen is a worse failure than the one it is reporting.
+  static String _detail(String? description) {
+    final text = description?.trim() ?? '';
+    if (text.isEmpty) return '. جرّب تاني.';
+    final short = text.length > 120 ? '${text.substring(0, 120)}…' : text;
+    return ' — $short';
   }
 
   /// Clears the Google session so the next sign-in shows the account chooser.
