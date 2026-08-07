@@ -8,12 +8,14 @@ export function Field({
   suffix,
   value,
   onChange,
+  hint,
 }: {
   id: string;
   label: string;
   suffix: string;
   value: string;
   onChange: (value: string) => void;
+  hint?: string;
 }) {
   return (
     <div>
@@ -32,6 +34,9 @@ export function Field({
         />
         <span className="shrink-0 text-xs text-fg-subtle">{suffix}</span>
       </div>
+      {/* No `.num`: it sets `direction: ltr`, which throws a trailing «ج.م» to
+          the head of an Arabic line. */}
+      {hint && <p className="mt-1 text-xs text-fg-subtle">{hint}</p>}
     </div>
   );
 }

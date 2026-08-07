@@ -139,3 +139,20 @@ export function roundToPiastre(value: number): number | null {
   const rounded = Math.round(value * 100) / 100;
   return Number.isFinite(rounded) ? rounded : null;
 }
+
+/**
+ * Tolerance for reward/risk threshold comparisons.
+ *
+ * Mirror of `kRatioEpsilon`. The quality bands sit on exact ratios (1 and 2),
+ * but the ratio is computed from prices that were rounded to the piastre, so a
+ * plan entered as "4% target, 2% stop" can land a hair under 2.0 and flip the
+ * badge from "good" to "warning" for no visible reason. Same class of bug as
+ * {@link RISK_EPSILON}, same fix.
+ */
+export const RATIO_EPSILON = 1e-9;
+
+/** True when `value` is at or above `threshold`, tolerating rounding noise. */
+export function meetsRatio(value: number | null, threshold: number): boolean {
+  if (value === null || !Number.isFinite(value)) return false;
+  return value - threshold > -RATIO_EPSILON;
+}

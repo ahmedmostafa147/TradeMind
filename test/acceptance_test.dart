@@ -648,10 +648,6 @@ void main() {
       'COMI',
     );
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'سبب الدخول والتحليل الفني'),
-      'اختراق',
-    );
-    await tester.enterText(
       find.widgetWithText(TextFormField, 'سعر الدخول'),
       '10.00',
     );
@@ -662,6 +658,17 @@ void main() {
     await tester.enterText(
       find.widgetWithText(TextFormField, 'عدد الأسهم'),
       '680',
+    );
+    // Below the live preview card, so a lazy ListView has not built it yet.
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextFormField, 'سبب الدخول والتحليل الفني'),
+      200,
+      scrollable: contentScrollable,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'سبب الدخول والتحليل الفني'),
+      'اختراق',
     );
     await tester.pumpAndSettle();
 
@@ -696,10 +703,9 @@ void main() {
     await openTab(tester, 'سجل الصفقات');
     await openFullTradeForm(tester);
 
-    await tester.enterText(find.widgetWithText(TextFormField, 'رمز السهم'), 'COMI');
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'سبب الدخول والتحليل الفني'),
-      'اختراق',
+      find.widgetWithText(TextFormField, 'رمز السهم'),
+      'COMI',
     );
     await tester.enterText(
       find.widgetWithText(TextFormField, 'سعر الدخول'),
@@ -712,6 +718,17 @@ void main() {
     await tester.enterText(
       find.widgetWithText(TextFormField, 'عدد الأسهم'),
       '680',
+    );
+    // Below the live preview card, so a lazy ListView has not built it yet.
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TextFormField, 'سبب الدخول والتحليل الفني'),
+      200,
+      scrollable: contentScrollable,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'سبب الدخول والتحليل الفني'),
+      'اختراق',
     );
     await tester.pumpAndSettle();
 

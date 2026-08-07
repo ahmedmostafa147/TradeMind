@@ -1,14 +1,22 @@
-import { useMemo, useState } from "react";
-import {
-  exceedsRiskLimit,
-  maxLossPerTrade,
-  parseNumber,
-  roundToPiastre,
-  safeDiv,
-} from "@/lib/risk-math";
+import { useMemo, useState } from 'react';
 
-export type InputMode = "price" | "percent";
+import { parseNumber } from '@/lib/risk-math';
+import { computeSmartTrade } from '@/lib/smart-trade';
 
+export type InputMode = 'price' | 'percent';
+
+/**
+ * State for the calculator widget. THE ARITHMETIC IS NOT HERE.
+ *
+ * It used to be: this hook floored the share count itself, derived its own
+ * level prices and had no notion of a reward/risk verdict — a second engine
+ * living beside `smart_trade.dart` and disagreeing with it. Everything numeric
+ * now goes through {@link computeSmartTrade}, which is the mirror, so the
+ * landing page, the dashboard and the phone answer with the same number.
+ *
+ * What is left is genuinely UI state: which mode each level is in, and the raw
+ * strings the user is mid-way through typing.
+ */
 export function useCalculatorState({
   initialCapital,
   initialRisk,
@@ -19,116 +27,62 @@ export function useCalculatorState({
   blankPrices?: boolean;
 }) {
   const [capital, setCapital] = useState(
-    initialCapital != null ? String(initialCapital) : "100000",
+    initialCapital != null ? String(initialCapital) : '100000'
   );
   const [maxRisk, setMaxRisk] = useState(initialRisk ?? 0.02);
-  const [entry, setEntry] = useState(blankPrices ? "" : "78.40");
+  const [entry, setEntry] = useState(blankPrices ? '' : '78.40');
 
-  const [stopMode, setStopMode] = useState<InputMode>("price");
-  const [stopVal, setStopVal] = useState(blankPrices ? "" : "74.50");
+  const [stopMode, setStopMode] = useState<InputMode>('price');
+  const [stopVal, setStopVal] = useState(blankPrices ? '' : '74.50');
 
-  const [targetMode, setTargetMode] = useState<InputMode>("price");
-  const [targetVal, setTargetVal] = useState(blankPrices ? "" : "88.00");
+  const [targetMode, setTargetMode] = useState<InputMode>('price');
+  const [targetVal, setTargetVal] = useState(blankPrices ? '' : '88.00');
+
+  /**
+   * «المبلغ اللي هدخل بيه» — the cash going into THIS position.
+   *
+   * The app's calculator has had it since the sizing rule learned about it;
+   * the web's did not, so it kept sizing as though the whole account were
+   * behind every trade.
+   */
+  const [budget, setBudget] = useState('');
 
   const [override, setOverride] = useState<string | null>(null);
 
-  const res = useMemo(() => {
-    const c = parseNumber(capital) ?? 0;
-    const e = parseNumber(entry) ?? 0;
-    const sRaw = parseNumber(stopVal);
-    const tRaw = parseNumber(targetVal);
-
-    /** Neither half of a level exists until BOTH the entry and it are typed. */
-    const level = (raw: number | null, mode: InputMode, sign: 1 | -1) => {
-      if (raw === null || raw <= 0 || e <= 0) return null;
-      // Rounded like the app does, so the price shown back for a percentage is
-      // the same number on both surfaces — see roundToPiastre's own comment.
-      return mode === "price"
-        ? roundToPiastre(raw)
-        : roundToPiastre(e * (1 + (sign * raw) / 100));
-    };
-
-    const sPrice = level(sRaw, stopMode, -1);
-    const tPrice = level(tRaw, targetMode, 1);
-
-    // The counterpart of whatever was typed. Null unless the level is usable,
-    // so an inverted stop shows its error rather than a negative percentage.
-    const stopPct =
-      sPrice === null || sPrice >= e ? null : safeDiv(e - sPrice, e);
-    const targetPct =
-      tPrice === null || tPrice <= e ? null : safeDiv(tPrice - e, e);
-
-    const empty = {
-      suggested: null,
-      qty: null,
-      riskEgp: null,
-      riskPct: null,
-      posVal: null,
-      posPct: null,
-      profitEgp: null,
-      rrRatio: null,
-      over: false,
-      invStop: false,
-      sPrice,
-      tPrice,
-      stopPct,
-      targetPct,
-    };
-
-    if (e <= 0 || c <= 0) return empty;
-
-    // An empty stop is not an inverted one. Written as `sPrice >= e` against a
-    // stop that defaulted to the entry price, the warning fired on a blank
-    // field the moment an entry price was typed.
-    const invStop = sPrice !== null && sPrice >= e;
-    const riskPerShare = sPrice === null ? null : e - sPrice;
-
-    if (riskPerShare === null || riskPerShare <= 0 || invStop) {
-      return { ...empty, invStop };
-    }
-
-    const budget = maxLossPerTrade(c, maxRisk);
-    const suggested = Math.floor(budget / riskPerShare);
-    const typed = override === null ? null : parseNumber(override);
-    const qty = typed !== null && typed >= 0 ? Math.floor(typed) : suggested;
-
-    if (qty === 0) return { ...empty, suggested, qty: 0 };
-
-    const riskEgp = riskPerShare * qty;
-    const riskPct = safeDiv(riskEgp, c);
-    const posVal = e * qty;
-    const posPct = safeDiv(posVal, c);
-    const reward = tPrice !== null && tPrice > e ? tPrice - e : null;
-
-    return {
-      suggested,
-      qty,
-      riskEgp,
-      riskPct,
-      posVal,
-      posPct,
-      profitEgp: reward === null ? null : reward * qty,
-      rrRatio: reward === null ? null : safeDiv(reward, riskPerShare),
-      over: riskPct !== null && exceedsRiskLimit(riskPct, maxRisk),
-      invStop: false,
-      sPrice,
-      tPrice,
-      stopPct,
-      targetPct,
-    };
-  }, [
-    capital,
-    maxRisk,
-    entry,
-    stopMode,
-    stopVal,
-    targetMode,
-    targetVal,
-    override,
-  ]);
+  const plan = useMemo(
+    () =>
+      computeSmartTrade({
+        capital: parseNumber(capital) ?? 0,
+        maxRiskPercent: maxRisk,
+        entryPrice: parseNumber(entry),
+        // Whichever mode a level is in, the OTHER input is left null so the
+        // shared calculation can apply its own precedence rule rather than
+        // this hook second-guessing it.
+        stopPrice: stopMode === 'price' ? parseNumber(stopVal) : null,
+        stopLossPercent:
+          stopMode === 'percent' ? (parseNumber(stopVal) ?? 0) / 100 : 0,
+        targetPrice: targetMode === 'price' ? parseNumber(targetVal) : null,
+        takeProfitPercent:
+          targetMode === 'percent' ? (parseNumber(targetVal) ?? 0) / 100 : 0,
+        budget: parseNumber(budget),
+        userQty: override === null ? null : parseNumber(override),
+      }),
+    [
+      capital,
+      maxRisk,
+      entry,
+      stopMode,
+      stopVal,
+      targetMode,
+      targetVal,
+      budget,
+      override,
+    ]
+  );
 
   const qtyVal =
-    override ?? (res.suggested === null ? "" : String(res.suggested));
+    override ??
+    (plan.sizing.suggestedQty === null ? '' : String(plan.sizing.suggestedQty));
 
   return {
     capital,
@@ -145,8 +99,10 @@ export function useCalculatorState({
     setTargetMode,
     targetVal,
     setTargetVal,
+    budget,
+    setBudget,
     setOverride,
-    res,
+    plan,
     qtyVal,
   };
 }

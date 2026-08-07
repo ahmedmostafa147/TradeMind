@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:egx_trade_journal/core/formatters.dart';
 import 'package:egx_trade_journal/core/hive_keys.dart';
 import 'package:egx_trade_journal/features/market/market_providers.dart';
 import 'package:egx_trade_journal/settings/settings_providers.dart';
@@ -149,6 +150,46 @@ void main() {
       TradeStatus.open,
       reason: 'nothing was written',
     );
+  });
+
+  /// The form had no entry-date control at all: `DateTime.now()` was stamped on
+  /// save and could not be changed, so a trade logged the morning after was
+  /// permanently dated wrong — and «الأداء الشهري», the equity curve and
+  /// «متوسط مدة الاحتفاظ» all read that field. The web form always had it.
+  group('the entry date', () {
+    testWidgets('is shown, and reads the stored value', (tester) async {
+      await pumpForm(tester, seedTrade(status: TradeStatus.open, exit: 11.00));
+
+      expect(find.text('تاريخ الدخول'), findsOneWidget);
+      expect(find.text(dateLabel(today.subtract(const Duration(days: 3)))),
+          findsOneWidget);
+    });
+
+    testWidgets('is called «المتوقّع» while the trade is only a plan', (
+      tester,
+    ) async {
+      await pumpForm(tester, seedTrade(status: TradeStatus.planned));
+
+      expect(find.text('تاريخ الدخول المتوقّع'), findsOneWidget);
+      expect(find.text('تاريخ الدخول'), findsNothing);
+    });
+
+    testWidgets('a picked date survives the save', (tester) async {
+      await pumpForm(tester, seedTrade(status: TradeStatus.open));
+
+      await tester.tap(find.text('تاريخ الدخول'));
+      await tester.pumpAndSettle();
+
+      // The picker opens on the trade's own date; step back one day and accept.
+      await tester.tap(find.text('27'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      await tapSave(tester);
+
+      expect(tradesBox.get('trade-1')!.entryDate.day, 27);
+    });
   });
 
   testWidgets('a plan is left alone — it has no exit to read', (tester) async {

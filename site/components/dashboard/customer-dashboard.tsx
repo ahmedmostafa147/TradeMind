@@ -23,6 +23,7 @@ import {
 } from '@/components/icons';
 import { EquityChart, MonthlyBars } from '@/components/dashboard/charts';
 import { GoalPanel } from '@/components/dashboard/goal-panel';
+import { LegalNotice } from '@/components/dashboard/legal-notice';
 import { AiTradeSheet } from '@/components/dashboard/ai-trade-sheet';
 import {
   Paywall,
@@ -1075,6 +1076,9 @@ function SettingsSection({
           </button>
         </div>
       </section>
+
+      {/* Moved out of the (app) layout, where it was pinned under every tab. */}
+      <LegalNotice />
     </div>
   );
 }

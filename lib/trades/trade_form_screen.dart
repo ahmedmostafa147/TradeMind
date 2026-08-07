@@ -181,6 +181,8 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
         child: TradeFormBody(
           status: _status,
           onStatusChanged: _changeStatus,
+          entryDate: _entryDate,
+          onEntryDateChanged: (d) => setState(() => _entryDate = d),
           tickerController: _tickerController,
           entryController: _entryController,
           stopController: _stopController,
