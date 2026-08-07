@@ -101,6 +101,23 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
     }
   }
 
+  /// Anything that is not «مغلقة» has no exit, so moving away from it empties
+  /// the pair.
+  ///
+  /// Without this, reopening a closed trade was impossible: the exit fields
+  /// stay on screen for an open position too, and the saver reads a filled exit
+  /// as "closed" — so picking «مفتوحة» on a trade that already had an exit
+  /// price closed it straight back on save, with no way out.
+  void _changeStatus(TradeStatus next) {
+    setState(() {
+      _status = next;
+      if (next != TradeStatus.closed) {
+        _exitController.clear();
+        _exitDate = null;
+      }
+    });
+  }
+
   Future<void> _save() async {
     final entry = parseNumber(_entryController.text);
     final stop = parseNumber(_stopController.text);
@@ -163,7 +180,7 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
         autovalidateMode: AutovalidateMode.onUserInteraction,
         child: TradeFormBody(
           status: _status,
-          onStatusChanged: (s) => setState(() => _status = s),
+          onStatusChanged: _changeStatus,
           tickerController: _tickerController,
           entryController: _entryController,
           stopController: _stopController,

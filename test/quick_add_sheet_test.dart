@@ -200,6 +200,84 @@ void main() {
     expect(tester.widget<FilledButton>(saveButton).onPressed, isNotNull);
   });
 
+  /// «هدخل بفلوس قد ايه» — the field the sheet was missing.
+  ///
+  /// Without it the suggestion came from the risk rule alone, which sizes as
+  /// though the whole account were behind every trade: someone here to commit
+  /// 2,000 EGP was told to buy 680 shares of a 10.00 stock, and had to divide
+  /// it out by hand before typing a quantity.
+  group('the position budget', () {
+    Finder budgetField() => find.byKey(const ValueKey('quick-budget-field'));
+
+    Future<void> priced(WidgetTester tester) async {
+      await pumpSheet(tester);
+      await tester.enterText(find.byType(TextFormField).first, 'COMI');
+      await tester.enterText(fieldWithLabel('سعر الدخول'), '10');
+      await tester.enterText(fieldWithLabel('وقف الخسارة'), '9.50');
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a budget caps the suggestion below the risk rule', (
+      tester,
+    ) async {
+      await priced(tester);
+      expect(find.text('المقترح: 680'), findsOneWidget, reason: 'risk only');
+
+      await tester.enterText(budgetField(), '2000');
+      await tester.pumpAndSettle();
+
+      // 2,000 / 10.00 = 200 whole shares, well under the 680 the 340 loss
+      // budget would allow.
+      expect(find.text('المقترح: 200'), findsOneWidget);
+      expect(
+        find.text('الكمية اتحددت بالمبلغ ده، مش بحد المخاطرة'),
+        findsOneWidget,
+        reason: 'the sheet says which of the two constraints bound it',
+      );
+    });
+
+    testWidgets('a budget never loosens the risk limit', (tester) async {
+      await priced(tester);
+
+      await tester.enterText(budgetField(), '999999');
+      await tester.pumpAndSettle();
+
+      expect(find.text('المقترح: 680'), findsOneWidget);
+      expect(
+        find.text('سيبه فاضي عشان يستخدم حد المخاطرة بس'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a typed quantity still wins over the budget', (tester) async {
+      await priced(tester);
+
+      await tester.enterText(budgetField(), '2000');
+      await tester.enterText(fieldWithLabel('عدد الأسهم'), '150');
+      await tester.pumpAndSettle();
+
+      expect(find.text('1,500.00 ج.م'), findsOneWidget, reason: 'position');
+    });
+
+    testWidgets('the saved trade carries the budget-sized quantity', (
+      tester,
+    ) async {
+      await priced(tester);
+      await tester.enterText(budgetField(), '2000');
+      await tester.pumpAndSettle();
+
+      await tester.runAsync(() async {
+        await tester.tap(
+          find.widgetWithText(FilledButton, 'حفظ الصفقة السريعة'),
+        );
+        await tester.pump();
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      });
+
+      expect(tradesBox.values.single.quantity, 200);
+    });
+  });
+
   testWidgets('the saved trade carries the typed quantity', (tester) async {
     await pumpSheet(tester);
 

@@ -131,40 +131,75 @@ class CancelTradeButton extends ConsumerWidget {
       );
 }
 
+/// The note box, as a widget that owns its own controller.
+///
+/// It used to be an inline [AlertDialog] over a controller created in
+/// [_addNote] and disposed on the line after `await showDialog`. That crashed
+/// the app on both حفظ and إلغاء with
+/// `'_dependents.isEmpty': is not true`:
+///
+/// `showDialog`'s future completes the moment the route is popped, BEFORE the
+/// dismiss animation runs — so the [TextField] was still mounted when its
+/// controller was disposed underneath it. The throw that followed landed
+/// inside the field's own teardown, which left it registered as a dependent of
+/// the inherited widgets above it, and the framework asserted when those
+/// deactivated.
+///
+/// A [State] cannot get this wrong: `dispose` runs after the element is gone.
+class _NoteDialog extends StatefulWidget {
+  final bool asLesson;
+
+  const _NoteDialog({required this.asLesson});
+
+  @override
+  State<_NoteDialog> createState() => _NoteDialogState();
+}
+
+class _NoteDialogState extends State<_NoteDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: Text(widget.asLesson ? 'الدرس المستفاد' : 'إضافة ملاحظة'),
+        content: TextField(
+          controller: _controller,
+          autofocus: true,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: widget.asLesson
+                ? 'إيه اللي اتعلمته من الصفقة دي؟'
+                : 'مثال: حركت الاستوب لسعر الدخول',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+            child: const Text('حفظ'),
+          ),
+        ],
+      );
+}
+
 Future<void> _addNote(
   BuildContext context,
   WidgetRef ref,
   Trade trade, {
   bool asLesson = false,
 }) async {
-  final controller = TextEditingController();
   final text = await showDialog<String>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(asLesson ? 'الدرس المستفاد' : 'إضافة ملاحظة'),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        maxLines: 3,
-        decoration: InputDecoration(
-          hintText: asLesson
-              ? 'إيه اللي اتعلمته من الصفقة دي؟'
-              : 'مثال: حركت الاستوب لسعر الدخول',
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('إلغاء'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-          child: const Text('حفظ'),
-        ),
-      ],
-    ),
+    builder: (_) => _NoteDialog(asLesson: asLesson),
   );
-  controller.dispose();
 
   if (text == null || text.isEmpty) return;
 

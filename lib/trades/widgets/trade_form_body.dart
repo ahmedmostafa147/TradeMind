@@ -165,7 +165,13 @@ class TradeFormBody extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'سيبهم فاضيين لو الصفقة لسه مفتوحة.',
+            // Says what saving actually does now. The old line —
+            // «سيبهم فاضيين لو الصفقة لسه مفتوحة» — described only the empty
+            // case, so filling them in and still seeing «مفتوحة» afterwards
+            // looked like the save had failed.
+            status == TradeStatus.closed
+                ? 'الصفقة مغلقة، فلازم تكتب سعر وتاريخ الخروج.'
+                : 'املا الاتنين وهي تتقفل لوحدها. سيبهم فاضيين لو لسه مفتوحة.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -186,6 +192,13 @@ class TradeFormBody extends StatelessWidget {
                   validator: (_) {
                     final price = parseNumber(exitController.text);
                     if (price == null) {
+                      // «مغلقة» with no exit is a contradiction the model
+                      // cannot hold: `Trade.isOpen` reads `exitPrice == null`,
+                      // so the record would call itself open the moment it was
+                      // written back.
+                      if (status == TradeStatus.closed) {
+                        return 'صفقة مغلقة لازم يكون ليها سعر خروج';
+                      }
                       // A date alone is dropped silently on save; say so rather
                       // than discarding what the user picked.
                       return exitDate == null ? null : 'اكتب سعر الخروج كمان';

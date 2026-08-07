@@ -36,7 +36,52 @@ class TradeFormSaver {
     required List<String> unsavedScreenshots,
     required ScreenshotStore store,
   }) async {
+    final isExecuted = status.isExecuted;
+    final typedExitPrice = isExecuted ? parseNumber(exitPriceText ?? '') : null;
+
+    // [Trade] asserts the pair is set together or not at all, so a half-filled
+    // exit would throw rather than save. Form validation rejects that before
+    // reaching here; this only guarantees no future call site can crash the
+    // app, by dropping the lone half instead.
+    final resolvedExitDate = typedExitPrice == null ? null : exitDate;
+    final exitPrice = resolvedExitDate == null ? null : typedExitPrice;
+
+    // «مغلقة» with no exit is a record that calls itself open the moment it is
+    // read back — `Trade.isOpen` is `exitPrice == null`.
+    //
+    // Checked BEFORE `validate()`, not after. The exit field carries the same
+    // rule, but it lives at the bottom of a scrolling form while «حفظ» is in
+    // the app bar: the validator does reject the save, and then paints its
+    // reason on a field the user cannot see, so the button reads as dead. A
+    // snackbar says it where the tap happened.
+    if (status == TradeStatus.closed && exitPrice == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('صفقة مغلقة لازم يكون ليها سعر وتاريخ خروج'),
+        ),
+      );
+      // Still runs, so the field itself is marked too — the message and the
+      // error the user finds on scrolling agree.
+      formKey.currentState?.validate();
+      return;
+    }
+
     if (!(formKey.currentState?.validate() ?? false)) return;
+
+    // The exit fields decide the status, not the picker above them.
+    //
+    // «إقفال» promises «أدخل سعر وتاريخ الخروج عشان تقفل الصفقة» and then sends
+    // the user straight to this form. Saving the chip's value verbatim meant
+    // filling in the exit did everything except close the trade: it stayed
+    // «مفتوحة» on قرار اليوم, out of the win rate and off the equity curve,
+    // with the exit price sitting in the same record contradicting it.
+    //
+    // The other direction is handled where it belongs, in the form: switching
+    // the chip away from «مغلقة» empties the exit pair, so a reopened trade
+    // does not get closed straight back on the next save.
+    final resolvedStatus = status == TradeStatus.open && exitPrice != null
+        ? TradeStatus.closed
+        : status;
 
     final settings = ref.read(settingsProvider);
     var updatedChecklist = List<String>.from(checklist);
@@ -47,16 +92,7 @@ class TradeFormSaver {
       updatedChecklist = result;
     }
 
-    final isExecuted = status.isExecuted;
-    final typedExitPrice = isExecuted ? parseNumber(exitPriceText ?? '') : null;
     final notes = notesText.trim();
-
-    // [Trade] asserts the pair is set together or not at all, so a half-filled
-    // exit would throw rather than save. Form validation rejects that before
-    // reaching here; this only guarantees no future call site can crash the
-    // app, by dropping the lone half instead.
-    final resolvedExitDate = typedExitPrice == null ? null : exitDate;
-    final exitPrice = resolvedExitDate == null ? null : typedExitPrice;
 
     final trade = Trade(
       id: existing?.id ?? const Uuid().v4(),
@@ -70,7 +106,7 @@ class TradeFormSaver {
       exitPrice: exitPrice,
       exitDate: resolvedExitDate,
       notes: notes.isEmpty ? null : notes,
-      status: status,
+      status: resolvedStatus,
       tags: tags,
       isFavorite: isFavorite,
       screenshotPaths: screenshots,

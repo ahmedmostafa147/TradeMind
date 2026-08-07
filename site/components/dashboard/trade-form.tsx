@@ -192,16 +192,33 @@ export function TradeForm({
 
   // MATCHES THE APP: the exit block appears for any position that exists, not
   // only a closed one — lib/trades/widgets/trade_form_body.dart shows it under
-  // `status.isExecuted` with the hint «سيبهم فاضيين لو الصفقة لسه مفتوحة». That
-  // is the better shape: closing a trade is filling in an exit, not hunting for
-  // a status dropdown first.
+  // `status.isExecuted`. That is the better shape: closing a trade is filling
+  // in an exit, not hunting for a status picker first — and since both surfaces
+  // now CLOSE the trade when the pair is filled, the block is the action, not a
+  // set of fields that only count once the type is right.
   //
-  // The fields are only REQUIRED when the status says closed, which is a guard
-  // the app lacks — its saver quietly writes status=closed with a null exit,
-  // and such a record has no P&L, no R and no place on the equity curve while
-  // still being counted as a finished trade.
+  // The fields stay REQUIRED when the type already says closed: such a record
+  // would have no P&L, no R and no place on the equity curve while still being
+  // counted as a finished trade. `Trade.isOpen` is `exitPrice == null`, so it
+  // would also call itself open again on the phone.
   const showsExit = isExecuted(status);
   const needsExit = status === 'closed';
+
+  /**
+   * Anything that is not «مقفولة» has no exit, so moving away from it empties
+   * the pair — mirroring `_changeStatus` in trade_form_screen.dart.
+   *
+   * Without it, reopening a closed trade is impossible: the exit fields stay
+   * on screen for an open position too, and the save below reads a filled exit
+   * as "closed", so picking «مفتوحة» would close it straight back.
+   */
+  function changeStatus(next: TradeStatus) {
+    setStatus(next);
+    if (next !== 'closed') {
+      setExitPrice('');
+      setExitDate('');
+    }
+  }
 
   function toggleCheck(id: string) {
     setChecked((prev) =>
@@ -242,7 +259,11 @@ export function TradeForm({
     // silently reopens.
     let exit: number | null = null;
     let exitOn: Date | null = null;
-    if (needsExit) {
+    // An exit typed against an OPEN position is a close, not a stray value to
+    // drop — same rule the app's saver applies. Dropping it was the web half of
+    // the bug where filling the exit in did everything except close the trade.
+    const typedExit = showsExit && (exitPrice.trim() !== '' || exitDate !== '');
+    if (needsExit || typedExit) {
       exit = parseNumber(exitPrice);
       exitOn = fromDateInput(exitDate);
       if (exit === null || exit <= 0)
@@ -250,6 +271,11 @@ export function TradeForm({
       if (!exitOn) return setError('تاريخ الخروج مش مظبوط.');
       if (exitOn < date) return setError('تاريخ الخروج مش ممكن يكون قبل الدخول.');
     }
+
+    // Mirrors `resolvedStatus` in trade_form_saver.dart. The other direction —
+    // clearing the exit to reopen — is handled by `changeStatus` above.
+    const resolvedStatus: TradeStatus =
+      status === 'open' && exit !== null ? 'closed' : status;
 
     setError(null);
     setBusy(true);
@@ -265,7 +291,7 @@ export function TradeForm({
         exitPrice: exit,
         exitDate: exitOn,
         notes: notes.trim() || null,
-        status,
+        status: resolvedStatus,
         tags: tags
           .split(/[،,]/)
           .map((t) => t.trim())
@@ -308,7 +334,7 @@ export function TradeForm({
                 type="button"
                 role="radio"
                 aria-checked={active}
-                onClick={() => setStatus(option.value)}
+                onClick={() => changeStatus(option.value)}
                 className={`rounded-lg border p-4 text-start transition-colors ${
                   active
                     ? 'border-brand-ink bg-surface-high'
@@ -510,7 +536,7 @@ export function TradeForm({
           <p className="mb-4 text-xs text-fg-muted">
             {needsExit
               ? 'الصفقة مقفولة، فلازم تكتب سعر وتاريخ الخروج.'
-              : 'سيبهم فاضيين لو الصفقة لسه مفتوحة — أول ما تكتبهم وتخليها «عملتها وخلصت» تتحسب في أداءك.'}
+              : 'املا الاتنين وهي تتقفل لوحدها وتتحسب في أداءك. سيبهم فاضيين لو لسه مفتوحة.'}
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
           <Field label="سعر الخروج" htmlFor="tf-exit" suffix="ج.م">
