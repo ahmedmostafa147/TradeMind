@@ -104,6 +104,39 @@ void main() {
     );
   });
 
+  testWidgets('the sample rates are shortcuts, under a label that says so', (
+    tester,
+  ) async {
+    await pumpCard(tester, capital: 0);
+
+    // A bare row of rates reads as a recommendation. The heading is what makes
+    // it read as three values to try.
+    expect(find.text('افتراضات للتجربة:'), findsOneWidget);
+    for (final rate in kReturnSamples) {
+      expect(find.widgetWithText(ChoiceChip, '$rate%'), findsOneWidget);
+    }
+
+    await tester.enterText(fieldWithLabel('المبلغ اللي عايز توصله'), '240000');
+    await tester.enterText(fieldWithLabel('المدة'), '10');
+    await tester.pumpAndSettle();
+    // With no rate the plan is pure saving, so nothing compounds.
+    expect(find.text('2,000.00 ج.م'), findsWidgets);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, '15%'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<TextField>(fieldWithLabel('العائد السنوي اللي بتفترضه'))
+          .controller
+          ?.text,
+      '15',
+    );
+    // And the required deposit drops, because the compounding now does part of
+    // the work — which is the whole point of showing the chips at all.
+    expect(find.text('2,000.00 ج.م'), findsNothing);
+  });
+
   testWidgets('the journal rate is offered, not applied', (tester) async {
     await pumpCard(tester, suggested: 24.0);
 

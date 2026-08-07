@@ -43,6 +43,8 @@ export function ToggleField({
   value,
   onModeChange,
   onValueChange,
+  derived,
+  tone,
 }: {
   id: string;
   label: string;
@@ -50,6 +52,15 @@ export function ToggleField({
   value: string;
   onModeChange: (mode: InputMode) => void;
   onValueChange: (value: string) => void;
+  /**
+   * Whatever was NOT typed: the price when a percentage was entered, the
+   * percentage when a price was. Mirrors LevelField in the app.
+   *
+   * This is what lets the summary drop the levels entirely — the answer sits
+   * beside the question instead of being read back three fields later.
+   */
+  derived?: string | null;
+  tone?: 'win' | 'loss';
 }) {
   return (
     <div>
@@ -96,6 +107,24 @@ export function ToggleField({
           {mode === "price" ? "ج.م" : "%"}
         </span>
       </div>
+      {/* Absent rather than «—» when it cannot be worked out: an empty entry
+          price is not a level of zero. */}
+      {derived && (
+        <p
+          // `.num` on the WHOLE pill, not just the figure: the leading «=»
+          // belongs to the left of the number, and in an RTL paragraph it lands
+          // on the right instead. Same as NumericText in the app's LevelField.
+          className={`num mt-1.5 rounded-md px-2 py-0.5 text-xs font-bold ${
+            tone === "win"
+              ? "bg-win-surface text-win"
+              : tone === "loss"
+                ? "bg-loss-surface text-loss"
+                : "bg-surface-high text-fg-muted"
+          }`}
+        >
+          = {derived}
+        </p>
+      )}
     </div>
   );
 }

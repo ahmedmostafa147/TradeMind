@@ -8,6 +8,14 @@ import {
 import { useGoalPlannerState } from '@/components/goal-planner-state';
 import { LightbulbIcon } from '@/components/icons';
 import { money, percent } from '@/lib/format';
+import { parseNumber } from '@/lib/risk-math';
+
+/**
+ * Sample rates, offered as one tap. NOT a forecast and NOT a house number:
+ * three values a saver might try, so the compounding line has something to say
+ * before anything is typed. Mirrors `kReturnSamples` in the app.
+ */
+const RETURN_SAMPLES = [10, 15, 20];
 
 /**
  * The savings planner itself — inputs on one side, the answer on the other.
@@ -94,21 +102,57 @@ export function GoalPlannerBody({
               suffix="%"
               value={annualReturn}
               onChange={setAnnualReturn}
-              hint={
-                suggestedAnnualReturn != null ? (
-                  <button
-                    type="button"
-                    onClick={() => setAnnualReturn(suggestedAnnualReturn.toFixed(1))}
-                    className="font-semibold text-brand-ink underline-offset-4 hover:underline"
-                  >
-                    من دفترك: {percent(suggestedAnnualReturn / 100)}
-                  </button>
-                ) : (
-                  'رقم بتفترضه انت — مش توقّع مننا.'
-                )
-              }
+              // Said on the field itself, every time — not only when there is
+              // nothing else to show there. It is the sentence the whole
+              // calculator hangs on.
+              hint="رقم بتفترضه انت — مش توقّع مننا."
             />
           </div>
+
+          {/* THE HEADING SAYS «افتراضات للتجربة», AND THAT IS NOT DECORATION.
+              A bare row of rates reads as a recommendation; the same row under
+              a label that calls them assumptions reads as what it is — three
+              shortcuts so the compounding is visible in one tap instead of
+              staying at zero until something is typed. */}
+          <fieldset>
+            <legend className="text-xs font-semibold text-fg-subtle">
+              افتراضات للتجربة:
+            </legend>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {RETURN_SAMPLES.map((rate) => {
+                const active = parseNumber(annualReturn) === rate;
+                return (
+                  <button
+                    key={rate}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setAnnualReturn(String(rate))}
+                    className={`num rounded-md border px-3 py-1 text-xs font-bold transition-colors ${
+                      active
+                        ? 'border-transparent bg-brand text-on-brand'
+                        : 'border-border-default text-fg-muted hover:bg-surface-high'
+                    }`}
+                  >
+                    {rate}%
+                  </button>
+                );
+              })}
+              {suggestedAnnualReturn != null && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAnnualReturn(suggestedAnnualReturn.toFixed(1))
+                  }
+                  className="rounded-md border border-brand-ink px-3 py-1 text-xs font-bold text-brand-ink transition-colors hover:bg-surface-high"
+                >
+                  من دفترك:{' '}
+                  <span className="num">
+                    {percent(suggestedAnnualReturn / 100)}
+                  </span>
+                </button>
+              )}
+            </div>
+          </fieldset>
 
           <PlannerInput
             id="goal-initial"

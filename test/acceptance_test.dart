@@ -228,9 +228,10 @@ void main() {
   /// which is what the manual calculator used to provide.
   Future<void> openManualCalculator(WidgetTester tester) async {
     await openTab(tester, 'حاسبة الصفقة');
-    // The stop-mode toggle: pick "سعر" so a stop price can be typed directly.
-    await tester.ensureVisible(find.text('سعر'));
-    await tester.tap(find.text('سعر'));
+    // `.last`, not the only one: both «جني الأرباح» and «وقف الخسارة» carry the
+    // نسبة/سعر toggle now, and the stop's is the second.
+    await tester.ensureVisible(find.text('سعر').last);
+    await tester.tap(find.text('سعر').last);
     await tester.pumpAndSettle();
   }
 
@@ -376,8 +377,12 @@ void main() {
         find.text('سعر الاستوب لازم يكون أقل من سعر الدخول'),
         findsOneWidget,
       );
-      // Suggested quantity, position value and risk % all read as unavailable.
-      expect(find.text('—'), findsWidgets);
+      // And the summary says what is missing instead of printing a column of
+      // «—», which reads as a calculator that failed rather than one waiting.
+      expect(
+        find.text('اكتب سعر الدخول وحدّد الهدف والاستوب، والباقي هيتحسب هنا.'),
+        findsOneWidget,
+      );
     });
   });
 

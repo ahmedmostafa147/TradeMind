@@ -4,6 +4,12 @@ import 'package:flutter/services.dart';
 import '../../core/calc/goal_plan.dart';
 import '../../core/formatters.dart';
 
+/// Sample rates, offered as one tap. NOT a forecast and NOT a house number:
+/// three values a saver might try, so the compounding line has something to say
+/// before anything is typed. Mirrors RETURN_SAMPLES in
+/// site/components/goal-planner-body.tsx.
+const List<int> kReturnSamples = [10, 15, 20];
+
 /// «بالادخار: تحطّ كام كل شهر» — the landing page's calculator, in the app.
 ///
 /// The counterpart of site/components/goal-planner-body.tsx, over the same
@@ -202,27 +208,53 @@ class _GoalPlannerCardState extends State<GoalPlannerCard> {
                     controller: _returnController,
                     label: 'العائد السنوي اللي بتفترضه',
                     suffix: '%',
-                    helperText: suggested == null
-                        ? 'رقم بتفترضه انت — مش توقّع مننا.'
-                        : null,
+                    // Said on the field itself, every time — not only when
+                    // there is nothing else to show there. It is the sentence
+                    // the whole calculator hangs on.
+                    helperText: 'رقم بتفترضه انت — مش توقّع مننا.',
                     onChanged: () => setState(() {}),
                   ),
                 ),
               ],
             ),
-            if (suggested != null) ...[
-              const SizedBox(height: 8),
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: ActionChip(
-                  avatar: const Icon(Icons.insights_rounded, size: 18),
-                  label: Text('من دفترك: ${percent(suggested / 100)}'),
-                  onPressed: () => setState(
-                    () => _returnController.text = suggested.toStringAsFixed(1),
-                  ),
-                ),
+            const SizedBox(height: 12),
+
+            // THE HEADING SAYS «افتراضات للتجربة», AND THAT IS NOT DECORATION.
+            // A bare row of rates reads as a recommendation; the same row under
+            // a label that calls them assumptions reads as what it is — three
+            // shortcuts so the compounding is visible in one tap instead of
+            // staying at zero until something is typed.
+            Text(
+              'افتراضات للتجربة:',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
-            ],
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final rate in kReturnSamples)
+                  ChoiceChip(
+                    label: Text('$rate%'),
+                    selected:
+                        parseNumber(_returnController.text) == rate.toDouble(),
+                    onSelected: (_) => setState(
+                      () => _returnController.text = rate.toString(),
+                    ),
+                  ),
+                if (suggested != null)
+                  ActionChip(
+                    avatar: const Icon(Icons.insights_rounded, size: 18),
+                    label: Text('من دفترك: ${percent(suggested / 100)}'),
+                    onPressed: () => setState(
+                      () =>
+                          _returnController.text = suggested.toStringAsFixed(1),
+                    ),
+                  ),
+              ],
+            ),
             const SizedBox(height: 12),
             _Field(
               controller: _initialController,

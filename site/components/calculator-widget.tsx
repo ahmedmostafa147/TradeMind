@@ -6,6 +6,16 @@ import { money, percent, quantity as formatQuantity } from '@/lib/format';
 
 const RISK_PRESETS = [0.01, 0.015, 0.02, 0.03];
 
+/** The half of the level the trader did not type. Mirrors LevelField's readout. */
+function counterpart(
+  mode: 'price' | 'percent',
+  price: number | null,
+  pct: number | null
+): string | null {
+  if (mode === 'percent') return price === null ? null : money(price);
+  return pct === null ? null : percent(pct);
+}
+
 export function CalculatorWidget(props: {
   initialCapital?: number;
   initialRisk?: number;
@@ -67,25 +77,33 @@ export function CalculatorWidget(props: {
         <div className="grid gap-3 sm:grid-cols-2">
           <ToggleField
             id="calc-stop"
-            label="الاستوب (إيقاف الخسارة)"
+            label="وقف الخسارة"
             mode={stopMode}
             value={stopVal}
+            tone="loss"
+            derived={counterpart(stopMode, res.sPrice, res.stopPct)}
             onModeChange={(m) => { setStopMode(m); setOverride(null); }}
             onValueChange={(v) => { setStopVal(v); setOverride(null); }}
           />
           <ToggleField
             id="calc-target"
-            label="الهدف المتوقع"
+            label="جني الأرباح"
             mode={targetMode}
             value={targetVal}
+            tone="win"
+            derived={counterpart(targetMode, res.tPrice, res.targetPct)}
             onModeChange={(m) => { setTargetMode(m); setOverride(null); }}
             onValueChange={(v) => { setTargetVal(v); setOverride(null); }}
           />
         </div>
 
         {res.invStop && (
-          <p role="status" className="text-xs font-semibold text-loss">
-            ⚠️ سعر الاستوب يجب أن يكون أقل من سعر الدخول.
+          <p
+            role="status"
+            className="flex items-start gap-2 text-xs font-semibold text-loss"
+          >
+            <WarningIcon />
+            <span>سعر الاستوب لازم يكون أقل من سعر الدخول.</span>
           </p>
         )}
       </div>
@@ -111,27 +129,28 @@ export function CalculatorWidget(props: {
             )}
           </div>
 
+          {/* OUTPUTS ONLY — nothing here repeats a number that was typed on
+              the other side. The levels used to be read back too; they now sit
+              under their own inputs, which is where the answer to "what price
+              is 5%?" belongs. Same wording as the app's summary card. */}
           <div className="space-y-1.5 border-t border-border-default pt-3">
-            <p className="text-xs font-bold text-fg mb-2">ملخص أرقام الصفقة:</p>
             <MetricRow
-              label="الخسارة المتوقعة عند الاستوب"
+              label="لو ضرب الاستوب"
               value={res.riskEgp ? `-${money(res.riskEgp)}` : '—'}
               tone="loss"
             />
-            {res.profitEgp != null && (
-              <MetricRow
-                label="الربح المتوقع عند الهدف"
-                value={`+${money(res.profitEgp)}`}
-                tone="win"
-              />
-            )}
             <MetricRow
-              label="نسبة المخاطرة الفعالة"
+              label="لو وصل الهدف"
+              value={res.profitEgp == null ? '—' : `+${money(res.profitEgp)}`}
+              tone="win"
+            />
+            <MetricRow
+              label="المخاطرة من رأس المال"
               value={percent(res.riskPct)}
               tone={res.over ? 'loss' : undefined}
             />
             <MetricRow
-              label="قيمة الصفقة الإجمالية"
+              label="قيمة المركز"
               subtitle={res.posPct != null ? `${(res.posPct * 100).toFixed(1)}% من رأس المال` : undefined}
               value={money(res.posVal)}
             />

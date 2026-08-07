@@ -3,6 +3,7 @@ import {
   exceedsRiskLimit,
   maxLossPerTrade,
   parseNumber,
+  roundToPiastre,
   safeDiv,
 } from "@/lib/risk-math";
 
@@ -34,48 +35,56 @@ export function useCalculatorState({
   const res = useMemo(() => {
     const c = parseNumber(capital) ?? 0;
     const e = parseNumber(entry) ?? 0;
-    const sRaw = parseNumber(stopVal) ?? 0;
-    const tRaw = parseNumber(targetVal) ?? 0;
+    const sRaw = parseNumber(stopVal);
+    const tRaw = parseNumber(targetVal);
 
-    if (e <= 0 || c <= 0) {
-      return {
-        suggested: null,
-        qty: null,
-        riskEgp: null,
-        riskPct: null,
-        posVal: null,
-        posPct: null,
-        profitEgp: null,
-        rrRatio: null,
-        over: false,
-        invStop: false,
-        sPrice: null,
-        tPrice: null,
-      };
-    }
+    /** Neither half of a level exists until BOTH the entry and it are typed. */
+    const level = (raw: number | null, mode: InputMode, sign: 1 | -1) => {
+      if (raw === null || raw <= 0 || e <= 0) return null;
+      // Rounded like the app does, so the price shown back for a percentage is
+      // the same number on both surfaces — see roundToPiastre's own comment.
+      return mode === "price"
+        ? roundToPiastre(raw)
+        : roundToPiastre(e * (1 + (sign * raw) / 100));
+    };
 
-    // Determine effective stop price & target price
-    const sPrice = stopMode === "percent" ? e * (1 - sRaw / 100) : sRaw;
-    const tPrice = targetMode === "percent" ? e * (1 + tRaw / 100) : tRaw;
+    const sPrice = level(sRaw, stopMode, -1);
+    const tPrice = level(tRaw, targetMode, 1);
 
-    const invStop = sPrice >= e && sPrice > 0;
-    const riskPerShare = e - sPrice;
+    // The counterpart of whatever was typed. Null unless the level is usable,
+    // so an inverted stop shows its error rather than a negative percentage.
+    const stopPct =
+      sPrice === null || sPrice >= e ? null : safeDiv(e - sPrice, e);
+    const targetPct =
+      tPrice === null || tPrice <= e ? null : safeDiv(tPrice - e, e);
 
-    if (riskPerShare <= 0 || invStop) {
-      return {
-        suggested: null,
-        qty: null,
-        riskEgp: null,
-        riskPct: null,
-        posVal: null,
-        posPct: null,
-        profitEgp: null,
-        rrRatio: null,
-        over: false,
-        invStop,
-        sPrice,
-        tPrice,
-      };
+    const empty = {
+      suggested: null,
+      qty: null,
+      riskEgp: null,
+      riskPct: null,
+      posVal: null,
+      posPct: null,
+      profitEgp: null,
+      rrRatio: null,
+      over: false,
+      invStop: false,
+      sPrice,
+      tPrice,
+      stopPct,
+      targetPct,
+    };
+
+    if (e <= 0 || c <= 0) return empty;
+
+    // An empty stop is not an inverted one. Written as `sPrice >= e` against a
+    // stop that defaulted to the entry price, the warning fired on a blank
+    // field the moment an entry price was typed.
+    const invStop = sPrice !== null && sPrice >= e;
+    const riskPerShare = sPrice === null ? null : e - sPrice;
+
+    if (riskPerShare === null || riskPerShare <= 0 || invStop) {
+      return { ...empty, invStop };
     }
 
     const budget = maxLossPerTrade(c, maxRisk);
@@ -83,29 +92,13 @@ export function useCalculatorState({
     const typed = override === null ? null : parseNumber(override);
     const qty = typed !== null && typed >= 0 ? Math.floor(typed) : suggested;
 
-    if (qty === 0) {
-      return {
-        suggested,
-        qty: 0,
-        riskEgp: null,
-        riskPct: null,
-        posVal: null,
-        posPct: null,
-        profitEgp: null,
-        rrRatio: null,
-        over: false,
-        invStop: false,
-        sPrice,
-        tPrice,
-      };
-    }
+    if (qty === 0) return { ...empty, suggested, qty: 0 };
 
     const riskEgp = riskPerShare * qty;
     const riskPct = safeDiv(riskEgp, c);
     const posVal = e * qty;
     const posPct = safeDiv(posVal, c);
-    const profitEgp = tPrice > e ? (tPrice - e) * qty : null;
-    const rrRatio = tPrice > e ? safeDiv(tPrice - e, riskPerShare) : null;
+    const reward = tPrice !== null && tPrice > e ? tPrice - e : null;
 
     return {
       suggested,
@@ -114,12 +107,14 @@ export function useCalculatorState({
       riskPct,
       posVal,
       posPct,
-      profitEgp,
-      rrRatio,
+      profitEgp: reward === null ? null : reward * qty,
+      rrRatio: reward === null ? null : safeDiv(reward, riskPerShare),
       over: riskPct !== null && exceedsRiskLimit(riskPct, maxRisk),
       invStop: false,
       sPrice,
       tPrice,
+      stopPct,
+      targetPct,
     };
   }, [
     capital,
