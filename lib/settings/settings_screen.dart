@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../billing/widgets/plan_card.dart';
 import '../core/calc/risk_math.dart';
 import '../core/formatters.dart';
 import '../features/auth/widgets/delete_account_tile.dart';
 import '../features/auth/widgets/user_profile_tile.dart';
 import 'settings_providers.dart';
+import 'widgets/legal_tiles.dart';
 import 'widgets/settings_tiles.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -90,6 +92,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           const UserProfileTile(),
           const SizedBox(height: 16),
+          // Where the web keeps it, and the answer to «أنا على أنهي باقة»
+          // without having to walk into a paywall first.
+          const PlanCard(),
+          const SizedBox(height: 16),
           TextField(
             controller: _capitalController,
             onChanged: _onCapitalChanged,
@@ -135,6 +141,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const BehaviourTiles(),
           const Divider(),
           const ReplayIntroTile(),
+          const Divider(),
+          const LegalTiles(),
           // Last, and only for a signed-in user: destructive and irreversible,
           // so it sits below everything rather than next to a toggle.
           const SizedBox(height: 24),

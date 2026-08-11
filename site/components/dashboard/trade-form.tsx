@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
+import { QuoteBadge } from '@/components/dashboard/quote-badge';
 import { TickerField } from '@/components/dashboard/ticker-field';
 import { TimelineEditor } from '@/components/dashboard/timeline-editor';
 import { CHECKLIST } from '@/lib/checklist';
@@ -93,6 +94,7 @@ export function TradeForm({
   isEdit = initial !== null,
   accountCapital,
   accountMaxRisk,
+  showLivePrices,
   onCancel,
   onSave,
 }: {
@@ -107,6 +109,8 @@ export function TradeForm({
    *  the fields below are a what-if and never write back. */
   accountCapital: number;
   accountMaxRisk: number;
+  /** Last closes are one of the four paid surfaces — see QuoteBadge. */
+  showLivePrices: boolean;
   onCancel: () => void;
   onSave: (trade: TradeDraft) => Promise<void>;
 }) {
@@ -359,6 +363,8 @@ export function TradeForm({
             required
             autoFocus
           />
+          {/* The app's StockQuoteBadge, which the browser was missing. */}
+          <QuoteBadge symbol={ticker} enabled={showLivePrices} />
         </Field>
 
         {/* NOT IN THE APP'S FORM AT ALL — kept, not removed. The phone stamps

@@ -147,7 +147,7 @@ type View = { kind: 'list' } | { kind: 'new'; seed?: Trade } | { kind: 'edit'; t
 function Journal() {
   const { user, logout, isAdmin } = useAuth();
   const { settings, update, source: settingsSource } = useAccountSettings(user);
-  const { entitlement, subscription } = useSubscription(user);
+  const { entitlement, subscription, readable } = useSubscription(user);
 
   const [trades, setTrades] = useState<Trade[] | null>(null);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
@@ -427,6 +427,7 @@ function Journal() {
             isEdit={view.kind === 'edit'}
             accountCapital={settings.capital}
             accountMaxRisk={settings.maxRiskPercent}
+            showLivePrices={can(entitlement ?? FREE_ENTITLEMENT, 'livePrices')}
             onCancel={() => setView({ kind: 'list' })}
             onSave={saveTrade}
           />
@@ -803,6 +804,7 @@ function Journal() {
                 onSubscribe={() => setSubscribing(true)}
                 entitlement={entitlement}
                 subscription={subscription}
+                billingReadable={readable}
                 settings={settings}
                 onChange={update}
                 source={settingsSource}
@@ -925,6 +927,7 @@ function SettingsSection({
   onSubscribe,
   entitlement,
   subscription,
+  billingReadable,
   settings,
   onChange,
   source,
@@ -935,6 +938,7 @@ function SettingsSection({
   onSubscribe: () => void;
   entitlement: Entitlement;
   subscription: ReturnType<typeof useSubscription>['subscription'];
+  billingReadable: boolean | null;
   settings: ReturnType<typeof useAccountSettings>['settings'];
   onChange: (next: Partial<typeof settings>) => void;
   source: SettingsSource;
@@ -950,12 +954,32 @@ function SettingsSection({
 
   return (
     <div className="space-y-5">
-      <PlanCard
-        entitlement={entitlement}
-        trialStartedAt={subscription?.trialStartedAt ?? null}
-        proUntil={subscription?.proUntil ?? null}
-        onSubscribe={onSubscribe}
-      />
+      {/* THE FAILURE THIS EXISTS FOR. A denied read and a fresh account both
+          surface as "no document" and both resolve to FREE — so a deployment
+          without `firestore.rules` locks every paid surface for everyone, and
+          no trial ever starts, with no error anywhere. Say which one it is. */}
+      {billingReadable === false ? (
+        <section className="rounded-lg border border-loss-border bg-loss-surface p-4 sm:p-5">
+          <h2 className="font-bold text-loss">مش قادرين نقرا حالة اشتراكك</h2>
+          <p className="mt-2 text-sm leading-relaxed text-fg">
+            الحساب شغّال عادي والدفتر بيتزامن، بس بيانات الباقة مترفوضة من
+            السيرفر — فالموقع بيعاملك كباقة مجانية مؤقتًا، والتجربة ما بدأتش.
+          </p>
+          <p className="mt-3 text-xs leading-relaxed text-fg-muted">
+            ده بيحصل لما قواعد Firestore ما تكونش اتنشرت. لو انت المالك، شغّل{' '}
+            <code className="num rounded bg-surface px-1.5 py-0.5 font-bold">
+              firebase deploy --only firestore:rules
+            </code>
+          </p>
+        </section>
+      ) : (
+        <PlanCard
+          entitlement={entitlement}
+          trialStartedAt={subscription?.trialStartedAt ?? null}
+          proUntil={subscription?.proUntil ?? null}
+          onSubscribe={onSubscribe}
+        />
+      )}
 
       <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">

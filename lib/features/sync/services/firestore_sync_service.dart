@@ -224,6 +224,27 @@ class FirestoreSyncService {
     }
   }
 
+  /// Whether the billing document can be READ at all.
+  ///
+  /// «مش موجود» and «مرفوض» both arrive at [pullSubscription] as null, and the
+  /// difference between them is the difference between a fresh account and a
+  /// deployment where `firestore.rules` was never pushed. In the second case
+  /// EVERY account reads as free, no trial ever starts, and all four paid
+  /// surfaces lock themselves — silently, because the denial is caught. This
+  /// separates the two so the settings screen can say which one it is.
+  ///
+  /// Returns null when there is nothing to test against (no Firebase app, or a
+  /// guest), so callers can tell "not applicable" from "denied".
+  static Future<bool?> canReadSubscription(String userId) async {
+    if (_rejects(userId)) return null;
+    try {
+      await _billing(userId).doc('subscription').get();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Asks for the fourteen-day trial. Succeeds exactly once per account.
   ///
   /// The rules decide whether the ask is honest — the document must not exist,

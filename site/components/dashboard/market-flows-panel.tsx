@@ -79,9 +79,14 @@ export function MarketFlowsPanel() {
     return (
       <div className="rounded-lg border border-dashed border-border-default p-12 text-center">
         <h2 className="text-lg font-bold">لسه مفيش بيانات سوق</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-fg-muted">
-          أرقام تداولات المستثمرين بتتسحب من البورصة المصرية. أول ما أول جلسة
-          تتخزّن هتلاقيها هنا.
+        {/* SAYS WHY, because the honest answer is not "any second now".
+            egx.com.eg sits behind F5 bot defence, so the automated pull is
+            blocked and every session is entered by hand from the admin panel.
+            A paid surface that shows an empty box with an encouraging sentence
+            is worse than one that explains itself. */}
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-fg-muted">
+          أرقام تداولات المستثمرين بتتنشر من البورصة المصرية، وبتتسجّل هنا جلسة
+          بجلسة. لسه مفيش جلسة مخزّنة — ارجع بعد إقفال الجلسة الجاية.
         </p>
       </div>
     );

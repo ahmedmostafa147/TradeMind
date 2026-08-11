@@ -45,6 +45,7 @@ dependencies:
   # not split a surrogate pair or a combining mark).
   characters: ^1.4.0
   google_sign_in: ^7.2.0
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
