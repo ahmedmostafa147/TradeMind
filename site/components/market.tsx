@@ -8,6 +8,25 @@ type InvestorGroup = {
   individuals: { amount: string; isBuy: boolean };
 };
 
+/**
+ * A WORKED EXAMPLE OF ONE SESSION. NOT LIVE DATA, AND THE PAGE NOW SAYS SO.
+ *
+ * These figures are hardcoded and always have been — this is a marketing
+ * section, not a data surface, and the real tables live behind the login in
+ * «السوق». That was fine; what was not fine was the presentation. The block was
+ * headed «صافي التعاملات حسب الفئة · البورصة المصرية» with no qualifier, and the
+ * insight box below it read «في **هذه الجلسة**، قامت المؤسسات المصرية بضخ…» — a
+ * present-tense factual claim about today's Egyptian market, published to
+ * everyone, generated from four string literals.
+ *
+ * A visitor cannot tell a styled example from a live readout, so they read it as
+ * today's session. That is a fabricated market statistic on a public page, and it
+ * sits directly under a tagline promising to read liquidity — the one claim a
+ * reader might act on.
+ *
+ * If this is ever wired to the real collection, delete the badge with the
+ * hardcoded data, not before.
+ */
 const groups: InvestorGroup[] = [
   {
     name: 'المستثمرون المصريون',
@@ -42,8 +61,12 @@ export function Market() {
         <div className="mx-auto mt-12 max-w-4xl">
           {/* Header Bar */}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-1">
-            <span className="text-xs font-semibold text-fg-subtle">
-              صافي التعاملات حسب الفئة · البورصة المصرية
+            <span className="flex flex-wrap items-center gap-2 text-xs font-semibold text-fg-subtle">
+              {/* The label is not decoration — see the note on `groups`. */}
+              <span className="rounded-md border border-border-strong bg-surface-high px-2 py-0.5 text-[11px] font-bold text-fg-muted">
+                مثال توضيحي
+              </span>
+              صافي التعاملات حسب الفئة — شكل البيانات جوّه «السوق»
             </span>
             <div className="flex items-center gap-4 text-xs font-medium">
               <span className="flex items-center gap-1.5 text-win">
@@ -110,11 +133,14 @@ export function Market() {
                 different picture on every device. */}
             <p className="text-sm leading-relaxed text-fg-muted">
               <LightbulbIcon className="me-1 inline-block size-4 align-[-0.2em] text-brand-ink" />
-              <span className="font-semibold text-fg">قراءة حركة السيولة:</span> في هذه الجلسة، قامت{' '}
-              <span className="font-bold text-win">المؤسسات المصرية</span> بضخ سيولة شرائية بمبلغ{' '}
-              <span dir="ltr" className="font-bold text-win">+66.0M</span>، بينما قام{' '}
-              <span className="font-bold text-loss">الأفراد الأجانب</span> بالبيع بمبلغ{' '}
-              <span dir="ltr" className="font-bold text-loss">-61.0M</span>. هذا التباين هو الكاشف الحقيقي لاتجاه السوق.
+              {/* «في هذه الجلسة» before this — present tense, about numbers that
+                  never change. It now reads as what it is: how a session like
+                  this one is read. */}
+              <span className="font-semibold text-fg">إزاي تقرا الأرقام دي:</span> في الجلسة اللي فوق،{' '}
+              <span className="font-bold text-win">المؤسسات المصرية</span> ضخّت سيولة شرائية بمبلغ{' '}
+              <span dir="ltr" className="font-bold text-win">+66.0M</span>، بينما{' '}
+              <span className="font-bold text-loss">الأفراد الأجانب</span> باعوا بمبلغ{' '}
+              <span dir="ltr" className="font-bold text-loss">-61.0M</span>. التباين ده هو الكاشف الحقيقي لاتجاه السوق.
             </p>
           </div>
         </div>
