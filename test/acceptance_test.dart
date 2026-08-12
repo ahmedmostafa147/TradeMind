@@ -190,8 +190,15 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// The detailed analytics moved from an icon on the dashboard into the hub's
-  /// overflow menu.
+  /// Opens «التحليلات» through the hub's overflow menu.
+  ///
+  /// THE MENU ITEM SWITCHES TABS, IT NO LONGER PUSHES A SCREEN. It used to open
+  /// an `AnalyticsScreen` that wrapped the same view with no entitlement check,
+  /// which is why these tests could reach the paid surface at all; the item now
+  /// does what the website's overflow does and selects the gated tab. Both paths
+  /// land on the same widget, so the assertions below are unchanged — but the
+  /// content is now inside the hub's TabBarView rather than a route of its own,
+  /// which is why callers scroll [hubList] and not [contentScrollable].
   Future<void> openAnalytics(WidgetTester tester) async {
     // By tooltip, not by type: PopupMenuButton is generic over the hub's own
     // private action enum, so no byType finder here can name it.
@@ -458,10 +465,14 @@ void main() {
       expect(find.text('2.4R'), findsWidgets, reason: 'متوسط ووسيط R');
 
       // The highlights card sits far down a lazily-built list.
+      //
+      // `hubList`, not `contentScrollable`: analytics is a TAB now, not a pushed
+      // route, so "the scrollable under the last Scaffold" is the hub's own
+      // PageView — dragging that switches tab instead of scrolling the list.
       await tester.scrollUntilVisible(
         find.text('أبرز الصفقات'),
         400,
-        scrollable: contentScrollable,
+        scrollable: hubList('analytics-list'),
       );
       await tester.pumpAndSettle();
       expect(find.text('COMI'), findsWidgets, reason: 'أفضل صفقة');
@@ -541,8 +552,13 @@ void main() {
       );
       await tester.pumpAndSettle();
       // Checklist complete, risk exactly at limit, stop present, long reason —
-      // four of five components, so 80 without screenshots.
-      expect(find.text('80/100 · جيد'), findsOneWidget);
+      // ALL FOUR components, so a full 100.
+      //
+      // This read 80/100 · جيد while the score had a fifth component for an
+      // attached screenshot. That component is gone (the website could never
+      // earn it), and this trade is now exactly what a fully prepared one looks
+      // like — which is the more useful thing for this test to assert anyway.
+      expect(find.text('100/100 · ممتاز'), findsOneWidget);
 
       await tester.scrollUntilVisible(
         find.text('التصنيفات'),

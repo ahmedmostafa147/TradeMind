@@ -1,3 +1,4 @@
+import { LightbulbIcon } from '@/components/icons';
 import { SectionHeader } from '@/components/section-header';
 
 type InvestorGroup = {
@@ -103,8 +104,13 @@ export function Market() {
 
           {/* Key Insight Box */}
           <div className="mt-5 rounded-xl border border-border-default bg-surface-low p-4 text-center sm:p-5 sm:text-start">
+            {/* LightbulbIcon, not 💡. Zero emoji on the site is an explicit
+                owner preference — SVG icons only, from components/icons.tsx. An
+                emoji also renders in whatever the reader's OS ships, which is a
+                different picture on every device. */}
             <p className="text-sm leading-relaxed text-fg-muted">
-              💡 <span className="font-semibold text-fg">قراءة حركة السيولة:</span> في هذه الجلسة، قامت{' '}
+              <LightbulbIcon className="me-1 inline-block size-4 align-[-0.2em] text-brand-ink" />
+              <span className="font-semibold text-fg">قراءة حركة السيولة:</span> في هذه الجلسة، قامت{' '}
               <span className="font-bold text-win">المؤسسات المصرية</span> بضخ سيولة شرائية بمبلغ{' '}
               <span dir="ltr" className="font-bold text-win">+66.0M</span>، بينما قام{' '}
               <span className="font-bold text-loss">الأفراد الأجانب</span> بالبيع بمبلغ{' '}

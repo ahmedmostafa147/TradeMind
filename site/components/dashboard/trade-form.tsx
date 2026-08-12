@@ -599,25 +599,25 @@ export function TradeForm({
 
       <TimelineEditor entries={timeline} onChange={setTimeline} />
 
-      {/* Said out loud rather than left as a missing button. The discipline
-          score has a 20-point component for "a chart screenshot is attached",
-          and a browser cannot earn it: the app stores images as files in the
-          phone's own storage and uploads only their paths, which are
-          meaningless here. Without this line the score just looks broken. */}
-      <p className="rounded-md border border-border-default bg-surface-low p-3 text-xs leading-relaxed text-fg-subtle">
-        صور الشارت بتتضاف من التطبيق على التليفون بس — متخزّنة على جهازك ومش
-        بترفع على السيرفر، فمش بتظهر ولا بتتضاف من المتصفح.
-        {initial && initial.screenshotPaths.length > 0 && (
-          <>
-            {' '}
-            الصفقة دي عليها{' '}
-            <span className="num font-bold">
-              {initial.screenshotPaths.length}
-            </span>{' '}
-            صورة على تليفونك، وهتفضل زي ما هي بعد الحفظ من هنا.
-          </>
-        )}
-      </p>
+      {/* THIS NO LONGER EXPLAINS A LOST 20 POINTS — the discipline score dropped
+          the screenshot component precisely because a browser could never earn
+          it. What is left is a plain statement about where images live, which
+          still matters: a user editing a trade from here needs to know the
+          images on their phone survive the save.
+
+          The note only appears when the trade actually HAS images. There is no
+          reason to tell somebody about a feature of a device they may not be
+          using, on a form that is otherwise complete. */}
+      {initial && initial.screenshotPaths.length > 0 && (
+        <p className="rounded-md border border-border-default bg-surface-low p-3 text-xs leading-relaxed text-fg-subtle">
+          الصفقة دي عليها{' '}
+          <span className="num font-bold">
+            {initial.screenshotPaths.length}
+          </span>{' '}
+          صورة شارت على تليفونك. الصور متخزّنة على الجهاز ومش بترفع على السيرفر،
+          فمش بتظهر من المتصفح — وهتفضل زي ما هي بعد الحفظ من هنا.
+        </p>
+      )}
 
       <Field label="ملاحظات (اختياري)" htmlFor="tf-notes">
         <textarea

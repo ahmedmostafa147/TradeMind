@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'auth_exception.dart';
@@ -40,8 +41,6 @@ class GoogleAuthService {
   static Future<UserCredential> signIn() async {
     if (!_firebaseReady) throw AuthException.backendUnavailable;
 
-    // Web and some desktop targets use a different (button-based) flow; this
-    // app ships Android, where authenticate() is supported.
     if (!GoogleSignIn.instance.supportsAuthenticate()) {
       throw AuthException.googleMisconfigured;
     }
@@ -61,6 +60,15 @@ class GoogleAuthService {
       final credential = GoogleAuthProvider.credential(idToken: idToken);
       return await FirebaseAuth.instance.signInWithCredential(credential);
     } on GoogleSignInException catch (e) {
+      // EVERY DIAGNOSTIC HERE IS BEHIND kDebugMode, and none of them carries an
+      // address, a uid or a token.
+      //
+      // `debugPrint` is NOT stripped from a release build — it writes to logcat
+      // in production, where any app holding READ_LOGS, and adb over a cable,
+      // can read it. A step-by-step trace of this method printing the signing-in
+      // account's email and the resulting uid was exactly that: the identity of
+      // every user who ever signed in, in the clear, on their own device.
+      _debug('GoogleSignInException: ${e.code}');
       throw switch (e.code) {
         GoogleSignInExceptionCode.canceled => AuthException.cancelled,
         _ => const AuthException(
@@ -69,15 +77,22 @@ class GoogleAuthService {
         ),
       };
     } on FirebaseAuthException catch (e) {
+      _debug('FirebaseAuthException: ${e.code}');
       throw AuthException.fromCode(e.code);
     } on AuthException {
       rethrow;
-    } catch (_) {
+    } catch (e) {
+      _debug('unexpected: ${e.runtimeType}');
       throw const AuthException(
         AuthFailure.unknown,
         'تعذّر تسجيل الدخول بجوجل. جرّب تاني.',
       );
     }
+  }
+
+  /// Failure codes only, and only in debug. See the note in [signIn].
+  static void _debug(String message) {
+    if (kDebugMode) debugPrint('[GoogleAuth] $message');
   }
 
   /// Clears the Google session so the next sign-in shows the account chooser.

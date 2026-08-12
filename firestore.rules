@@ -140,6 +140,33 @@ service cloud.firestore {
           && request.resource.data.plan == 'trial'
           && request.resource.data.trialStartedAt == request.time;
 
+        // THE OPERATOR CAN OPEN A SUBSCRIPTION THAT DOES NOT EXIST YET.
+        //
+        // Without this the «فعّل» button could only ever UPDATE, so an account
+        // whose client had not yet created its own trial row could pay and not be
+        // activatable — the operator would be holding money with no way to
+        // deliver. Both clients create that row on first sight, so this is the
+        // edge and not the norm, but "we took your money and the button does not
+        // work" is not an edge worth leaving open.
+        //
+        // `trialStartedAt` is still the SERVER's clock and still required, for a
+        // reason beyond forgery: the update rule above compares the field to
+        // itself, and a document created without it would make every later edit
+        // to that document fail on a missing key. Requiring it here keeps the
+        // field present on every subscription document that exists.
+        allow create: if isAdmin()
+          && docId == 'subscription'
+          && request.resource.data.keys().hasOnly([
+               'plan', 'trialStartedAt', 'proUntil', 'note'
+             ])
+          && request.resource.data.plan in ['trial', 'free', 'pro']
+          && request.resource.data.trialStartedAt == request.time
+          && (!('proUntil' in request.resource.data)
+              || request.resource.data.proUntil is timestamp)
+          && (!('note' in request.resource.data)
+              || (request.resource.data.note is string
+                  && request.resource.data.note.size() <= 500));
+
         // Operator-only, and the trial's start is immutable even here: it is
         // evidence of when the clock started, and an admin who needs to give
         // somebody more time sets `proUntil` rather than rewriting history.

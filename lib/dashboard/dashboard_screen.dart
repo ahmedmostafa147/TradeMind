@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
 import '../settings/settings_providers.dart';
-import 'analytics_screen.dart';
 import 'dashboard_providers.dart';
 import 'widgets/equity_chart.dart';
 import 'widgets/portfolio_scenarios_card.dart';
@@ -12,8 +11,8 @@ import 'widgets/stat_card.dart';
 
 /// «الأداء» — what the journal adds up to.
 ///
-/// A tab body under [TradesHubScreen]. The deeper breakdown still lives in
-/// [AnalyticsScreen], reached from the hub's menu.
+/// A tab body under `TradesHubScreen`. The deeper breakdown is the
+/// «التحليلات» tab beside it, and both sit behind the same entitlement.
 class PerformanceView extends ConsumerWidget {
   const PerformanceView({super.key});
 

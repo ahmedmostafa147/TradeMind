@@ -102,6 +102,47 @@ class _AuthFormState extends ConsumerState<AuthForm> {
     }
   }
 
+  Future<void> _resetPassword() async {
+    final email = _emailController.text.trim();
+    // Same check the sign-in path uses, not a looser `contains('@')` one: a
+    // reset that silently does nothing because the address was malformed is
+    // indistinguishable from one that worked, since Firebase deliberately does
+    // not reveal whether an account exists.
+    if (email.isEmpty || !_looksLikeEmail(email)) {
+      setState(
+        () => _error =
+            'اكتب بريدك الإلكتروني الأول عشان نبعتلك رابط إعادة التعيين.',
+      );
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      await ref.read(authProvider.notifier).sendPasswordResetEmail(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم إرسال رابط إعادة تعيين كلمة السر إلى $email'),
+          ),
+        );
+      }
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = 'تعذّر إرسال الرابط. اتأكد من البريد وجرّب تاني.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _google() async {
     setState(() {
       _loading = true;
@@ -195,6 +236,7 @@ class _AuthFormState extends ConsumerState<AuthForm> {
               tooltip: _obscurePassword ? 'إظهار كلمة السر' : 'إخفاء كلمة السر',
               onPressed: () =>
                   setState(() => _obscurePassword = !_obscurePassword),
+            ),
           ),
         ),
 
@@ -272,14 +314,21 @@ class _AuthFormState extends ConsumerState<AuthForm> {
         // The tint is `secondaryContainer`, not the brand: the brand fill
         // belongs to the primary button directly above, and repeating it would
         // give the screen two things claiming to be the main action.
+        //
+        // WRAP, NOT ROW. «ليس لديك حساب؟» plus «أنشئ حساباً جديداً» needs about
+        // 436 logical pixels; the panel gets 388 inside this screen's 420-wide
+        // ConstrainedBox, so a Row clipped the verb off the first screen every
+        // user sees — 48 pixels of the single most important action on it. Wrap
+        // drops the button to a second centred line instead of hiding it.
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHigh,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
                 _isSignUp ? 'لديك حساب بالفعل؟' : 'ليس لديك حساب؟',

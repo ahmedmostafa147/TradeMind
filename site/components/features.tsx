@@ -9,11 +9,20 @@ import {
 } from '@/components/icons';
 import { Card, IconChip, SectionHeader } from '@/components/section-header';
 
+/**
+ * THE FOUR COMPONENTS LISTED BELOW MUST MATCH SCORE_COMPONENTS in
+ * site/lib/risk-score.ts, and there used to be five.
+ *
+ * The fifth was «وصورة مرفقة», which the score dropped because a browser could
+ * never earn it — so this paragraph was promising visitors a component the
+ * product no longer has, on the page that sells it. See the note on
+ * lib/core/calc/risk_score.dart.
+ */
 const features = [
   {
     Icon: GaugeIcon,
     title: 'درجة انضباط لكل صفقة',
-    body: 'من 0 لـ 100، على خمس نقاط: تشيك ليست مكتملة، مخاطرة داخل الحد، استوب محدد، سبب مكتوب، وصورة مرفقة. بتقيس التزامك بالخطة، مش نتيجة الصفقة — صفقة خسرانة اتعملت صح بتاخد 100.',
+    body: 'من 0 لـ 100، على أربع نقاط: تشيك ليست مكتملة، مخاطرة داخل الحد، استوب محدد، وسبب مكتوب. بتقيس التزامك بالخطة، مش نتيجة الصفقة — صفقة خسرانة اتعملت صح بتاخد 100.',
   },
   {
     Icon: ChartIcon,

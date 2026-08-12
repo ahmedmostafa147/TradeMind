@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "680175215-pddbq5nhqb2lp820ad9ukt7h1k1sk62r.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.radar.eg",
+            "certificate_hash": "156866d5a6749d7e26228b780038987205dbef82"
+          }
+        },
+        {
           "client_id": "680175215-eaj9ea5etm3h5du0il3r7ipmcol4ltc4.apps.googleusercontent.com",
           "client_type": 3
         }

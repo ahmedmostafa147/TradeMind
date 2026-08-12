@@ -27,13 +27,22 @@ export const faq = [
     // page said nothing about that anywhere, which left the most likely
     // question of all unanswered.
     //
-    // The three exclusions are exact, not hedging: chart images are absolute
-    // paths inside the phone's own storage (only the paths sync), closing
-    // prices have no web fetch at all, and the Gemini key lives in app
-    // settings. Naming them here is cheaper than a one-star review from
-    // somebody who signed up expecting them.
+    // ONE EXCLUSION, AND IT USED TO CLAIM THREE.
+    //
+    // The comment here said closing prices "have no web fetch at all" and that
+    // the Gemini key "lives in app settings". Both stopped being true and nobody
+    // came back to this answer: `use-quotes.ts` fetches prices through the same
+    // /api/quote route the phone uses, and `ai-parser.ts` + `gemini-key.ts` run
+    // the reader in the browser against a key in localStorage.
+    //
+    // So the page was telling visitors to wait for an UNPUBLISHED app to get two
+    // features they could already use. Naming a real limit is cheaper than a
+    // one-star review; naming two invented ones just loses the signup.
+    //
+    // Chart images are the genuine exclusion — absolute paths inside the phone's
+    // own storage, with only the paths syncing.
     q: 'أقدر أستخدمه من المتصفح من غير ما أستنى التطبيق؟',
-    a: 'أيوه، والموقع شغّال دلوقتي. تقدر تسجّل صفقاتك وتعدّلها وتمسحها، وتمشّي قائمة المراقبة، وتشوف قرار اليوم وكل التحليلات ودرجة الانضباط، وتظبط رأس مالك ونسبة المخاطرة — وكله بيتحفظ على حسابك، فلما التطبيق ينزل هتلاقي دفترك كامل مستنيك. تلات حاجات بس بتشتغل من التطبيق على التليفون: إرفاق صور الشارت، أسعار الإغلاق، وقراءة التوصية من صورة.',
+    a: 'أيوه، والموقع شغّال دلوقتي. تقدر تسجّل صفقاتك وتعدّلها وتمسحها، وتمشّي قائمة المراقبة، وتشوف قرار اليوم وأسعار الإغلاق وكل التحليلات ودرجة الانضباط، وتقرا التوصية من صورة، وتظبط رأس مالك ونسبة المخاطرة — وكله بيتحفظ على حسابك، فلما التطبيق ينزل هتلاقي دفترك كامل مستنيك. حاجة واحدة بس محتاجة التطبيق على التليفون: إرفاق صور الشارت، لأنها متخزّنة على الجهاز نفسه.',
   },
   {
     q: 'بياناتي بتروح فين؟',
@@ -48,8 +57,12 @@ export const faq = [
     a: 'لأ، وده مش هدفه أصلًا. رادار مبيقدّمش نصائح ولا توصيات استثمارية، ومبيتصلش بأي وسيط أو حساب تداول. دوره إنه يسجّل قراراتك انت ويحسبلك المخاطرة قبل ما تدخل.',
   },
   {
+    // «إعدادات التطبيق» before this, which is only half of where the key lives:
+    // the browser keeps it in localStorage (`gemini-key.ts`) exactly as the phone
+    // keeps it in Hive. Naming one surface implied the feature belongs to it —
+    // the same mistake the «تلات حاجات» answer above was making.
     q: 'ميزة قراءة التوصية من صورة بتشتغل إزاي؟',
-    a: 'بتحط مفتاح Gemini بتاعك انت في إعدادات التطبيق، وبيتخزّن على جهازك. الصورة بتتبعت لخدمة Google وقت الاستخدام بس، ومش بتتخزّن على أي سيرفر بتاعنا. من غير المفتاح الميزة بتبقى مقفولة ومفيش أي صورة بتخرج من جهازك.',
+    a: 'بتحط مفتاح Gemini بتاعك انت في الإعدادات، وبيتخزّن على جهازك انت — على التليفون أو في المتصفح، وميتزامنش بينهم. الصورة بتتبعت لخدمة Google وقت الاستخدام بس، ومش بتتخزّن على أي سيرفر بتاعنا. من غير المفتاح الميزة بتبقى مقفولة ومفيش أي صورة بتخرج من جهازك.',
   },
   {
     q: 'بيدعم البيع على المكشوف أو أسواق تانية؟',

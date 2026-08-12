@@ -1,21 +1,30 @@
 import { SectionHeader } from '@/components/section-header';
 import { TradeCardMock, type TradeMock } from '@/components/trade-card-mock';
+import { POINTS_EACH } from '@/lib/risk-score';
 
 /**
- * The five components of the app's risk score, worth 20 points each
+ * The four components of the app's risk score, worth 25 points each
  * (lib/core/calc/risk_score.dart), and the six checklist items that feed the
  * first of them (lib/trades/checklist.dart).
  *
- * The example scores 80 rather than a perfect 100 on purpose: a full score
- * teaches nothing about how the number moves, and the missing component shows
- * the mechanic at a glance.
+ * MUST MATCH SCORE_COMPONENTS in site/lib/risk-score.ts. This is a marketing
+ * page and duplicates the labels rather than importing them, because the example
+ * needs a fixed earned/unearned pattern that no real trade supplies — but the
+ * labels drifting would put a component on the public page that the product does
+ * not score. It was five here, including «صورة من الشارت مرفقة», for exactly as
+ * long as the score had five.
+ *
+ * The example scores 75 rather than a perfect 100 on purpose: a full score
+ * teaches nothing about how the number moves, and one missing component shows
+ * the mechanic at a glance. «المخاطرة داخل الحد المسموح» is the one dropped,
+ * because the card beside it is the over-risk example — so the list and the card
+ * are telling the same story.
  */
 const components = [
   { label: 'تشيك ليست مكتملة', earned: true },
-  { label: 'المخاطرة داخل الحد المسموح', earned: true },
+  { label: 'المخاطرة داخل الحد المسموح', earned: false },
   { label: 'استوب محدد وتحت سعر الدخول', earned: true },
   { label: 'سبب مكتوب ومفصّل', earned: true },
-  { label: 'صورة من الشارت مرفقة', earned: false },
 ];
 
 const checklist = [
@@ -27,11 +36,10 @@ const checklist = [
   'الأخبار متابَعة',
 ];
 
-const POINTS_EACH = 20;
 const score = components.filter((c) => c.earned).length * POINTS_EACH;
 
-/** 100 ممتاز · 80 جيد · 60 متوسط · 40 وأقل ضعيف — the app's own thresholds. */
-const grade = score >= 100 ? 'ممتاز' : score >= 80 ? 'جيد' : score >= 60 ? 'متوسط' : 'ضعيف';
+/** 100 ممتاز · 75 جيد · 50 متوسط · 25 وأقل ضعيف — the app's own thresholds. */
+const grade = score >= 100 ? 'ممتاز' : score >= 75 ? 'جيد' : score >= 50 ? 'متوسط' : 'ضعيف';
 
 /**
  * Entry 62.30, stop 57.10, 500 shares → 2,600 EGP at risk, which is 2.6% of a
@@ -58,12 +66,12 @@ export function Discipline() {
           title="رادار بيقيس التزامك، مش حظك."
           lead={
             <>
-              كل صفقة بتاخد درجة من 0 لـ 100 على خمس نقاط، كل واحدة بـ{' '}
-              <span className="num">20</span>. الدرجة دي مالهاش علاقة بالربح
-              والخسارة: صفقة خسرانة اتعملت بالأصول بتاخد{' '}
+              كل صفقة بتاخد درجة من 0 لـ 100 على أربع نقاط، كل واحدة بـ{' '}
+              <span className="num">{POINTS_EACH}</span>. الدرجة دي مالهاش علاقة
+              بالربح والخسارة: صفقة خسرانة اتعملت بالأصول بتاخد{' '}
               <span className="num">100</span>، وصفقة كسبانة اتاخدت بمزاج بتاخد{' '}
-              <span className="num">20</span>. وده المقصود — الدرجة بتقيس الشغل
-              اللي انت بتتحكم فيه.
+              <span className="num">{POINTS_EACH}</span>. وده المقصود — الدرجة
+              بتقيس الشغل اللي انت بتتحكم فيه.
             </>
           }
         />

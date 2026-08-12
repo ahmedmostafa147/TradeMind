@@ -357,7 +357,9 @@ class _RiskScoreBar extends StatelessWidget {
         _ScoreItem('المخاطرة داخل الحد', score.riskWithinLimit),
         _ScoreItem('فيه استوب', score.hasStop),
         _ScoreItem('سبب مفصّل', score.hasDetailedReason),
-        _ScoreItem('فيه صور', score.hasScreenshots),
+        // «فيه صور» was a fifth row here. The score dropped that component
+        // because the website could never earn it; the images themselves are
+        // still shown in the gallery above when a trade has any.
       ],
     );
   }

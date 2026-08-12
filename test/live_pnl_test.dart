@@ -73,7 +73,9 @@ void main() {
   ) async {
     await _pump(tester, quote: AsyncData(_quote(0)));
 
-    expect(find.text('السعر اللحظي غير متاح'), findsOneWidget);
+    // «إغلاق», not «لحظي»: the route serves a daily close, and the card's own
+    // label already said so while these two lines claimed a live tick.
+    expect(find.text('سعر الإغلاق غير متاح'), findsOneWidget);
     expect(find.textContaining('ج.م'), findsNothing);
   });
 
@@ -83,7 +85,7 @@ void main() {
       quote: AsyncError(Exception('boom'), StackTrace.empty),
     );
 
-    expect(find.text('تعذّر تحديث السعر اللحظي'), findsOneWidget);
+    expect(find.text('تعذّر تحديث سعر الإغلاق'), findsOneWidget);
   });
 
   testWidgets('the avatar shows the first two letters of the ticker', (

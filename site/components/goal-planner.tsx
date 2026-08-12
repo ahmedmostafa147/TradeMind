@@ -6,6 +6,7 @@ import {
   PlannerInput,
 } from "@/components/goal-planner-fields";
 import { useGoalPlannerState } from "@/components/goal-planner-state";
+import { LightbulbIcon } from "@/components/icons";
 import { SectionHeader } from "@/components/section-header";
 import { money } from "@/lib/format";
 
@@ -140,8 +141,10 @@ export function GoalPlanner() {
               </div>
 
               <div className="mt-5 rounded-lg border border-border-default bg-surface p-3 text-center sm:text-start">
+                {/* LightbulbIcon, not 💡 — zero emoji on the site is an
+                    explicit owner preference; SVG icons only. */}
                 <p className="text-xs leading-relaxed text-fg-muted">
-                  💡{" "}
+                  <LightbulbIcon className="me-1 inline-block size-3.5 align-[-0.2em] text-brand-ink" />
                   <span className="font-semibold text-fg">
                     قوة التراكم المركب:
                   </span>{" "}

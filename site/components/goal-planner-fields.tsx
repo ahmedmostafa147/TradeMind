@@ -20,7 +20,11 @@ export function ModeSwitcher({
             : 'text-fg-muted hover:text-fg'
         }`}
       >
-        🎯 عندي مبلغ مستهدف واعرف أستثمر كام شهرياً
+        {/* No emoji, and no icon either. Zero emoji on the site is an explicit
+            owner preference, and these two labels are full sentences that say
+            exactly which direction the calculator runs — a pictogram in front of
+            each adds nothing a reader needs. */}
+        عندي مبلغ مستهدف واعرف أستثمر كام شهرياً
       </button>
       <button
         type="button"
@@ -31,7 +35,7 @@ export function ModeSwitcher({
             : 'text-fg-muted hover:text-fg'
         }`}
       >
-        💵 هحط مبلغ شهري واعرف ثروتي هتكون كام
+        هحط مبلغ شهري واعرف ثروتي هتكون كام
       </button>
     </div>
   );
@@ -57,7 +61,6 @@ export function GoalPresetList({
               : 'border-border-default bg-surface-low text-fg-muted hover:bg-surface-high'
           }`}
         >
-          <span>{preset.icon}</span>
           <span>{preset.title}</span>
         </button>
       ))}

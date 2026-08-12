@@ -1,6 +1,14 @@
 'use client';
 
-import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
+import {
+  collection,
+  deleteField,
+  doc,
+  getDoc,
+  getDocs,
+  serverTimestamp,
+  setDoc,
+} from 'firebase/firestore';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -131,13 +139,24 @@ function Console() {
  * Firestore under the admin's own credentials. That is why there is no service
  * account anywhere in this project — see the note on the route.
  *
- * A BUTTON RATHER THAN A CRON, FOR NOW, AND DELIBERATELY. EGX answers
- * automated requests with 403 from at least some networks, and whether it
- * answers Vercel is unknown until this is deployed and pressed. A cron that
- * silently 502s every evening would look exactly like a market with no data.
- * One button, one visible error message, and the failure is legible on the
- * first try — then the same route can be put behind a schedule once it is known
- * to work.
+ * THE SCHEDULED COLLECTOR IS NOT THIS BUTTON — IT IS `worker/`.
+ *
+ * This panel was the only way to get a session in, and the note here used to say
+ * a cron could be pointed at the same route "once it is known to work". It is now
+ * known NOT to work: egx.com.eg sits behind F5 Shape Bot Defense, which answers
+ * any HTTP client with an obfuscated JavaScript challenge that has to be
+ * EXECUTED. No header and no copied cookie gets past it, by design — that is what
+ * the product is for. It was tried from two networks and failed differently in
+ * each (403 locally, 200-with-challenge from Vercel).
+ *
+ * `worker/` does it with a real browser (Playwright, on Cloud Run) and writes the
+ * same document through the Admin SDK. See worker/README.md.
+ *
+ * THE BUTTON AND THE MANUAL FORM BOTH STAY. The button because if EGX ever drops
+ * Shape it starts working again and the failure message is a useful probe either
+ * way; the form because a scraper against a site that does not want to be scraped
+ * is one layout change from silence, and «السوق» is a paid surface that cannot go
+ * blank for a week while someone fixes a selector.
  */
 function MarketRefreshPanel() {
   const [busy, setBusy] = useState(false);
@@ -174,8 +193,9 @@ function MarketRefreshPanel() {
         <div>
           <h2 className="font-bold">بيانات السوق</h2>
           <p className="mt-1 text-xs leading-relaxed text-fg-muted">
-            بيسحب تداولات المستثمرين من البورصة المصرية ويخزّنها لليوم ده. لو
-            اتضغط أكتر من مرة في نفس اليوم، آخر مرة هي اللي بتفضل.
+            السحب اليومي بيشتغل لوحده من الوركر بعد الجلسة. الزرار ده محاولة سحب
+            من المتصفح — البورصة وراها حماية بوت فغالبًا بيفشل، وتحته الإدخال
+            اليدوي. لو اتحفظت أكتر من مرة في نفس اليوم، آخر مرة هي اللي بتفضل.
           </p>
         </div>
         <button
@@ -255,16 +275,6 @@ function UsersPanel() {
   const [activating, setActivating] = useState<UserRow | null>(null);
 
   /**
-   * Activates or ends a subscription by hand.
-   *
-   * THIS IS THE ONLY WAY TO BECOME A PAYING CUSTOMER RIGHT NOW, and it is
-   * deliberate rather than a stopgap that leaked into production: there is no
-   * payment gateway wired up, and a checkout button that cannot take money is
-   * worse than none. The rules already say only an admin may write this
-   * document, so the manual path and the eventual automated one land in exactly
-   * the same place through exactly the same check.
-   */
-  /**
    * Activates or ends a subscription by hand, and RECORDS WHAT WAS PAID.
    *
    * This is the whole payment system right now, and deliberately so: no gateway
@@ -276,6 +286,31 @@ function UsersPanel() {
    * the method or the reference is one that cannot answer «أنا دفعت» three
    * months later — and the rules already reserve a 500-character field for
    * exactly this.
+   *
+   * ── `merge: true`, AND `trialStartedAt` IS NEVER SENT ──────────────────────
+   *
+   * THIS WRITE USED TO FAIL FOR EVERY REAL USER, and the catch below blamed the
+   * wrong thing for it.
+   *
+   * It sent `merge: false` with `trialStartedAt` read back out of state. The
+   * rule requires that field to be unchanged —
+   * `request.resource.data.trialStartedAt == resource.data.trialStartedAt` — and
+   * the stored value is `request.time`, a server stamp carrying SUB-MILLISECOND
+   * precision. State held it as a JavaScript `Date`, which cannot: `toDate()`
+   * truncates to whole milliseconds. Writing that back produced a timestamp a
+   * few hundred microseconds off the stored one, the equality failed, and
+   * Firestore returned permission-denied — for roughly 999 accounts in 1000,
+   * every one that had ever started a trial. Nobody could be made a paying
+   * customer at all.
+   *
+   * Merging and omitting the field is the fix, not re-reading it with better
+   * precision: `request.resource.data` under a merge is the document as it will
+   * be AFTER the write, so an omitted field still satisfies the equality using
+   * the value already on the server. The client never has to reproduce a
+   * timestamp it cannot represent.
+   *
+   * `proUntil` is then explicitly deleted when stopping a subscription, because
+   * a merge would otherwise leave a future date sitting on a `free` plan.
    */
   async function activate(row: UserRow, input: ActivationInput) {
     setBusyUid(row.uid);
@@ -283,32 +318,36 @@ function UsersPanel() {
       const until = new Date();
       until.setMonth(until.getMonth() + input.months);
 
+      const stopping = input.months === 0;
       const stamp = new Date().toISOString().slice(0, 10);
-      const note =
-        input.months === 0
-          ? `أُوقف يدويًا · ${stamp}`
-          : [
-              `${input.months} شهر`,
-              input.amount > 0 ? `${input.amount} ج.م` : null,
-              input.method,
-              input.reference.trim() === '' ? null : input.reference.trim(),
-              stamp,
-            ]
-              .filter((part) => part !== null)
-              .join(' · ')
-              .slice(0, 500);
+      const note = stopping
+        ? `أُوقف يدويًا · ${stamp}`
+        : [
+            `${input.months} شهر`,
+            input.amount > 0 ? `${input.amount} ج.م` : null,
+            input.method,
+            input.reference.trim() === '' ? null : input.reference.trim(),
+            stamp,
+          ]
+            .filter((part) => part !== null)
+            .join(' · ')
+            .slice(0, 500);
+
+      // `row.subscription === null` means the read found no document, so this
+      // write is a CREATE and the admin-create rule applies — which requires
+      // `trialStartedAt` and requires it to be the server's own clock. Sending
+      // it only in that branch is what keeps the update branch omitting it.
+      const opening = row.subscription === null;
 
       await setDoc(
         doc(firestore(), 'users', row.uid, 'billing', 'subscription'),
         {
-          plan: input.months === 0 ? 'free' : 'pro',
-          // The trial's start is immutable and the rules enforce it, so it has
-          // to go back exactly as it came.
-          trialStartedAt: row.subscription?.trialStartedAt ?? null,
-          ...(input.months === 0 ? {} : { proUntil: until }),
+          plan: stopping ? 'free' : 'pro',
+          proUntil: stopping ? deleteField() : until,
           note,
+          ...(opening ? { trialStartedAt: serverTimestamp() } : {}),
         },
-        { merge: false }
+        { merge: true }
       );
 
       setRows(
@@ -318,9 +357,14 @@ function UsersPanel() {
               ? {
                   ...r,
                   subscription: {
-                    plan: input.months === 0 ? 'free' : 'pro',
-                    trialStartedAt: r.subscription?.trialStartedAt ?? null,
-                    proUntil: input.months === 0 ? null : until,
+                    plan: stopping ? 'free' : 'pro',
+                    // On a create the server stamped it just now; the exact
+                    // value only matters to the rules, and the next page load
+                    // reads the real one.
+                    trialStartedAt:
+                      r.subscription?.trialStartedAt ??
+                      (opening ? new Date() : null),
+                    proUntil: stopping ? null : until,
                     note,
                   },
                 }
@@ -329,8 +373,11 @@ function UsersPanel() {
       );
       setActivating(null);
     } catch {
+      // The old copy here guessed at a cause — «لو المستخدم ده لسه ما فتحش رادار
+      // ولا مرة» — and that guess was wrong for the failure that was actually
+      // happening on every attempt. Say what is known and nothing more.
       window.alert(
-        'مقدرش يحفظ. لو المستخدم ده لسه ما فتحش رادار ولا مرة، مفيش مستند اشتراك يتعدّل.'
+        'مقدرش يحفظ الاشتراك. اتأكد إن حسابك أدمن وإن النت شغّال، وجرّب تاني.'
       );
     } finally {
       setBusyUid(null);
@@ -449,7 +496,10 @@ function UsersPanel() {
               <tr className="bg-surface-high">
                 <Th>الاسم</Th>
                 <Th>البريد</Th>
-                <Th>اشترك</Th>
+                {/* «اشترك» before this, which in a table that also has a
+                    «الباقة» column reads as the date they started PAYING. It is
+                    `createdAt` — when the account was made. */}
+                <Th>سجّل</Th>
                 <Th>آخر ظهور</Th>
                 <Th>صفقات</Th>
                 <Th>الباقة</Th>

@@ -18,8 +18,9 @@
 class GoogleAuthConfig {
   const GoogleAuthConfig._();
 
-  /// Empty means "not configured". Fill in before shipping Google sign-in.
-  static const String serverClientId = '';
+  /// Web client ID for trademind-6222c Firebase project.
+  static const String serverClientId =
+      '680175215-eaj9ea5etm3h5du0il3r7ipmcol4ltc4.apps.googleusercontent.com';
 
   static bool get isConfigured => serverClientId.isNotEmpty;
 }

@@ -1,0 +1,14 @@
+# The image runs the worker; it does not test it.
+tests/
+README.md
+
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# NEVER SHIP A KEY FILE. Cloud Run supplies the credential through the metadata
+# server, so `init_app` needs no key at all — a key only exists on a developer's
+# machine for local runs, and baking one into a layer publishes it to anybody who
+# can pull the image.
+*.json
+!requirements.txt

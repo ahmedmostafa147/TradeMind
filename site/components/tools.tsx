@@ -13,8 +13,30 @@ import {
 } from '@/components/icons';
 import { Card, IconChip, SectionHeader } from '@/components/section-header';
 
+type Tool = {
+  Icon: (props: { className?: string }) => React.ReactElement;
+  title: string;
+  body: string;
+  featured?: boolean;
+  /**
+   * Shows the «التطبيق بس» badge. ONLY TRUE FOR THINGS A BROWSER GENUINELY
+   * CANNOT DO — currently just chart images, whose paths point into the phone's
+   * own storage.
+   *
+   * It was also on «قراءة التوصية من صورة» and «أسعار الإغلاق», both of which
+   * the website has done for a while. The badge was telling visitors to wait for
+   * an unpublished app to get features they could already use.
+   */
+  appOnly?: boolean;
+};
+
 /**
  * Everything the app actually does, one card each.
+ *
+ * TYPED EXPLICITLY, not inferred. With `appOnly` on a single entry, TypeScript
+ * narrows the array to a union in which most members have no such property, and
+ * the render below stops compiling — the annotation is what lets an optional flag
+ * be optional.
  *
  * Each entry maps to real code — the file is named so a claim here can be
  * checked rather than taken on trust. Nothing on this list is planned,
@@ -29,7 +51,7 @@ import { Card, IconChip, SectionHeader } from '@/components/section-header';
  * the trade as well as after it, and a reader can now see that claim in the
  * shape of the section instead of having to take the headline's word for it.
  */
-const groups = [
+const groups: { stage: string; note: string; tools: Tool[] }[] = [
   {
     stage: 'قبل ما تشتري',
     note: 'القرار بيتاخد هنا، مش بعدين',
@@ -53,8 +75,11 @@ const groups = [
       {
         Icon: SparkIcon,
         title: 'قراءة التوصية من صورة',
-        body: 'ترفع صورة توصية، والتطبيق يستخرج منها الأسعار. بمفتاحك انت، ومقفولة من غيره.',
-        appOnly: true,
+        // NOT appOnly. It runs in the browser too — `ai-trade-sheet.tsx` and
+        // `ai-parser.ts` are a full mirror of the Dart service, and the dashboard
+        // renders the sheet from its own sparkle action. The badge was sending
+        // visitors to wait for an unpublished app for something they can use now.
+        body: 'ترفع صورة توصية، ورادار يستخرج منها الأسعار. بمفتاحك انت، ومقفولة من غيره.',
       },
     ],
   },
@@ -70,8 +95,10 @@ const groups = [
       {
         Icon: ChartIcon,
         title: 'أسعار الإغلاق',
+        // NOT appOnly either. `use-quotes.ts` drives this in «قرار اليوم» on the
+        // web through the SAME /api/quote route the phone calls — that shared
+        // route exists precisely so neither surface quotes a position differently.
         body: 'آخر إغلاق للسهم من البورصة المصرية، وربح وخسارة غير محققة للمراكز المفتوحة.',
-        appOnly: true,
       },
       {
         Icon: TimelineIcon,
@@ -93,7 +120,9 @@ const groups = [
       {
         Icon: GaugeIcon,
         title: 'درجة الانضباط',
-        body: 'من 0 لـ 100 على خمس نقاط. بتقيس التزامك بالخطة، مش نتيجة الصفقة.',
+        // Four, not five. The screenshot component is gone — see the note in
+        // features.tsx and on lib/core/calc/risk_score.dart.
+        body: 'من 0 لـ 100 على أربع نقاط. بتقيس التزامك بالخطة، مش نتيجة الصفقة.',
       },
       {
         Icon: ChartIcon,

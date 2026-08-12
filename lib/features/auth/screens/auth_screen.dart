@@ -4,12 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_providers.dart';
 import '../widgets/auth_form.dart';
 
-/// The first screen on a fresh install: sign in, or carry on without an account.
+/// The first screen on a fresh install, and there is no way past it.
 ///
-/// The guest path is not a courtesy — this journal stores every trade locally
-/// and is designed to work with no network at all. A hard gate would make the
-/// app unusable whenever Firebase is unreachable or unconfigured, which is
-/// precisely when someone most needs to reach their own records.
+/// THIS USED TO OFFER A GUEST PATH and the comment here used to defend one. It
+/// is gone by the owner's decision: Radar is an account-based product, the
+/// journal lives in the account, and the app and the website are the same
+/// account. `test/auth_gate_test.dart` pins that — «the sign-in screen offers no
+/// way past it» — because a stray footer link would quietly undo it.
+///
+/// Offline still works: the session is cached in Hive, so only the first launch
+/// needs a network.
 class AuthScreen extends ConsumerWidget {
   const AuthScreen({super.key});
 

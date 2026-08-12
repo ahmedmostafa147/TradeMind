@@ -23,13 +23,39 @@ class EgxMarketService {
     'Accept': 'application/json',
   };
 
-  /// The site's quote route — the single source of last-close prices for the
-  /// app AND the browser. See fetchStockInfo for why it is not Yahoo directly.
+  /// Origin to try FIRST, from `--dart-define=RADAR_ORIGIN=https://…`.
   ///
-  /// Points at production rather than being configurable: there is one
-  /// deployment, and a build flag nobody sets is a way to ship a debug URL.
-  static const String _quoteApi =
-      'https://radar-one-phi.vercel.app/api/quote';
+  /// Empty when the flag is not passed, which is the normal debug build.
+  static const String _originOverride = String.fromEnvironment('RADAR_ORIGIN');
+
+  /// The origin every shipped build already knows.
+  ///
+  /// KEEP THIS ENTRY FOREVER, even after a real domain is live. It is what an
+  /// already-installed APK falls back to, and old installs are the reason this
+  /// list exists at all.
+  static const String _fallbackOrigin = 'https://radar-one-phi.vercel.app';
+
+  /// The site's quote route — the single source of last-close prices for the app
+  /// AND the browser. See [fetchStockInfo] for why it is not Yahoo directly.
+  ///
+  /// ── A LIST, BECAUSE THIS URL SHIPS INSIDE THE APK ─────────────────────────
+  ///
+  /// It was one hardcoded constant, with a comment arguing that a build flag
+  /// nobody sets is a way to ship a debug URL. True, and beside the point: the
+  /// real risk is the opposite one. Moving to a bought domain and retiring the
+  /// Vercel hostname would silently kill prices on every copy of the app already
+  /// on a phone, and the only repair is a forced update — for a hostname, not a
+  /// feature.
+  ///
+  /// So the app tries each origin in order and keeps the old one at the end. A
+  /// new build gets the new domain first via `--dart-define`; an old build still
+  /// reaches the old one; and if neither answers, [_fetchDirect] goes upstream.
+  /// The debug-URL worry is handled by the flag defaulting to empty rather than
+  /// to localhost — an unset flag changes nothing.
+  static List<String> get _quoteEndpoints => [
+    if (_originOverride.isNotEmpty) '$_originOverride/api/quote',
+    if (_originOverride != _fallbackOrigin) '$_fallbackOrigin/api/quote',
+  ];
 
   /// Known Egyptian stocks with Arabic names, for offline suggestions and to
   /// label a ticker before any quote arrives.
@@ -107,45 +133,70 @@ class EgxMarketService {
       return cached;
     }
 
+    // ONE SOURCE FOR BOTH SURFACES.
+    //
+    // This used to call Yahoo's chart endpoint directly while the browser called
+    // it through /api/quote, so the same open position could show two different
+    // last-close prices on the phone and on the site — and the owner saw exactly
+    // that. The browser CANNOT call Yahoo (no CORS headers), so the only endpoint
+    // both can share is ours.
+    //
+    // The cost is a dependency on our own deployment being up. That is the right
+    // trade for a number the user compares across two screens: a price that is
+    // briefly unavailable reads as «مفيش سعر», which is honest, while two prices
+    // that disagree read as a broken product.
+    for (final endpoint in _quoteEndpoints) {
+      final info = await _fetchFromRoute(endpoint, cleanSymbol);
+      if (info != null) {
+        _cache[cleanSymbol] = info;
+        return info;
+      }
+    }
+
+    // Every origin we know is unreachable — offline, down, or the hostname has
+    // been retired out from under this build. The phone goes upstream rather
+    // than losing its prices with our deployment.
     try {
-      // ONE SOURCE FOR BOTH SURFACES.
-      //
-      // This used to call Yahoo's chart endpoint directly while the browser
-      // called it through /api/quote, so the same open position could show two
-      // different last-close prices on the phone and on the site — and the
-      // owner saw exactly that. The browser CANNOT call Yahoo (no CORS
-      // headers), so the only endpoint both can share is ours.
-      //
-      // The cost is a dependency on our own deployment being up. That is the
-      // right trade for a number the user compares across two screens: a price
-      // that is briefly unavailable reads as «مفيش سعر», which is honest, while
-      // two prices that disagree read as a broken product.
-      final url = Uri.parse('$_quoteApi?symbols=$cleanSymbol');
+      return _cacheOrNull(cleanSymbol, await _fetchDirect(cleanSymbol));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// One attempt against one origin. Null for every failure, so the caller can
+  /// simply try the next one.
+  static Future<EgxStockInfo?> _fetchFromRoute(
+    String endpoint,
+    String cleanSymbol,
+  ) async {
+    try {
+      final url = Uri.parse('$endpoint?symbols=$cleanSymbol');
       final response = await http
           .get(url, headers: _headers)
           .timeout(const Duration(seconds: 10));
 
-      if (response.statusCode != 200) {
-        return _cacheOrNull(cleanSymbol, await _fetchDirect(cleanSymbol));
-      }
+      if (response.statusCode != 200) return null;
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final quotes = data['quotes'] as List?;
-      if (quotes == null || quotes.isEmpty) {
-        return _cacheOrNull(cleanSymbol, await _fetchDirect(cleanSymbol));
-      }
+      if (quotes == null || quotes.isEmpty) return null;
 
       final quote = quotes.first as Map<String, dynamic>;
       final price = (quote['price'] as num?)?.toDouble();
       // Null rather than a zero-priced placeholder, the same rule the route
       // follows: a missing price must never be arithmetic-ed into a 100% loss.
+      //
+      // A route that answered but has no price for this symbol is a real answer,
+      // not a broken origin — but returning null here only costs one extra
+      // request against the next origin, and the alternative is a special case
+      // that says "this failure means stop trying" for no gain.
       if (price == null || !price.isFinite || price <= 0) return null;
 
       final change = (quote['change'] as num?)?.toDouble() ?? 0;
       final changePercent =
           ((quote['changePercent'] as num?)?.toDouble() ?? 0) * 100;
 
-      final info = EgxStockInfo(
+      return EgxStockInfo(
         symbol: cleanSymbol,
         name: egxDirectory[cleanSymbol] ??
             (quote['name'] as String? ?? cleanSymbol),
@@ -162,17 +213,8 @@ class EgxMarketService {
         lastUpdated: DateTime.tryParse(quote['asOf'] as String? ?? '') ??
             DateTime.now(),
       );
-
-      _cache[cleanSymbol] = info;
-      return info;
     } catch (_) {
-      // Our deployment is unreachable — offline, or down. The phone falls back
-      // to the upstream source rather than losing its prices with it.
-      try {
-        return _cacheOrNull(cleanSymbol, await _fetchDirect(cleanSymbol));
-      } catch (_) {
-        return null;
-      }
+      return null;
     }
   }
 

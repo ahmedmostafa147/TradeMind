@@ -1,0 +1,19 @@
+# Pinned to minors, not exact versions: this is a scheduled job, not a library,
+# and a security patch landing without a manual bump is worth more here than
+# byte-identical rebuilds.
+
+# HTML parsing. The pure parser's only dependency, which is what lets
+# `--html sample.html` and the whole test suite run without a browser.
+beautifulsoup4~=4.12
+
+# The browser. THE POINT OF THIS WORKER — see the note at the top of fetch.py:
+# egx.com.eg is behind F5 Shape Bot Defense, which serves an obfuscated
+# JavaScript challenge that has to be EXECUTED. No HTTP client gets past it.
+playwright~=1.48
+
+# Firestore, via the Admin SDK. NOTE: this bypasses firestore.rules entirely —
+# radar_flows/store.py re-implements the whitelist because of it.
+firebase-admin~=6.5
+
+# Tests only.
+pytest~=8.3

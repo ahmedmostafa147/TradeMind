@@ -26,6 +26,12 @@ class AnalyticsView extends ConsumerWidget {
     }
 
     return ListView(
+        // Keyed like every other tab body in the hub («performance-list»,
+        // «goal-list», «today-list», «trades-list»). It went without one while
+        // it was a pushed route — the last Scaffold in the tree was enough to
+        // find it. As a tab it shares a PageView with its neighbours, where
+        // dragging the wrong Scrollable changes tab instead of scrolling.
+        key: const ValueKey('analytics-list'),
         padding: const EdgeInsets.all(16),
         children: [
           _SectionTitle('جودة الأداء'),
@@ -353,12 +359,14 @@ class _ExtremeRow extends StatelessWidget {
 
 /// The same body with a Scaffold around it, for the places that still push
 /// «الإحصائيات» as its own route rather than showing it as a hub tab.
-class AnalyticsScreen extends StatelessWidget {
-  const AnalyticsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('الإحصائيات')),
-    body: const AnalyticsView(),
-  );
-}
+// `AnalyticsScreen` USED TO LIVE HERE, and it was a hole in the paywall.
+//
+// It was a bare Scaffold wrapping [AnalyticsView] with no entitlement check,
+// pushed from the hub's overflow menu as «الإحصائيات التفصيلية». The same widget
+// reached through the «التحليلات» tab is gated — so the lock was on one of the
+// two doors into identical content, and the unlocked one was two taps away.
+//
+// The menu item now switches to the tab, which is what the website's own
+// overflow does (`setTab('analytics')` in customer-dashboard.tsx). One gated
+// route to one surface: a second entry point cannot forget a check it does not
+// make.

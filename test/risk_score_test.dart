@@ -92,10 +92,10 @@ void main() {
       expect(score.value, 100);
     });
 
-    test('a genuine breach loses the 20 points', () {
+    test('a genuine breach loses the 25 points', () {
       final score = scoreOf(makeTrade(qty: 700));
       expect(score.riskWithinLimit, isFalse);
-      expect(score.value, 80);
+      expect(score.value, 75);
       expect(score.grade, RiskGrade.good);
     });
 
@@ -106,10 +106,10 @@ void main() {
   });
 
   group('individual components', () {
-    test('an incomplete checklist loses its 20 points', () {
+    test('an incomplete checklist loses its 25 points', () {
       final score = scoreOf(makeTrade(checklist: const ['trend', 'volume']));
       expect(score.checklistComplete, isFalse);
-      expect(score.value, 80);
+      expect(score.value, 75);
     });
 
     test('a stop above entry does not count as a stop', () {
@@ -127,40 +127,56 @@ void main() {
       );
     });
 
-    test('screenshots count only when at least one is attached', () {
-      expect(scoreOf(makeTrade(screenshots: const [])).hasScreenshots, isFalse);
-      expect(scoreOf(makeTrade()).hasScreenshots, isTrue);
+    // «صورة من الشارت مرفقة» WAS A FIFTH COMPONENT AND IS NOT ANY MORE.
+    //
+    // It could only be earned on the phone — chart images are files in device
+    // storage and only their paths sync — so every trade logged from the website
+    // was capped at 80 with no action available to raise it. See the note on
+    // RiskScore for the full reasoning. This test guards that it does not creep
+    // back in without both surfaces being able to earn it.
+    test('attached screenshots do not change the score', () {
+      final withImages = scoreOf(makeTrade(screenshots: const ['/tmp/a.png']));
+      final without = scoreOf(makeTrade(screenshots: const []));
+      expect(withImages.value, without.value);
+      expect(withImages.value, 100);
     });
   });
 
-  group('grade thresholds land on the 20-point grid', () {
+  group('grade thresholds land on the 25-point grid', () {
     // A valid stop at exactly the risk limit is held constant, so two
     // components (hasStop, riskWithinLimit) always score. That fixes the floor
-    // at 40 and lets the remaining three be toggled one at a time for a clean
-    // 40 → 60 → 80 → 100 ladder.
+    // at 50 and lets the remaining two be toggled one at a time for a clean
+    // 50 → 75 → 100 ladder.
     RiskScore withExtras(int extras) => scoreOf(
       makeTrade(
         checklist: extras >= 1 ? _fullChecklist : const [],
-        screenshots: extras >= 2 ? const ['/tmp/a.png'] : const [],
-        reason: extras >= 3 ? _longReason : 'قصير',
+        reason: extras >= 2 ? _longReason : 'قصير',
       ),
     );
 
-    test('the two constant components put the floor at 40', () {
-      expect(withExtras(0).value, 40);
-      expect(withExtras(0).grade, RiskGrade.poor);
+    test('the two constant components put the floor at 50', () {
+      expect(withExtras(0).value, 50);
+      expect(withExtras(0).grade, RiskGrade.average);
     });
 
-    test('each further component adds exactly 20', () {
-      expect(withExtras(1).value, 60);
-      expect(withExtras(2).value, 80);
-      expect(withExtras(3).value, 100);
+    test('each further component adds exactly 25', () {
+      expect(withExtras(1).value, 75);
+      expect(withExtras(2).value, 100);
     });
 
     test('grades map to the grid', () {
-      expect(withExtras(1).grade, RiskGrade.average);
-      expect(withExtras(2).grade, RiskGrade.good);
-      expect(withExtras(3).grade, RiskGrade.excellent);
+      expect(withExtras(1).grade, RiskGrade.good);
+      expect(withExtras(2).grade, RiskGrade.excellent);
+    });
+
+    test('a single earned component is still ضعيف', () {
+      // 25 is the lowest non-zero score the formula can produce, and the poor
+      // band has to reach it — the old thresholds bottomed out at 40.
+      final score = scoreOf(
+        makeTrade(stop: 0, reason: 'حدس', checklist: _fullChecklist),
+      );
+      expect(score.value, 25);
+      expect(score.grade, RiskGrade.poor);
     });
   });
 

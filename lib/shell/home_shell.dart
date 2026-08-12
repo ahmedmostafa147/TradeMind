@@ -10,17 +10,17 @@ import '../features/market/screens/market_screen.dart';
 import '../settings/settings_screen.dart';
 import 'trades_hub_screen.dart';
 
-/// Four destinations, each a different job: look at my trades, plan a new one,
-/// read what was published, change my settings.
+/// Four destinations, each a different job: look at my trades, read the market,
+/// size a trade, change my settings.
 ///
-/// «المستجدات» is the fourth and it earns the slot on the same test as the
-/// others — it is a different JOB, not the same trades shown another way, which
-/// is exactly what got three of the original five merged into [TradesHubScreen]
-/// below. It is also the only way anybody sees an announcement: the admin
-/// console has published to `announcements` and `signals` since it was built,
-/// and until this screen existed nothing anywhere read either collection.
+/// THIS COMMENT USED TO DESCRIBE «المستجدات» AS THE FOURTH ONE and argue that it
+/// earned its slot. It was wrong twice over by the time anybody read it: the tab
+/// had already been replaced by «السوق», and the paragraph claiming the admin
+/// console publishes to `announcements` and `signals` described collections that
+/// firestore.rules denies outright. The screen and its service are now deleted
+/// too, so there is nothing left for it to be wrong about.
 ///
-/// It was five, and three of those five — «قرار اليوم», «سجل الصفقات» and
+/// The bar was five, and three of those five — «قرار اليوم», «سجل الصفقات» and
 /// «لوحة التحكم» — were the same trades shown three ways. Sitting side by side
 /// in the bar they read as three separate features, so the only way to learn
 /// what each held was to open it. They are now the tabs of [TradesHubScreen],
@@ -42,7 +42,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   /// «المستجدات» USED TO LIVE AT INDEX 2, with a seen/unseen badge and the
   /// bookkeeping that went with it. The feed is gone — both collections behind
   /// it are denied by firestore.rules — so the tab, its badge and the
-  /// mark-as-seen call went with it, and «السوق» took the slot.
+  /// mark-as-seen call went with it, «السوق» took the slot, and
+  /// `lib/features/updates/` has since been deleted entirely.
   void _select(int value) => setState(() => _index = value);
 
   @override
@@ -59,9 +60,21 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final entitlement = ref.watch(entitlementProvider);
 
     return Scaffold(
+      // THE TRIAL COUNTDOWN BAR IS GONE FROM THE APP, and only from the app.
+      //
+      // It sat here saying «باقي 3 أيام في تجربتك المجانية» — the clearest
+      // possible announcement that a paid tier exists, on a surface that offers
+      // no way to reach it, because Play Billing is not wired up and an emailed
+      // bank transfer is exactly what Play forbids. A countdown whose only remedy
+      // is somewhere else is not information, it is a nag with no button.
+      //
+      // The website keeps its banner (`TrialBanner` in paywall.tsx) because that
+      // is where the user can act on it. Someone whose trial lapses on the phone
+      // meets `Paywall.lockedLabel` on the surface they reached for, which states
+      // the situation where it is relevant instead of counting down to it for a
+      // fortnight.
       body: Column(
         children: [
-          const TrialBanner(),
           Expanded(
             // IndexedStack, not a rebuild-on-switch: it preserves scroll
             // position and half-typed calculator input across tab changes.

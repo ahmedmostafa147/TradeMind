@@ -1707,7 +1707,7 @@ function TradesTable({
 }
 
 /**
- * The five components as five segments, plus the number.
+ * The four components as four segments, plus the number.
  *
  * Neutral tones, not win/loss: discipline is not money, and the green a trader
  * has learned to read as profit must not also mean "well prepared". The title
@@ -1716,16 +1716,15 @@ function TradesTable({
  */
 function DisciplineBadge({ score }: { score: ReturnType<typeof riskScoreOf> }) {
   const earned = SCORE_COMPONENTS.filter((c) => score[c.key]);
-  const title = [
-    ...SCORE_COMPONENTS.map((c) => `${score[c.key] ? '✓' : '✗'} ${c.label}`),
-    // The one component this surface cannot earn. Chart images are files in
-    // the phone's own storage and only their paths are synced, so a trade
-    // logged entirely from the browser is capped at 80 — which reads as a bug
-    // unless the reason is stated where the score is.
-    ...(score.hasScreenshots
-      ? []
-      : ['', 'الصور بتتضاف من التطبيق على التليفون بس.']),
-  ].join('\n');
+  // THE APOLOGY IS GONE BECAUSE THE COMPONENT IS.
+  //
+  // This tooltip used to append «الصور بتتضاف من التطبيق على التليفون بس» when
+  // the screenshot component was unearned — which was always, on this surface.
+  // Every one of the four components left can be earned from a browser, so the
+  // list needs no footnote.
+  const title = SCORE_COMPONENTS.map(
+    (c) => `${score[c.key] ? '✓' : '✗'} ${c.label}`
+  ).join('\n');
 
   return (
     <span className="flex items-center gap-2" title={title}>

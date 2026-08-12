@@ -7,13 +7,14 @@ import '../../../billing/billing_providers.dart';
 import '../../../billing/entitlements.dart';
 import '../market_providers.dart';
 
-/// Live, unrealised profit/loss for an OPEN position, from the last market
-/// price. Realised trades already show their final P&L, so this is only for
-/// positions still running.
+/// Unrealised profit/loss for an OPEN position, measured against the last
+/// session's CLOSE. Realised trades already show their final P&L, so this is
+/// only for positions still running.
 ///
-/// The price comes from the unofficial Yahoo endpoint behind
-/// [livePriceProvider], so every non-success path degrades to a quiet muted
-/// line rather than an error — a missing live price must never look like a loss.
+/// The price comes through `/api/quote` behind [livePriceProvider] — the same
+/// route the website uses, so the two surfaces cannot quote one position
+/// differently. Every non-success path degrades to a quiet muted line rather
+/// than an error: a price that did not arrive must never look like a loss.
 class LivePnlView extends ConsumerWidget {
   final String ticker;
   final double entryPrice;
@@ -66,11 +67,20 @@ class LivePnlView extends ConsumerWidget {
           muted('جاري تحديث السعر...'),
         ],
       ),
-      error: (_, _) => muted('تعذّر تحديث السعر اللحظي'),
+      // «إغلاق», NEVER «لحظي», IN EITHER OF THESE.
+      //
+      // /api/quote returns the LAST DAILY CLOSE from an unofficial endpoint.
+      // Calling it a live price is a claim the product decided it may not make —
+      // it was scrubbed from five places for that reason, and these two survived
+      // the sweep while the card's own label three rows down already said «آخر
+      // إغلاق». Two names for one number on one card.
+      error: (_, _) => muted('تعذّر تحديث سعر الإغلاق'),
       data: (info) {
-        // 0.0 is the service's sentinel for "no real quote" (offline fallback).
+        // The service returns null for every failure and never a zero — a price
+        // that did not arrive must not be arithmetic-ed into a 100% loss. The
+        // `<= 0` is belt-and-braces against a future caller that forgets.
         if (info == null || info.price <= 0) {
-          return muted('السعر اللحظي غير متاح');
+          return muted('سعر الإغلاق غير متاح');
         }
 
         final current = info.price;

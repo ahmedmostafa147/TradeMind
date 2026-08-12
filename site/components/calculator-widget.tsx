@@ -83,9 +83,17 @@ export function CalculatorWidget(props: {
           />
         </div>
 
+        {/* WarningIcon, not ⚠️. Zero emoji on the site is an explicit owner
+            preference, and this one mattered twice over: an emoji renders in
+            whatever the reader's OS ships, so the single most important warning
+            on the calculator looked different on every device. */}
         {res.invStop && (
-          <p role="status" className="text-xs font-semibold text-loss">
-            ⚠️ سعر الاستوب يجب أن يكون أقل من سعر الدخول.
+          <p
+            role="status"
+            className="flex items-center gap-1.5 text-xs font-semibold text-loss"
+          >
+            <WarningIcon />
+            سعر الاستوب يجب أن يكون أقل من سعر الدخول.
           </p>
         )}
       </div>

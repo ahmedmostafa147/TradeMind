@@ -3,20 +3,29 @@ import { parseNumber } from '@/lib/risk-math';
 
 export type PlannerMode = 'targetToMonthly' | 'monthlyToTarget';
 
+/**
+ * THERE WAS AN `icon` FIELD HERE CARRYING 🎓 🚗 🌴 🏠, and it is gone rather than
+ * replaced with SVGs.
+ *
+ * Zero emoji on the site is an explicit owner preference — SVG icons only, from
+ * components/icons.tsx. But four new SVGs would have been the wrong fix too: each
+ * chip already carries a full text label, so a pictogram beside «شراء سيارة» adds
+ * no information, and an emoji renders in whatever the reader's OS ships, so the
+ * set looked different on every device it was seen on.
+ */
 export type GoalPreset = {
   id: string;
   title: string;
-  icon: string;
   defaultTarget: number;
   defaultYears: number;
   annualReturn: number;
 };
 
 export const GOAL_PRESETS: GoalPreset[] = [
-  { id: 'kids', title: 'مستقبل الأبناء', icon: '🎓', defaultTarget: 2000000, defaultYears: 18, annualReturn: 20 },
-  { id: 'car', title: 'شراء سيارة', icon: '🚗', defaultTarget: 1200000, defaultYears: 5, annualReturn: 20 },
-  { id: 'retirement', title: 'التقاعد الحر', icon: '🌴', defaultTarget: 5000000, defaultYears: 20, annualReturn: 20 },
-  { id: 'home', title: 'شراء عقار', icon: '🏠', defaultTarget: 3000000, defaultYears: 10, annualReturn: 20 },
+  { id: 'kids', title: 'مستقبل الأبناء', defaultTarget: 2000000, defaultYears: 18, annualReturn: 20 },
+  { id: 'car', title: 'شراء سيارة', defaultTarget: 1200000, defaultYears: 5, annualReturn: 20 },
+  { id: 'retirement', title: 'التقاعد الحر', defaultTarget: 5000000, defaultYears: 20, annualReturn: 20 },
+  { id: 'home', title: 'شراء عقار', defaultTarget: 3000000, defaultYears: 10, annualReturn: 20 },
 ];
 
 export function useGoalPlannerState() {
