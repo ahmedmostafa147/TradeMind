@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 import { dateLabel } from '@/lib/format';
 import {
+  EVERYTHING_FREE,
   PLAN_PRICES,
   TRIAL_DAYS,
   type Entitlement,
@@ -78,6 +79,12 @@ export function TrialBanner({
   entitlement: Entitlement;
   trialStartedAt: Date | null;
 }) {
+  // NOTHING TO COUNT DOWN TO. While the paid tier is paused every surface is
+  // open on both plans, so «باقي 3 أيام في تجربتك المجانية» would warn about a
+  // deadline that no longer takes anything away — and would be the loudest
+  // signal on the page that a paid tier exists, on a product that is not
+  // currently selling one.
+  if (EVERYTHING_FREE) return null;
   if (entitlement.plan === 'pro') return null;
 
   if (entitlement.trialExpired) {
@@ -147,6 +154,25 @@ export function PlanCard({
   proUntil: Date | null;
   onSubscribe: () => void;
 }) {
+  // STATE OF THE ACCOUNT, WITH NOTHING TO BUY. The paid version below is intact
+  // and returns the moment `EVERYTHING_FREE` flips.
+  if (EVERYTHING_FREE) {
+    return (
+      <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-bold">باقتك</h2>
+          <span className="rounded-full bg-brand px-3 py-1 text-xs font-bold text-on-brand">
+            كل المميزات مفتوحة
+          </span>
+        </div>
+        <p className="mt-2 text-sm leading-relaxed text-fg-muted">
+          رادار مجاني بالكامل دلوقتي — من غير اشتراك ومن غير بطاقة. لو بقى فيه
+          اشتراك بعدين، هنقول قبلها بوقت كافي.
+        </p>
+      </section>
+    );
+  }
+
   const endsAt =
     trialStartedAt === null
       ? null

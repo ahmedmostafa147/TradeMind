@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:egx_trade_journal/app.dart';
 import 'package:egx_trade_journal/core/hive_keys.dart';
+import 'package:egx_trade_journal/shell/home_shell.dart';
 import 'package:egx_trade_journal/features/auth/providers/auth_providers.dart';
 import 'package:egx_trade_journal/features/auth/repositories/auth_repository.dart';
 import 'package:egx_trade_journal/features/market/market_providers.dart';
@@ -152,9 +153,25 @@ void main() {
     // took it. That passes the same rule: reading what the exchange published
     // about who was buying is not journaling a trade, not sizing one, and not
     // changing a setting. What this test defends is that no destination is
-    // another destination wearing a different label, so before adding a fifth,
-    // answer which of these jobs it is not.
-    expect(labels, ['صفقاتي', 'السوق', 'حاسبة الصفقة', 'الإعدادات']);
+    // another destination wearing a different label.
+    //
+    // «الأسهم» IS THE FIFTH, AND HERE IS WHICH OF THE OTHERS IT IS NOT.
+    // The comment above demanded that answer before a fifth was added, so:
+    //   - not «السوق» — that is who was buying, by nationality and by class,
+    //     for the market as a whole. This is one price per company.
+    //   - not «صفقاتي» — nothing on it is a record of anything the user did.
+    //   - not «حاسبة الصفقة» — it computes nothing; it looks things up.
+    // It answers «السهم ده بكام؟», which nothing else here answered at all.
+    //
+    // The ORDER is load-bearing too: SECTIONS in customer-dashboard.tsx carries
+    // the same five in the same order, so the same slot holds the same
+    // destination on both surfaces.
+    // FOUR IN THE BAR, AND «الإعدادات» IS NOT ONE OF THEM. Five destinations on
+    // a 360px phone truncated «حاسبة الصفقة», so settings moved to a gear in
+    // each screen's AppBar (`SettingsAction`). It is still a destination — it
+    // just is not a slot down here, and the web does the same below `sm`.
+    expect(labels, ['صفقاتي', 'السوق', 'الأسهم', 'حاسبة الصفقة']);
+    expect(find.byKey(settingsActionKey).hitTestable(), findsWidgets);
 
     // «التحليلات» was reachable only from the hub's overflow menu and «الهدف»
     // did not exist. Both are tabs now, because the web carries them as

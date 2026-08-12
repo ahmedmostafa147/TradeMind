@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:egx_trade_journal/app.dart';
+import 'package:egx_trade_journal/billing/entitlements.dart';
 import 'package:egx_trade_journal/core/hive_keys.dart';
 import 'package:egx_trade_journal/features/auth/providers/auth_providers.dart';
 import 'package:egx_trade_journal/features/auth/repositories/auth_repository.dart';
@@ -34,7 +35,22 @@ import 'package:hive_ce/hive.dart';
 ///
 /// `entitlements_test.dart` covers the arithmetic of who is entitled to what.
 /// This covers whether the widget tree actually asks.
+///
+/// ── SKIPPED WHILE `kEverythingFree` IS ON, NOT DELETED. ────────────────────
+///
+/// The paid tier is paused (owner's call, 12 أغسطس) and every surface is open,
+/// so there is no paywall to find. The moment the constant flips back these run
+/// again and the hole they were written for stays closed — which is the whole
+/// reason to skip rather than delete: a deleted regression test comes back as
+/// nobody's job.
+///
+/// `«السوق» is gated, and the journal never is` keeps the half that is still
+/// true either way — the journal must never lock — see the note on it.
 void main() {
+  // `testWidgets` takes a bool here, unlike `test`, so the reason lives in the
+  // doc comment above rather than in the skip itself.
+  const gatedOnly = kEverythingFree;
+
   late Directory tempDir;
   late Box settingsBox;
   late Box<Trade> tradesBox;
@@ -121,7 +137,7 @@ void main() {
 
     expect(find.text('جودة الأداء'), findsNothing);
     expect(find.textContaining('معامل الربح ومتوسط R'), findsOneWidget);
-  });
+  }, skip: gatedOnly);
 
   testWidgets(
     'the overflow «الإحصائيات التفصيلية» lands on the same paywall',
@@ -137,6 +153,7 @@ void main() {
       expect(find.textContaining('معامل الربح ومتوسط R'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
+    skip: gatedOnly,
   );
 
   testWidgets('«الأداء» is gated too', (tester) async {
@@ -152,9 +169,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('صافي الربح ونسبة النجاح'), findsOneWidget);
-  });
+  }, skip: gatedOnly);
 
-  testWidgets('«السوق» is gated, and the journal never is', (tester) async {
+  testWidgets('«السوق» is gated', (tester) async {
     await pumpFreeApp(tester);
 
     await tester.tap(
@@ -165,8 +182,16 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.textContaining('مين اشترى ومين باع'), findsOneWidget);
+  }, skip: gatedOnly);
 
-    // AND THE PART THAT MUST NEVER LOCK. A journal that stops letting you write
+  /// SPLIT OUT AND NEVER SKIPPED. Whether «السوق» is locked depends on the paid
+  /// tier; whether the journal is writable does NOT, in either mode. It was one
+  /// test, so pausing the paid tier would have taken the journal assertion with
+  /// it — and that is the one thing here that must hold forever.
+  testWidgets('the journal is never locked, in either mode', (tester) async {
+    await pumpFreeApp(tester);
+
+    // A journal that stops letting you write in it is not a limited plan. A journal that stops letting you write
     // in it is not a limited plan, and `Feature` has no entry for recording a
     // trade precisely so this cannot drift.
     await tester.tap(

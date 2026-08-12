@@ -4,6 +4,7 @@ import 'package:egx_trade_journal/app.dart';
 import 'package:egx_trade_journal/billing/billing_providers.dart';
 import 'package:egx_trade_journal/billing/entitlements.dart';
 import 'package:egx_trade_journal/core/hive_keys.dart';
+import 'package:egx_trade_journal/shell/home_shell.dart';
 import 'package:egx_trade_journal/features/auth/providers/auth_providers.dart';
 import 'package:egx_trade_journal/features/auth/repositories/auth_repository.dart';
 import 'package:egx_trade_journal/features/market/market_providers.dart';
@@ -186,6 +187,18 @@ void main() {
       return;
     }
 
+    // «الإعدادات» LEFT THE BOTTOM BAR. Five destinations truncated
+    // «حاسبة الصفقة» on a narrow phone, so settings became a gear in each
+    // screen's own AppBar — see SettingsAction in home_shell.dart. Mapped here
+    // rather than at every call site, which is what this helper is for.
+    if (label == 'الإعدادات') {
+      // `.hitTestable()`, not `.first`: the shell's IndexedStack BUILDS all five
+      // screens, so five gears exist in the tree and only one is on screen.
+      await tester.tap(find.byKey(settingsActionKey).hitTestable().first);
+      await tester.pumpAndSettle();
+      return;
+    }
+
     await tester.tap(find.text(label).last);
     await tester.pumpAndSettle();
   }
@@ -263,8 +276,10 @@ void main() {
     // same trades shown differently.
     expect(find.text('صفقاتي'), findsWidgets);
     expect(find.text('السوق'), findsWidgets);
+    expect(find.text('الأسهم'), findsWidgets);
     expect(find.text('حاسبة الصفقة'), findsWidgets);
-    expect(find.text('الإعدادات'), findsWidgets);
+    // Settings is reachable from every screen's AppBar, not from the bar.
+    expect(find.byKey(settingsActionKey).hitTestable(), findsWidgets);
 
     // The journal's views are tabs inside صفقاتي, and they carry the SAME
     // labels the web dashboard uses — the two surfaces are one product, so a

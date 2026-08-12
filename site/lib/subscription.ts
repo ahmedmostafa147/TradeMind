@@ -67,8 +67,40 @@ export const FREE_ENTITLEMENT: Entitlement = {
   hasFullAccess: false,
 };
 
+/**
+ * ── EVERYTHING IS FREE RIGHT NOW. ONE SWITCH, AND IT IS THIS ONE. ───────────
+ *
+ * Set false to bring the paid tier back. Nothing else here was deleted: the
+ * plans, the prices, the trial arithmetic, the admin activation flow and every
+ * test over them are intact and still correct, because this decision is a
+ * PAUSE and not a reversal.
+ *
+ * WHY IT IS PAUSED (owner's call, 12 أغسطس):
+ *   - Three of the four paid surfaces cannot be enforced server-side at all.
+ *     Analytics is computed on the user's own device from their own trades; the
+ *     AI reader runs on the user's own Gemini key and bills them, not us; and
+ *     /api/quote takes no credential today. Only `marketFlows` has a rule behind
+ *     it. Charging for three things a determined user simply switches on is a
+ *     paywall that inconveniences honest customers and stops nobody.
+ *   - There is no payment mechanism. Activation is an admin typing into a
+ *     dialog after a bank transfer.
+ *   - There are zero users. The scarce thing is people, not revenue.
+ *   - And on Android, no paid tier means no Play Billing question at all.
+ *
+ * `kEverythingFree` in lib/billing/entitlements.dart is the mirror of this and
+ * MUST flip at the same time — a client that thinks a surface is open while the
+ * other thinks it is locked is the same class of silent split the whole
+ * mirroring rule exists to prevent.
+ *
+ * AND `firestore.rules` IS THE THIRD COPY. `marketFlows` read is gated on
+ * `hasActivePlan()` there. Flipping only the clients would open the panel in the
+ * UI and have the server refuse the read — which surfaces as an empty market,
+ * with no error, for everybody. All three move together.
+ */
+export const EVERYTHING_FREE = true;
+
 export function can(entitlement: Entitlement, _feature: Feature): boolean {
-  return entitlement.hasFullAccess;
+  return EVERYTHING_FREE || entitlement.hasFullAccess;
 }
 
 /** Worth showing a countdown for. A fortnight left is not news; three days is. */

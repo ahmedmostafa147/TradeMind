@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CalculatorWidget } from '@/components/calculator-widget';
 import {
   CalculatorIcon,
+  CandlesIcon,
   ChartIcon,
   PlusIcon,
   MoreIcon,
@@ -37,6 +38,7 @@ import {
   QuickAddSheet,
 } from '@/components/dashboard/quick-add-sheet';
 import { ScenariosPanel } from '@/components/dashboard/scenarios-panel';
+import { StocksPanel } from '@/components/dashboard/stocks-panel';
 import { SignInPanel } from '@/components/dashboard/sign-in-panel';
 import { InstallButton } from '@/components/pwa';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -69,7 +71,13 @@ import {
   riskScoreOf,
   SCORE_COMPONENTS,
 } from '@/lib/risk-score';
-import { decodeTrade, encodeTrade, metricsOf, type Trade } from '@/lib/trade';
+import {
+  decodeTrade,
+  encodeTrade,
+  metricsOf,
+  newTradeId,
+  type Trade,
+} from '@/lib/trade';
 import { updateCounts, upsertProfile } from '@/lib/user-profile';
 import {
   decodeWatchlistItem,
@@ -124,7 +132,7 @@ type Tab =
  * A phone got all eight as wrapping pills, which took three rows of the first
  * screen and read as eight separate features.
  */
-type Section = 'journal' | 'market' | 'calculator' | 'settings';
+type Section = 'journal' | 'market' | 'stocks' | 'calculator' | 'settings';
 
 /**
  * The bar itself. Labels and order are the app's, so the same slot holds the
@@ -138,9 +146,29 @@ const SECTIONS: {
 }[] = [
   { id: 'journal', label: 'صفقاتي', Icon: ReceiptIcon },
   { id: 'market', label: 'السوق', Icon: ChartIcon },
+  // «الأسهم» sits between «السوق» and the calculator on BOTH surfaces: the two
+  // market-facing destinations together, then the tools. HomeShell has the same
+  // order.
+  { id: 'stocks', label: 'الأسهم', Icon: CandlesIcon },
   { id: 'calculator', label: 'حاسبة الصفقة', Icon: CalculatorIcon },
   { id: 'settings', label: 'الإعدادات', Icon: SettingsIcon },
 ];
+
+/**
+ * The bottom bar on a phone, which is NOT the same list.
+ *
+ * ── «الإعدادات» MOVED TO THE TOP BAR ON SMALL SCREENS ──────────────────────
+ *
+ * A row of five on a 360px phone gives each destination about 68px, and
+ * «حاسبة الصفقة» does not fit in it — the label wraps or truncates, and a
+ * truncated label in a nav bar is a destination people stop recognising.
+ *
+ * Settings is the one that can leave: it is opened rarely, it is the
+ * conventional place for a gear in a header anyway, and it is the only one of
+ * the five that is not part of the daily loop. Desktop keeps all five in the
+ * row above, where there is room. The app's `HomeShell` does exactly this.
+ */
+const PHONE_SECTIONS = SECTIONS.filter((s) => s.id !== 'settings');
 
 type View = { kind: 'list' } | { kind: 'new'; seed?: Trade } | { kind: 'edit'; trade: Trade };
 
@@ -473,6 +501,23 @@ function Journal() {
           {SECTIONS.find((d) => d.id === section)?.label ?? 'دفتر صفقاتك'}
         </h1>
 
+        {/* «الإعدادات» ON A PHONE LIVES HERE, not in the bottom bar — see
+            PHONE_SECTIONS. `sm:hidden` because the desktop row above already
+            carries it, and two ways to reach one screen on one viewport is how
+            a header ends up with a button nobody can explain. */}
+        <button
+          type="button"
+          onClick={() => setSection('settings')}
+          aria-current={section === 'settings' ? 'page' : undefined}
+          aria-label="الإعدادات"
+          title="الإعدادات"
+          className={`rounded-md p-2 transition-colors hover:bg-surface-high sm:hidden ${
+            section === 'settings' ? 'text-brand-ink' : 'text-fg-muted'
+          }`}
+        >
+          <SettingsIcon className="size-5" />
+        </button>
+
         {/* The app's hub AppBar actions, in the app's place: above the tab
             strip, not inside it. Inline with the tabs they sat on top of a row
             that scrolls horizontally, so the last label slid under them. */}
@@ -788,6 +833,44 @@ function Journal() {
             </div>
           )}
 
+          {section === 'stocks' && (
+            <StocksPanel
+              onPick={(ticker) => {
+                // Straight into a new trade with the ticker filled in. A stock
+                // list you can only look at is a dead end; this is the one thing
+                // somebody who just found a symbol actually wants to do next.
+                setSection('journal');
+                setView({
+                  kind: 'new',
+                  seed: {
+                    id: newTradeId(),
+                    entryDate: new Date(),
+                    ticker,
+                    reason: '',
+                    // ZEROES, and the form reads them as empty. TradeForm treats
+                    // a 0 price or quantity on a SEED as "nothing typed yet"
+                    // precisely so a partly-filled hand-off does not make the
+                    // user clear boxes before typing.
+                    entryPrice: 0,
+                    stopPrice: 0,
+                    quantity: 0,
+                    exitPrice: null,
+                    exitDate: null,
+                    notes: null,
+                    status: 'planned',
+                    tags: [],
+                    isFavorite: false,
+                    completedChecklistItems: [],
+                    source: null,
+                    takeProfitPrice: null,
+                    timeline: [],
+                    screenshotPaths: [],
+                  },
+                });
+              }}
+            />
+          )}
+
           {section === 'calculator' && (
             <div className="mt-4">
               <CalculatorSection
@@ -841,7 +924,7 @@ function Journal() {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border-default bg-surface pb-[env(safe-area-inset-bottom)] sm:hidden"
       >
         <ul className="mx-auto flex max-w-md">
-          {SECTIONS.map((d) => (
+          {PHONE_SECTIONS.map((d) => (
             <li key={d.id} className="flex-1">
               <button
                 type="button"

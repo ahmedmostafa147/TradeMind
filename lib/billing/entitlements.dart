@@ -33,6 +33,33 @@ enum Plan {
 /// constant, so it must stay identical to TRIAL_DAYS in subscription.ts.
 const int kTrialDays = 14;
 
+/// ── EVERY PAID SURFACE IS OPEN. ONE SWITCH, AND IT IS THIS ONE. ─────────────
+///
+/// Set false to bring the paid tier back. NOTHING WAS DELETED to do this: the
+/// plans, the trial arithmetic, [Feature], the admin activation flow and every
+/// test over them are intact and still correct, because this is a PAUSE and not
+/// a reversal. The owner said outright that the paid tier is coming back.
+///
+/// WHY IT IS PAUSED (owner's call, 12 أغسطس):
+///   - Three of the four paid surfaces cannot be enforced on a server at all.
+///     [Feature.analytics] is computed on this device from the user's own
+///     trades; [Feature.aiReader] runs on the user's own Gemini key and bills
+///     them, not us; and `/api/quote` takes no credential today. Only
+///     [Feature.marketFlows] has a rule behind it. A paywall over three things a
+///     determined user simply switches off inconveniences honest customers and
+///     stops nobody.
+///   - There is no payment mechanism — activation is an admin typing into a
+///     dialog after a bank transfer.
+///   - There are zero users. The scarce thing is people, not revenue.
+///   - And on Android, no paid tier means no Play Billing question at all.
+///
+/// `EVERYTHING_FREE` in site/lib/subscription.ts is the mirror of this and MUST
+/// flip at the same time. `firestore.rules` is the THIRD copy — `marketFlows`
+/// read is gated on `hasActivePlan()` there, and flipping only the clients would
+/// open the panel on screen while the server refuses the read, which shows up as
+/// an empty market with no error at all. All three move together.
+const bool kEverythingFree = true;
+
 /// The paid surfaces, one entry per thing the pricing page sells.
 enum Feature {
   /// «تتبّع سيولة المستثمرين» — the EGX investor-flow tables.
@@ -73,7 +100,8 @@ class Entitlement {
   /// evaluation.
   bool get hasFullAccess => plan == Plan.trial || plan == Plan.pro;
 
-  bool can(Feature feature) => hasFullAccess;
+  /// ── EVERYTHING IS FREE RIGHT NOW. See [kEverythingFree]. ──────────────────
+  bool can(Feature feature) => kEverythingFree || hasFullAccess;
 
   /// Worth showing a countdown for. A trial with a fortnight left is not news;
   /// one with three days is.

@@ -7,7 +7,21 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// «باقتك» in الإعدادات. The app had nothing here at all, so the only way to
 /// learn which plan you were on was to walk into a paywall.
+///
+/// ── THE TIER TESTS ARE SKIPPED WHILE `kEverythingFree` IS ON, NOT DELETED. ──
+///
+/// The paid tier is paused (owner's call, 12 أغسطس) and the card reports «كل
+/// المميزات مفتوحة» for every entitlement, so «باقي 9 أيام» has nothing to
+/// assert against. Each one comes back with the switch — which is the point of
+/// skipping rather than deleting.
+///
+/// TWO ARE NEVER SKIPPED, because they do not depend on the tier at all: the
+/// unreadable-subscription card (an unpublished-rules diagnostic, useful whether
+/// or not anything is sold) and the Play-copy guard.
 void main() {
+  // `testWidgets` takes a bool here, unlike `test`.
+  const tieredOnly = kEverythingFree;
+
   Future<void> pumpCard(
     WidgetTester tester, {
     required Entitlement entitlement,
@@ -38,7 +52,7 @@ void main() {
 
     expect(find.textContaining('التجربة المجانية'), findsOneWidget);
     expect(find.textContaining('باقي 9 أيام'), findsOneWidget);
-  });
+  }, skip: tieredOnly);
 
   testWidgets('Arabic counts its days properly', (tester) async {
     await pumpCard(
@@ -46,7 +60,7 @@ void main() {
       entitlement: const Entitlement(plan: Plan.trial, trialDaysLeft: 2),
     );
     expect(find.textContaining('باقي 2 يومين'), findsOneWidget);
-  });
+  }, skip: tieredOnly);
 
   /// ── THESE TWO USED TO ASSERT THE OPPOSITE, AND THE OWNER OVERRULED IT. ────
   ///
@@ -69,7 +83,7 @@ void main() {
     expect(find.text('الباقة المدفوعة'), findsOneWidget);
     expect(find.text('Radar Pro'), findsNothing);
     expect(find.textContaining('ابعتلنا'), findsNothing);
-  });
+  }, skip: tieredOnly);
 
   testWidgets('a lapsed account is NOT told how to pay', (tester) async {
     await pumpCard(
@@ -84,6 +98,26 @@ void main() {
     expect(find.textContaining('الاشتراك بيتم يدوي'), findsNothing);
     expect(find.textContaining('ابعتلنا'), findsNothing);
     expect(find.textContaining('تدفع'), findsNothing);
+  }, skip: tieredOnly);
+
+  /// THE PLAY GUARD, IN WHICHEVER MODE THE PRODUCT IS IN.
+  ///
+  /// Split from the test above so pausing the paid tier could not take the
+  /// purchase-direction assertions with it. `play_billing_copy_test.dart` scans
+  /// the source for the same words; this proves what actually reaches the screen.
+  testWidgets('no card ever tells the user how to pay', (tester) async {
+    for (final entitlement in const [
+      Entitlement.free,
+      Entitlement(plan: Plan.pro),
+      Entitlement(plan: Plan.trial, trialDaysLeft: 3),
+      Entitlement(plan: Plan.free, trialExpired: true),
+    ]) {
+      await pumpCard(tester, entitlement: entitlement);
+      expect(find.textContaining('ابعتلنا'), findsNothing);
+      expect(find.textContaining('الاشتراك بيتم'), findsNothing);
+      expect(find.text('Radar Pro'), findsNothing);
+      expect(find.textContaining('تدفع'), findsNothing);
+    }
   });
 
   /// THE FAILURE THIS CARD EXISTS FOR.
@@ -117,7 +151,9 @@ void main() {
     // `readable == null` is "not applicable" — signed out, or no Firebase app.
     await pumpCard(tester, entitlement: Entitlement.free, readable: null);
 
+    // The POINT of this test is the red card's absence — the title beside it
+    // depends on the tier, so it is not asserted here.
     expect(find.text('مش قادرين نقرا حالة اشتراكك'), findsNothing);
-    expect(find.text('الباقة المجانية'), findsOneWidget);
+    expect(find.byType(PlanCard), findsOneWidget);
   });
 }

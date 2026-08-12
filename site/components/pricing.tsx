@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { CheckIcon } from "@/components/icons";
 import { SectionHeader } from "@/components/section-header";
+import { EVERYTHING_FREE } from "@/lib/subscription";
 
 type BillingPeriod = "monthly" | "semiAnnual" | "annual";
 
@@ -39,7 +40,66 @@ const proFeatures = [
   "قراءة التوصيات من صورة بالذكاء الاصطناعي (AI OCR)",
 ];
 
+/**
+ * «مجاني دلوقتي» — what this section says while the paid tier is paused.
+ *
+ * A SEPARATE COMPONENT, AND THE PAID ONE BELOW IS UNTOUCHED. The plans, the
+ * period toggle, the feature list and the prices are all still here and still
+ * correct; `EVERYTHING_FREE` picks between them. The owner said the paid tier is
+ * coming back, so deleting the markup would only mean rebuilding it.
+ *
+ * It keeps the `#pricing` id: the nav links to it, and an anchor that scrolls
+ * nowhere is worse than one that answers the question honestly.
+ */
+function FreeForNow() {
+  return (
+    <section id="pricing" className="border-b border-border-default scroll-mt-20">
+      <div className="mx-auto max-w-3xl px-5 py-16 text-center lg:py-24">
+        <SectionHeader
+          eyebrow="السعر"
+          title="كل حاجة مجانية دلوقتي."
+          lead="من غير اشتراك ومن غير بطاقة. سجّل واستخدم كل أداة في رادار — السوق وأسعار الإغلاق وتحليل الأداء وقراءة التوصية من صورة."
+        />
+
+        <ul className="mx-auto mt-10 grid max-w-xl gap-3 text-start sm:grid-cols-2">
+          {[...proFeatures, "تسجيل الصفقات ومتابعتها", "حاسبة الصفقة وحاسبة الهدف"].map(
+            (feature) => (
+              <li
+                key={feature}
+                className="flex items-start gap-2.5 rounded-lg border border-border-default bg-surface p-3 text-sm"
+              >
+                <CheckIcon className="mt-0.5 size-4 shrink-0 text-brand-ink" />
+                <span>{feature}</span>
+              </li>
+            )
+          )}
+        </ul>
+
+        {/* Said plainly rather than left for a user to discover later. A product
+            that is free "for now" and does not say "for now" is one that looks
+            like it broke a promise the day it starts charging. */}
+        <p className="mx-auto mt-8 max-w-lg text-sm leading-relaxed text-fg-muted">
+          دي مرحلة مبكرة، ورادار لسه بيكبر. لو بقى فيه اشتراك بعدين، هنقول قبلها
+          بوقت كافي — واللي انت سجّلته يفضل ليك في الحالتين.
+        </p>
+
+        <Link
+          href="/dashboard/#signup"
+          className="mt-8 inline-block rounded-md bg-brand px-7 py-3 text-sm font-bold text-on-brand transition-opacity hover:opacity-90"
+        >
+          ابدأ مجانًا
+        </Link>
+      </div>
+    </section>
+  );
+}
+
 export function Pricing() {
+  if (EVERYTHING_FREE) return <FreeForNow />;
+  return <PaidPlans />;
+}
+
+function PaidPlans() {
   const [period, setPeriod] = useState<BillingPeriod>("annual");
 
   return (

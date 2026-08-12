@@ -43,8 +43,11 @@ export function ClosingCta() {
             <DownloadButton variant="inverse" />
           </div>
 
+          {/* «14 يوم تجربة» before this. There is no trial to offer while the
+              paid tier is paused — everything is simply open, which is a
+              stronger line anyway. */}
           <p className="mt-6 text-xs opacity-60">
-            14 يوم تجربة من غير بطاقة · دفتر مجاني للأبد · من غير إعلانات
+            مجاني بالكامل · من غير بطاقة · من غير إعلانات
           </p>
         </div>
       </div>

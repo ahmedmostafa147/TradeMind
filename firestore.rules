@@ -321,7 +321,26 @@ service cloud.firestore {
       // The admin is exempt: they publish this data by hand from the console
       // and have to see what is already there, and requiring the operator to
       // subscribe to their own product is a way to lock yourself out.
-      allow read: if isAdmin() || (isSignedIn() && hasActivePlan());
+      //
+      // ── THE PAID TIER IS PAUSED, SO THIS IS A SESSION CHECK AGAIN. ─────────
+      //
+      // It read `isAdmin() || (isSignedIn() && hasActivePlan())`. Both clients
+      // now treat every surface as open (`kEverythingFree` in entitlements.dart,
+      // `EVERYTHING_FREE` in subscription.ts), and leaving the rule as it was
+      // would have opened «السوق» on screen while the server refused the read —
+      // an empty market, for everybody, with no error anywhere, because the
+      // denial is swallowed by design in both readers.
+      //
+      // TO BRING THE PAID TIER BACK: restore the `hasActivePlan()` clause here
+      // IN THE SAME CHANGE as flipping the two client constants. `hasActivePlan`
+      // itself is deliberately left defined and unused below — it is correct,
+      // it is tested by the trial rules above it, and deleting it would mean
+      // rewriting it from scratch later.
+      //
+      // Read still requires a session: this is the accumulated history the
+      // product is built on, and an open read lets anyone scrape it all without
+      // ever signing up.
+      allow read: if isSignedIn();
       allow create, update: if isAdmin()
         && request.resource.data.keys().hasOnly([
              'date', 'scope', 'all', 'institutions', 'individuals',

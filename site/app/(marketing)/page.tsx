@@ -10,7 +10,7 @@ import { Problem } from '@/components/problem';
 import { StatsStrip } from '@/components/stats-strip';
 import { Tools } from '@/components/tools';
 import { disclaimer, site } from '@/lib/site';
-import { PLAN_PRICES } from '@/lib/subscription';
+import { EVERYTHING_FREE, PLAN_PRICES } from '@/lib/subscription';
 
 /**
  * Structured data for the page.
@@ -48,16 +48,24 @@ const structuredData = {
       operatingSystem: site.playStoreUrl === null ? 'Web' : 'Web, Android',
       inLanguage: 'ar',
       url: site.url,
-      offers: {
-        '@type': 'AggregateOffer',
-        priceCurrency: 'EGP',
-        // The free plan is real and permanent — the journal, the trade calculator
-        // and the goal calculator never lock. See `Feature` in entitlements.dart,
-        // which has no entry for recording a trade.
-        lowPrice: '0',
-        highPrice: String(Math.max(...paidPlans)),
-        offerCount: paidPlans.length + 1,
-      },
+      // PRICE FOLLOWS THE SWITCH, because a search result is the one place this
+      // must not lag. While `EVERYTHING_FREE` is on there is nothing to buy, so a
+      // published AggregateOffer of 0–799 EGP would put a price Google shows in
+      // results next to a page that says «كل حاجة مجانية دلوقتي» — the same
+      // mismatch that made this block wrong in the other direction a day ago,
+      // when it said 0 while three plans were on sale.
+      offers: EVERYTHING_FREE
+        ? { '@type': 'Offer', price: '0', priceCurrency: 'EGP' }
+        : {
+            '@type': 'AggregateOffer',
+            priceCurrency: 'EGP',
+            // The free plan is real and permanent — the journal, the trade
+            // calculator and the goal calculator never lock. See `Feature` in
+            // entitlements.dart, which has no entry for recording a trade.
+            lowPrice: '0',
+            highPrice: String(Math.max(...paidPlans)),
+            offerCount: paidPlans.length + 1,
+          },
       disclaimer,
     },
     // FAQPage, built from the SAME array the section renders.

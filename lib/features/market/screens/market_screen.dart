@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../shell/home_shell.dart';
 import '../../../core/formatters.dart';
 import '../../../core/theme.dart';
 import '../models/market_flows.dart';
@@ -41,7 +42,10 @@ class _MarketScreenState extends State<MarketScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('السوق')),
+      appBar: AppBar(
+        title: const Text('السوق'),
+        actions: const [SettingsAction()],
+      ),
       body: FutureBuilder<List<MarketFlows>>(
         future: _future,
         builder: (context, snapshot) {

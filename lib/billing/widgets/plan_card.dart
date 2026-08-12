@@ -42,6 +42,22 @@ class PlanCard extends ConsumerWidget {
       );
     }
 
+    // NOTHING IS LOCKED, SO THERE IS NO TIER TO REPORT. The paid copy below is
+    // intact and returns the moment [kEverythingFree] flips. The red
+    // unreadable-subscription card above still runs first, because a denied read
+    // is worth surfacing whether or not anything is being sold — it means the
+    // rules are unpublished.
+    if (kEverythingFree) {
+      return _Card(
+        color: theme.colorScheme.surfaceContainerHigh,
+        onColor: theme.colorScheme.onSurface,
+        title: 'كل المميزات مفتوحة',
+        body:
+            'رادار مجاني بالكامل دلوقتي — من غير اشتراك ومن غير بطاقة. '
+            'السوق وأسعار الإغلاق والتحليل بالـAI والأداء، كلها شغّالة.',
+      );
+    }
+
     final (title, body) = _copy(entitlement);
 
     return _Card(

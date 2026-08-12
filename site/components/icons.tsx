@@ -230,17 +230,29 @@ export function XIcon({ className }: IconProps) {
 }
 
 /**
- * The four bottom-bar destinations and the add-trade action.
+ * The FIVE bottom-bar destinations and the add-trade action.
  *
  * Drawn to stand in for the app's Material icons one-for-one — receipt_long,
- * insights, calculate, settings, add — so the same slot carries the same
- * picture on both surfaces. ChartIcon above already covers `insights`.
+ * insights, candlestick_chart, calculate, settings, add — so the same slot
+ * carries the same picture on both surfaces. ChartIcon above already covers
+ * `insights`.
  */
 export function ReceiptIcon({ className }: IconProps) {
   return (
     <svg {...base} className={cls(className)}>
       <path d="M5 21V4.5A1.5 1.5 0 0 1 6.5 3h11A1.5 1.5 0 0 1 19 4.5V21l-2.3-1.5L14.4 21l-2.3-1.5L9.8 21l-2.3-1.5Z" />
       <path d="M9 8h6M9 12h6M9 16h3" />
+    </svg>
+  );
+}
+
+/** «الأسهم» — Material's `candlestick_chart`, two candles with their wicks. */
+export function CandlesIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <path d="M8 3v3M8 17v4M16 3v6M16 20v1" />
+      <rect x="5.5" y="6" width="5" height="11" rx="1" />
+      <rect x="13.5" y="9" width="5" height="11" rx="1" />
     </svg>
   );
 }

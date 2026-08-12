@@ -40,7 +40,9 @@ const closes = [
   82.1, 83.6, 85.0, 84.4, 86.2,
 ];
 
-const promises = ['تدفّقات المستثمرين كل جلسة', 'تجربة مجانية 14 يومًا', 'بياناتك محفوظة لك'];
+// «تجربة مجانية 14 يومًا» before this — a trial only means something when there
+// is something to lapse into, and while the paid tier is paused there is not.
+const promises = ['تدفّقات المستثمرين كل جلسة', 'مجاني بالكامل دلوقتي', 'بياناتك محفوظة لك'];
 
 export function Hero() {
   return (

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'home_shell.dart';
 import '../billing/billing_providers.dart';
 import '../billing/entitlements.dart';
 import '../billing/widgets/paywall.dart';
@@ -114,6 +115,7 @@ class TradesHubScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            const SettingsAction(),
           ],
           // Scrollable, because five fixed tabs crush their labels on a
           // narrow phone. «الهدف» is new and «التحليلات» was promoted out of

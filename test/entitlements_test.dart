@@ -161,11 +161,24 @@ void main() {
       }
     });
 
-    test('free opens none of them', () {
+    // ── THIS PAIR TRACKS `kEverythingFree`, RATHER THAN ONE OF THEM BEING
+    //    DELETED WHILE THE PAID TIER IS PAUSED. ───────────────────────────────
+    //
+    // The gating assertion is still the one that matters — it is what proves the
+    // paywall works — and the owner has said the paid tier is coming back. A
+    // deleted test comes back as nobody's job; a switched one comes back with the
+    // switch.
+    test('free opens none of them — when there is a paid tier', () {
       for (final f in Feature.values) {
         expect(Entitlement.free.can(f), isFalse, reason: f.name);
       }
-    });
+    }, skip: kEverythingFree ? 'الباقات متوقفة — kEverythingFree = true' : null);
+
+    test('free opens ALL of them while the paid tier is paused', () {
+      for (final f in Feature.values) {
+        expect(Entitlement.free.can(f), isTrue, reason: f.name);
+      }
+    }, skip: kEverythingFree ? null : 'الباقات شغّالة — kEverythingFree = false');
 
     test('recording trades is not among the gated features', () {
       // A journal that stops letting you write in it is not a limited plan.
