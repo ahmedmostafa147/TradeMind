@@ -278,19 +278,15 @@ void main() {
     expect(find.text('السوق'), findsWidgets);
     expect(find.text('الأسهم'), findsWidgets);
     expect(find.text('حاسبة الصفقة'), findsWidgets);
-    // Settings is reachable from every screen's AppBar, not from the bar.
+    expect(find.text('الهدف'), findsWidgets);
     expect(find.byKey(settingsActionKey).hitTestable(), findsWidgets);
 
-    // The journal's views are tabs inside صفقاتي, and they carry the SAME
-    // labels the web dashboard uses — the two surfaces are one product, so a
-    // screen must not be called «اليوم» here and «قرار اليوم» there.
     for (final tab in const [
       'قرار اليوم',
       'صفقاتي',
       'تخطيط',
       'الأداء',
       'التحليلات',
-      'الهدف',
     ]) {
       expect(find.widgetWithText(Tab, tab), findsOneWidget, reason: tab);
     }

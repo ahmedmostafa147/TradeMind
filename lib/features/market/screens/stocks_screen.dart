@@ -2,33 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shell/home_shell.dart';
-import '../../../core/formatters.dart';
-import '../../../core/theme.dart';
 import '../../../trades/trade_draft.dart';
 import '../../../trades/trade_form_screen.dart';
 import '../market_providers.dart';
-import '../models/egx_stock_info.dart';
 import '../services/egx_market_service.dart';
+import '../widgets/stock_row.dart';
 
-/// «الأسهم» — the thirty EGX codes Radar knows, with each one's last close.
-///
-/// MIRROR OF site/components/dashboard/stocks-panel.tsx. Same list, same search
-/// (code or Arabic name), same sort toggle, and the same thing happens on tap:
-/// the full trade form opens with the ticker already filled in.
-///
-/// ── ONE REQUEST PER SYMBOL, AND THAT IS THE COST OF THE APP'S SHAPE ────────
-///
-/// The website asks `/api/quote` for all thirty at once and the route fans out
-/// server-side. Here each row watches `livePriceProvider(code)`, which is thirty
-/// calls — but they are cached for five minutes inside [EgxMarketService], the
-/// list is lazy so only visible rows subscribe, and the alternative is a second
-/// batch endpoint in the service purely for this screen.
-///
-/// A ROW WITH NO PRICE STILL SHOWS. ESRS returns no candles at all from the
-/// upstream — a real property, documented on the route — and a stock Radar
-/// supports belongs on this list whether or not there is a print for it today.
-/// It renders «—», never a zero: a price that did not arrive must not look like
-/// a stock that did not move.
+/// «الأسهم» — EGX stocks directory with live quotes.
 class StocksScreen extends ConsumerStatefulWidget {
   const StocksScreen({super.key});
 
@@ -48,8 +28,6 @@ class _StocksScreenState extends ConsumerState<StocksScreen> {
     super.dispose();
   }
 
-  /// Codes matching the query, by code OR by Arabic name — most people know
-  /// «البنك التجاري الدولي», not COMI. Same rule the ticker field uses.
   List<String> get _codes {
     final query = _search.text.trim();
     final entries = EgxMarketService.search(query);
@@ -57,10 +35,6 @@ class _StocksScreenState extends ConsumerState<StocksScreen> {
 
     if (_sort == _Sort.name) return codes;
 
-    // Biggest mover first. A code with no quote yet sorts last rather than as
-    // 0% — an unknown is not a flat day. Reading the provider's current value
-    // without watching it is fine here: every row watches its own, so the list
-    // rebuilds as they land.
     codes.sort((a, b) {
       final av = _percentOf(a);
       final bv = _percentOf(b);
@@ -75,11 +49,6 @@ class _StocksScreenState extends ConsumerState<StocksScreen> {
   double? _percentOf(String code) =>
       ref.read(livePriceProvider(code)).asData?.value?.changePercent;
 
-  /// Straight into the full form with the ticker filled in.
-  ///
-  /// Through [TradeDraft], which is the hand-off the quick-add sheet already
-  /// uses — not a new `seedTicker` parameter. A second way to pre-fill the same
-  /// form is a second thing to keep in step with it.
   void _open(String code) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -151,78 +120,21 @@ class _StocksScreenState extends ConsumerState<StocksScreen> {
                     padding: const EdgeInsets.only(bottom: 24),
                     itemCount: codes.length,
                     separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (_, i) =>
-                        _StockRow(code: codes[i], onTap: () => _open(codes[i])),
+                    itemBuilder: (_, i) => StockRowWidget(
+                      code: codes[i],
+                      onTap: () => _open(codes[i]),
+                    ),
                   ),
           ),
-          // The same sentence the website's panel ends with, and it is not
-          // decoration: these are daily closes from an unofficial source, and
-          // the product may not be read as recommending anything.
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Text(
-              'الأسعار آخر إغلاق يومي من مصدر غير رسمي، مش أسعار لحظية. '
-              'رادار بيعرضها كما هي ومش بيقدّم أي توصية بيع أو شراء.',
+              'الأسعار محدّثة من TradingView والمصادر المتاحة. رادار بيعرضها كما هي.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.outline,
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StockRow extends ConsumerWidget {
-  final String code;
-  final VoidCallback onTap;
-
-  const _StockRow({required this.code, required this.onTap});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final colors = context.resultColors;
-    final quote = ref.watch(livePriceProvider(code));
-
-    final EgxStockInfo? info = quote.asData?.value;
-    final pct = info?.changePercent;
-    final color = pct == null || pct == 0
-        ? theme.colorScheme.onSurfaceVariant
-        : (pct > 0 ? colors.win : colors.loss);
-
-    return ListTile(
-      onTap: onTap,
-      title: NumericText(code, style: theme.textTheme.titleSmall),
-      subtitle: Text(
-        EgxMarketService.nameFor(code) ?? code,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          NumericText(
-            info == null ? kEmptyValue : money(info.price),
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          if (pct != null) ...[
-            const SizedBox(height: 2),
-            NumericText(
-              '${pct > 0 ? '+' : ''}${pct.toStringAsFixed(2)}%',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
         ],
       ),
     );
