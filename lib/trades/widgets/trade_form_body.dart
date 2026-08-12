@@ -35,10 +35,22 @@ class TradeFormBody extends StatelessWidget {
   final DateTime? exitDate;
   final ValueChanged<DateTime?> onExitDateChanged;
 
+  /// When the position was opened.
+  ///
+  /// The form had no control for this at all: `DateTime.now()` was stamped on
+  /// save and there was no way to change it, so a trade logged the morning
+  /// after was permanently dated wrong — and «الأداء الشهري», the equity curve
+  /// and «متوسط مدة الاحتفاظ» all read from this field. The web form has always
+  /// had the picker.
+  final DateTime entryDate;
+  final ValueChanged<DateTime> onEntryDateChanged;
+
   const TradeFormBody({
     super.key,
     required this.status,
     required this.onStatusChanged,
+    required this.entryDate,
+    required this.onEntryDateChanged,
     required this.tickerController,
     required this.entryController,
     required this.stopController,
@@ -80,6 +92,12 @@ class TradeFormBody extends StatelessWidget {
           const SizedBox(height: 8),
           StockQuoteBadge(symbol: ticker),
         ],
+        const SizedBox(height: 16),
+        _EntryDateField(
+          date: entryDate,
+          isExecuted: status.isExecuted,
+          onChanged: onEntryDateChanged,
+        ),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -165,7 +183,13 @@ class TradeFormBody extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'سيبهم فاضيين لو الصفقة لسه مفتوحة.',
+            // Says what saving actually does now. The old line —
+            // «سيبهم فاضيين لو الصفقة لسه مفتوحة» — described only the empty
+            // case, so filling them in and still seeing «مفتوحة» afterwards
+            // looked like the save had failed.
+            status == TradeStatus.closed
+                ? 'الصفقة مغلقة، فلازم تكتب سعر وتاريخ الخروج.'
+                : 'املا الاتنين وهي تتقفل لوحدها. سيبهم فاضيين لو لسه مفتوحة.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -186,6 +210,13 @@ class TradeFormBody extends StatelessWidget {
                   validator: (_) {
                     final price = parseNumber(exitController.text);
                     if (price == null) {
+                      // «مغلقة» with no exit is a contradiction the model
+                      // cannot hold: `Trade.isOpen` reads `exitPrice == null`,
+                      // so the record would call itself open the moment it was
+                      // written back.
+                      if (status == TradeStatus.closed) {
+                        return 'صفقة مغلقة لازم يكون ليها سعر خروج';
+                      }
                       // A date alone is dropped silently on save; say so rather
                       // than discarding what the user picked.
                       return exitDate == null ? null : 'اكتب سعر الخروج كمان';
@@ -216,6 +247,50 @@ class TradeFormBody extends StatelessWidget {
           notesController: notesController,
         ),
       ],
+    );
+  }
+}
+
+/// Entry date picker.
+///
+/// The label follows the status for the same reason the web form's does: on a
+/// plan the date is an intention, on an executed trade it is a record.
+class _EntryDateField extends StatelessWidget {
+  final DateTime date;
+  final bool isExecuted;
+  final ValueChanged<DateTime> onChanged;
+
+  const _EntryDateField({
+    required this.date,
+    required this.isExecuted,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: () async {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: date,
+          firstDate: DateTime(2000),
+          // A plan can be dated forward; a trade already taken cannot.
+          lastDate: isExecuted
+              ? DateTime.now().add(const Duration(days: 1))
+              : DateTime.now().add(const Duration(days: 365)),
+        );
+        if (picked != null) onChanged(picked);
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: isExecuted ? 'تاريخ الدخول' : 'تاريخ الدخول المتوقّع',
+          suffixIcon: const Icon(Icons.calendar_today_rounded, size: 18),
+        ),
+        child: NumericText(dateLabel(date), style: theme.textTheme.bodyLarge),
+      ),
     );
   }
 }

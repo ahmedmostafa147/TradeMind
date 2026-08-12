@@ -34,6 +34,9 @@ class _AuthFormState extends ConsumerState<AuthForm> {
   /// the sheet, so failures looked like the button simply did nothing.
   String? _error;
 
+  /// A confirmation, kept apart from [_error] so the two never share a colour.
+  String? _notice;
+
   /// Firebase's own minimum, checked here so the common mistake costs no round
   /// trip.
   static const _minPasswordLength = 6;
@@ -102,41 +105,52 @@ class _AuthFormState extends ConsumerState<AuthForm> {
     }
   }
 
+  /// Sends the reset link, and says the same thing whether or not the address
+  /// has an account.
+  ///
+  /// **THIS FORM MUST NOT CONFIRM WHETHER AN EMAIL IS REGISTERED.** The sign-in
+  /// path already refuses to say which half of the pair was wrong, for exactly
+  /// this reason — and a reset form that answers «الحساب مش موجود» hands the
+  /// same oracle back to anyone who can type. Firebase's own newer projects
+  /// return success for an unknown address; older ones throw `user-not-found`,
+  /// so that one code is folded into the success path here rather than shown.
   Future<void> _resetPassword() async {
     final email = _emailController.text.trim();
-    // Same check the sign-in path uses, not a looser `contains('@')` one: a
-    // reset that silently does nothing because the address was malformed is
-    // indistinguishable from one that worked, since Firebase deliberately does
-    // not reveal whether an account exists.
+
     if (email.isEmpty || !_looksLikeEmail(email)) {
-      setState(
-        () => _error =
-            'اكتب بريدك الإلكتروني الأول عشان نبعتلك رابط إعادة التعيين.',
-      );
+      setState(() {
+        _notice = null;
+        _error = 'اكتب بريدك الإلكتروني الأول، وهنبعتلك رابط تغيير كلمة السر.';
+      });
       return;
     }
 
     setState(() {
       _loading = true;
       _error = null;
+      _notice = null;
     });
+
+    const sent =
+        'لو البريد ده مسجّل عندنا، هيوصله رابط تغيير كلمة السر. شوف صندوق '
+        'الوارد و«السبام» كمان.';
 
     try {
       await ref.read(authProvider.notifier).sendPasswordResetEmail(email);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تم إرسال رابط إعادة تعيين كلمة السر إلى $email'),
-          ),
-        );
-      }
+      if (mounted) setState(() => _notice = sent);
     } on AuthException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (!mounted) return;
+      // A missing account is not an error the user may see — see above.
+      setState(() {
+        if (e.failure == AuthFailure.invalidCredentials) {
+          _notice = sent;
+        } else {
+          _error = e.message;
+        }
+      });
     } catch (_) {
       if (mounted) {
-        setState(
-          () => _error = 'تعذّر إرسال الرابط. اتأكد من البريد وجرّب تاني.',
-        );
+        setState(() => _error = 'تعذّر إرسال الرابط. جرّب تاني.');
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -147,6 +161,7 @@ class _AuthFormState extends ConsumerState<AuthForm> {
     setState(() {
       _loading = true;
       _error = null;
+      _notice = null;
     });
 
     try {
@@ -267,6 +282,15 @@ class _AuthFormState extends ConsumerState<AuthForm> {
           AuthBanner(icon: Icons.error_outline_rounded, text: _error!),
         ],
 
+        if (_notice != null) ...[
+          const SizedBox(height: 14),
+          AuthBanner(
+            icon: Icons.mark_email_read_outlined,
+            text: _notice!,
+            positive: true,
+          ),
+        ],
+
         const SizedBox(height: 20),
         FilledButton(
           onPressed: disabled ? null : _submit,
@@ -314,18 +338,16 @@ class _AuthFormState extends ConsumerState<AuthForm> {
         // The tint is `secondaryContainer`, not the brand: the brand fill
         // belongs to the primary button directly above, and repeating it would
         // give the screen two things claiming to be the main action.
-        //
-        // WRAP, NOT ROW. «ليس لديك حساب؟» plus «أنشئ حساباً جديداً» needs about
-        // 436 logical pixels; the panel gets 388 inside this screen's 420-wide
-        // ConstrainedBox, so a Row clipped the verb off the first screen every
-        // user sees — 48 pixels of the single most important action on it. Wrap
-        // drops the button to a second centred line instead of hiding it.
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHigh,
             borderRadius: BorderRadius.circular(12),
           ),
+          // Wrap, not Row. The question and the verb together are wider than a
+          // narrow phone once the Arabic runs long, and a Row overflows by
+          // ~48px rather than reflowing — a striped bar across the one control
+          // that creates the account the whole app requires.
           child: Wrap(
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
@@ -373,7 +395,18 @@ class AuthBanner extends StatelessWidget {
   final IconData icon;
   final String text;
 
-  const AuthBanner({super.key, required this.icon, required this.text});
+  /// Draws in the neutral surface instead of the error colours.
+  ///
+  /// A password-reset email that WAS sent, painted red, reads as a failure —
+  /// and this banner is the only thing the screen says back.
+  final bool positive;
+
+  const AuthBanner({
+    super.key,
+    required this.icon,
+    required this.text,
+    this.positive = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -381,19 +414,29 @@ class AuthBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: theme.colorScheme.errorContainer,
+        color: positive
+            ? theme.colorScheme.surfaceContainerHighest
+            : theme.colorScheme.errorContainer,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: theme.colorScheme.error),
+          Icon(
+            icon,
+            size: 18,
+            color: positive
+                ? theme.colorScheme.onSurfaceVariant
+                : theme.colorScheme.error,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onErrorContainer,
+                color: positive
+                    ? theme.colorScheme.onSurface
+                    : theme.colorScheme.onErrorContainer,
               ),
             ),
           ),

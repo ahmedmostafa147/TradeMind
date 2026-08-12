@@ -2,17 +2,13 @@
 
 import { useMemo, useState } from 'react';
 
+import { QuoteBadge } from '@/components/dashboard/quote-badge';
 import { TickerField } from '@/components/dashboard/ticker-field';
 import { TimelineEditor } from '@/components/dashboard/timeline-editor';
 import { CHECKLIST } from '@/lib/checklist';
 import { money, percent, quantity as fmtQuantity } from '@/lib/format';
-import {
-  exceedsRiskLimit,
-  maxLossPerTrade,
-  parseNumber,
-  safeDiv,
-  suggestedQuantity,
-} from '@/lib/risk-math';
+import { parseInteger, parseNumber } from '@/lib/risk-math';
+import { computeSizing } from '@/lib/sizing';
 import {
   newTradeId,
   type TimelineEntry,
@@ -21,22 +17,19 @@ import {
 } from '@/lib/trade';
 
 /**
- * The add / edit trade form.
+ * The add / edit trade form — the browser's «التفاصيل الكاملة».
  *
- * It carries the position-size calculator inline rather than linking to the one
- * on the landing page, because the product's whole claim is that size is
- * decided BEFORE the trade — a calculator you have to leave the form to reach
- * is a calculator most people will skip.
+ * IT IS LAID OUT SECTION FOR SECTION LIKE lib/trades/widgets/trade_form_body.dart,
+ * because the two are the same screen on two devices and were drifting apart:
+ * the browser had an extra «حاسبة الحجم» panel with its own capital and risk
+ * inputs, four expanded blocks where the phone has one folded panel, and the
+ * exit block above the reason instead of below it.
  *
- * CAPITAL IS SEEDED FROM THE ACCOUNT AND NOT WRITTEN BACK. It used to open at a
- * hardcoded 100,000 with a note saying the real number lived on the phone and
- * could not be read — which meant the suggested quantity was computed against a
- * portfolio the user did not have. The account carries the rule now
- * (`users/{uid}/settings/risk`), so the form starts from it. Editing the field
- * here stays a what-if for this one form: it changes the suggestion in front of
- * you and nothing else, and the account's value is changed in the bar above the
- * journal. That is deliberate — sizing a trade against "what if I had double"
- * should not silently rewrite the rule every other figure is scored against.
+ * THE RISK RULE IS READ, NEVER EDITED HERE. The panel let both numbers be
+ * changed and then explained at length that the change does not save — a
+ * what-if the phone does not offer and nobody asked for. The account carries
+ * the rule (`users/{uid}/settings/risk`); it is changed in الإعدادات, and this
+ * form just uses it.
  */
 
 /**
@@ -71,8 +64,6 @@ function isExecuted(status: TradeStatus): boolean {
   return status === 'open' || status === 'closed';
 }
 
-const RISK_PRESETS = [0.01, 0.015, 0.02, 0.03];
-
 /** `<input type="date">` wants YYYY-MM-DD in LOCAL time, not an ISO instant. */
 function toDateInput(date: Date): string {
   const y = String(date.getFullYear()).padStart(4, '0');
@@ -103,6 +94,7 @@ export function TradeForm({
   isEdit = initial !== null,
   accountCapital,
   accountMaxRisk,
+  showLivePrices,
   onCancel,
   onSave,
 }: {
@@ -117,6 +109,8 @@ export function TradeForm({
    *  the fields below are a what-if and never write back. */
   accountCapital: number;
   accountMaxRisk: number;
+  /** Last closes are one of the four paid surfaces — see QuoteBadge. */
+  showLivePrices: boolean;
   onCancel: () => void;
   onSave: (trade: TradeDraft) => Promise<void>;
 }) {
@@ -161,47 +155,63 @@ export function TradeForm({
     initial?.timeline ?? []
   );
 
-  const [capital, setCapital] = useState(String(accountCapital));
-  const [maxRisk, setMaxRisk] = useState(accountMaxRisk);
-
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * The SHARED sizing rule, exactly as the app's form uses `SizingResult`.
+   *
+   * This used to derive its own suggestion, its own risk and its own position
+   * value inline — a third engine beside the calculator's and the app's, and
+   * the same reason they could disagree about a share count.
+   */
   const calc = useMemo(() => {
-    const c = parseNumber(capital) ?? 0;
-    const e = parseNumber(entryPrice) ?? 0;
-    const s = parseNumber(stopPrice) ?? 0;
-    const q = parseNumber(qty) ?? 0;
-
-    const budget = maxLossPerTrade(c, maxRisk);
-    const suggested = suggestedQuantity(budget, e, s);
-
-    const riskEgp = q > 0 && e > s ? (e - s) * q : null;
-    const riskPct = riskEgp === null ? null : safeDiv(riskEgp, c);
-
+    const e = parseNumber(entryPrice);
+    const s = parseNumber(stopPrice);
+    const sizing = computeSizing({
+      capital: accountCapital,
+      maxRiskPercent: accountMaxRisk,
+      entry: e,
+      stop: s,
+      userQty: parseInteger(qty),
+    });
     return {
-      suggested,
-      riskEgp,
-      riskPct,
-      positionValue: q > 0 && e > 0 ? e * q : null,
-      // The ONLY comparison of a risk ratio against the limit — never inline.
-      over: riskPct !== null && exceedsRiskLimit(riskPct, maxRisk),
-      invertedStop: e > 0 && s > 0 && s >= e,
+      sizing,
+      invertedStop: e !== null && s !== null && e > 0 && s > 0 && s >= e,
     };
-  }, [capital, entryPrice, stopPrice, qty, maxRisk]);
+  }, [accountCapital, accountMaxRisk, entryPrice, stopPrice, qty]);
+
+  const sizing = calc.sizing;
 
   // MATCHES THE APP: the exit block appears for any position that exists, not
   // only a closed one — lib/trades/widgets/trade_form_body.dart shows it under
-  // `status.isExecuted` with the hint «سيبهم فاضيين لو الصفقة لسه مفتوحة». That
-  // is the better shape: closing a trade is filling in an exit, not hunting for
-  // a status dropdown first.
+  // `status.isExecuted`. That is the better shape: closing a trade is filling
+  // in an exit, not hunting for a status picker first — and since both surfaces
+  // now CLOSE the trade when the pair is filled, the block is the action, not a
+  // set of fields that only count once the type is right.
   //
-  // The fields are only REQUIRED when the status says closed, which is a guard
-  // the app lacks — its saver quietly writes status=closed with a null exit,
-  // and such a record has no P&L, no R and no place on the equity curve while
-  // still being counted as a finished trade.
+  // The fields stay REQUIRED when the type already says closed: such a record
+  // would have no P&L, no R and no place on the equity curve while still being
+  // counted as a finished trade. `Trade.isOpen` is `exitPrice == null`, so it
+  // would also call itself open again on the phone.
   const showsExit = isExecuted(status);
   const needsExit = status === 'closed';
+
+  /**
+   * Anything that is not «مقفولة» has no exit, so moving away from it empties
+   * the pair — mirroring `_changeStatus` in trade_form_screen.dart.
+   *
+   * Without it, reopening a closed trade is impossible: the exit fields stay
+   * on screen for an open position too, and the save below reads a filled exit
+   * as "closed", so picking «مفتوحة» would close it straight back.
+   */
+  function changeStatus(next: TradeStatus) {
+    setStatus(next);
+    if (next !== 'closed') {
+      setExitPrice('');
+      setExitDate('');
+    }
+  }
 
   function toggleCheck(id: string) {
     setChecked((prev) =>
@@ -242,7 +252,11 @@ export function TradeForm({
     // silently reopens.
     let exit: number | null = null;
     let exitOn: Date | null = null;
-    if (needsExit) {
+    // An exit typed against an OPEN position is a close, not a stray value to
+    // drop — same rule the app's saver applies. Dropping it was the web half of
+    // the bug where filling the exit in did everything except close the trade.
+    const typedExit = showsExit && (exitPrice.trim() !== '' || exitDate !== '');
+    if (needsExit || typedExit) {
       exit = parseNumber(exitPrice);
       exitOn = fromDateInput(exitDate);
       if (exit === null || exit <= 0)
@@ -250,6 +264,11 @@ export function TradeForm({
       if (!exitOn) return setError('تاريخ الخروج مش مظبوط.');
       if (exitOn < date) return setError('تاريخ الخروج مش ممكن يكون قبل الدخول.');
     }
+
+    // Mirrors `resolvedStatus` in trade_form_saver.dart. The other direction —
+    // clearing the exit to reopen — is handled by `changeStatus` above.
+    const resolvedStatus: TradeStatus =
+      status === 'open' && exit !== null ? 'closed' : status;
 
     setError(null);
     setBusy(true);
@@ -265,7 +284,7 @@ export function TradeForm({
         exitPrice: exit,
         exitDate: exitOn,
         notes: notes.trim() || null,
-        status,
+        status: resolvedStatus,
         tags: tags
           .split(/[،,]/)
           .map((t) => t.trim())
@@ -287,6 +306,13 @@ export function TradeForm({
   }
 
   return (
+    /* MIRRORS THE APP'S FORM, SECTION BY SECTION.
+       lib/trades/widgets/trade_form_body.dart goes: status, ticker, the two
+       prices, quantity beside the target, the live preview, the reason, the
+       exit block, then ONE collapsible carrying tags, screenshots, the
+       timeline and the closing note. The browser had the same material in a
+       different order, with an extra «حاسبة الحجم» panel the phone does not
+       have — so the two screens taught different habits for the same job. */
     <form onSubmit={submit} className="space-y-5">
       {/* Cards rather than a <select>: four options whose difference is the
           whole shape of the form is not a thing to hide behind a closed
@@ -294,10 +320,10 @@ export function TradeForm({
           are. A radiogroup, so arrow keys work and a screen reader announces
           it as one choice of four. */}
       <fieldset>
-        <legend className="text-sm font-bold">الصفقة دي إيه؟</legend>
+        <legend className="text-sm font-bold">حالة الصفقة</legend>
         <div
           role="radiogroup"
-          aria-label="نوع الصفقة"
+          aria-label="حالة الصفقة"
           className="mt-3 grid gap-2 sm:grid-cols-2"
         >
           {TYPE_OPTIONS.map((option) => {
@@ -308,7 +334,7 @@ export function TradeForm({
                 type="button"
                 role="radio"
                 aria-checked={active}
-                onClick={() => setStatus(option.value)}
+                onClick={() => changeStatus(option.value)}
                 className={`rounded-lg border p-4 text-start transition-colors ${
                   active
                     ? 'border-brand-ink bg-surface-high'
@@ -337,8 +363,15 @@ export function TradeForm({
             required
             autoFocus
           />
+          {/* The app's StockQuoteBadge, which the browser was missing. */}
+          <QuoteBadge symbol={ticker} enabled={showLivePrices} />
         </Field>
 
+        {/* NOT IN THE APP'S FORM AT ALL — kept, not removed. The phone stamps
+            `DateTime.now()` and offers no way to change it, so a trade entered
+            the morning after cannot be dated correctly there. Dropping the
+            field here to match would make both surfaces worse; the app is
+            getting the picker instead. */}
         <Field
           label={isExecuted(status) ? 'تاريخ الدخول' : 'تاريخ الدخول المتوقّع'}
           htmlFor="tf-date"
@@ -355,7 +388,7 @@ export function TradeForm({
         </Field>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Field label="سعر الدخول" htmlFor="tf-entry" suffix="ج.م">
           <input
             id="tf-entry"
@@ -367,7 +400,7 @@ export function TradeForm({
             required
           />
         </Field>
-        <Field label="الاستوب" htmlFor="tf-stop" suffix="ج.م">
+        <Field label="سعر الاستوب" htmlFor="tf-stop" suffix="ج.م">
           <input
             id="tf-stop"
             inputMode="decimal"
@@ -378,16 +411,6 @@ export function TradeForm({
             required
           />
         </Field>
-        <Field label="الهدف (اختياري)" htmlFor="tf-tp" suffix="ج.م">
-          <input
-            id="tf-tp"
-            inputMode="decimal"
-            value={takeProfit}
-            onChange={(e) => setTakeProfit(e.target.value)}
-            dir="ltr"
-            className={inputCls}
-          />
-        </Field>
       </div>
 
       {calc.invertedStop && (
@@ -396,75 +419,11 @@ export function TradeForm({
         </p>
       )}
 
-      {/* SIZING ONLY WHEN THERE IS STILL A SIZE TO DECIDE.
-          For an executed trade the quantity is history, and a suggestion next
-          to it reads as a verdict on a position that cannot be changed. The
-          risk read-out below stays for every status — on a done trade it is a
-          fact worth seeing, just not a target. */}
-      {needsSizing(status) && (
-      <fieldset className="rounded-lg border border-border-default bg-surface-low p-4 sm:p-5">
-        <legend className="px-2 text-sm font-bold">حاسبة الحجم</legend>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="رأس المال" htmlFor="tf-capital" suffix="ج.م">
-            <input
-              id="tf-capital"
-              inputMode="decimal"
-              value={capital}
-              onChange={(e) => setCapital(e.target.value)}
-              dir="ltr"
-              className={inputCls}
-            />
-          </Field>
-
-          <div>
-            <span className="text-sm font-semibold">أقصى مخاطرة</span>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {RISK_PRESETS.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setMaxRisk(preset)}
-                  aria-pressed={maxRisk === preset}
-                  className={`num rounded-md border px-3 py-1.5 text-sm font-semibold transition-colors ${
-                    maxRisk === preset
-                      ? 'border-transparent bg-brand text-on-brand'
-                      : 'border-border-default text-fg-muted hover:bg-surface-high'
-                  }`}
-                >
-                  {(preset * 100).toFixed(preset === 0.015 ? 1 : 0)}%
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <p className="mt-4 text-xs text-fg-subtle">
-          الأرقام دي جاية من إعدادات حسابك. تغييرها هنا بيحسب المقترح والنسبة في
-          الفورم ده بس ومش بيتحفظ — عشان تغيّر القاعدة نفسها، عدّلها من فوق
-          الجورنال.
-        </p>
-
-        <div className="mt-5 flex flex-wrap items-end justify-between gap-4 border-t border-border-default pt-5">
-          <div>
-            <p className="text-sm text-fg-muted">الكمية المقترحة</p>
-            <p className="num mt-1 text-3xl font-bold">
-              {calc.suggested === null ? '—' : fmtQuantity(calc.suggested)}
-            </p>
-          </div>
-          {calc.suggested !== null && calc.suggested > 0 && (
-            <button
-              type="button"
-              onClick={() => setQty(String(calc.suggested))}
-              className="rounded-md border border-border-strong px-4 py-2 text-sm font-semibold transition-colors hover:bg-surface-high"
-            >
-              استخدم المقترح
-            </button>
-          )}
-        </div>
-      </fieldset>
-      )}
-
+      {/* Quantity beside the target, exactly as the app pairs them — and the
+          suggestion is a HELPER UNDER THE FIELD, not a «حاسبة الحجم» panel of
+          its own. That panel let the capital and the risk rule be edited here
+          and then explained at length that the edits do not save; the app just
+          reads the account and prints the number. */}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
           label={isExecuted(status) ? 'عدد الأسهم اللي اشتريتها' : 'عدد الأسهم'}
@@ -483,26 +442,78 @@ export function TradeForm({
             // relaxed in both places or in neither.
             required={status !== 'cancelled'}
           />
+          {/* SIZING ONLY WHEN THERE IS STILL A SIZE TO DECIDE. For an executed
+              trade the quantity is history, and a suggestion next to it reads
+              as a verdict on a position that cannot be changed. */}
+          {needsSizing(status) && sizing.suggestedQty !== null && (
+            <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-fg-subtle">
+              <span>
+                المقترح:{' '}
+                <span className="num font-bold text-fg-muted">
+                  {fmtQuantity(sizing.suggestedQty)}
+                </span>
+              </span>
+              {sizing.suggestedQty > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setQty(String(sizing.suggestedQty))}
+                  className="font-semibold text-brand-ink underline-offset-4 hover:underline"
+                >
+                  استخدمه
+                </button>
+              )}
+            </p>
+          )}
         </Field>
 
+        <Field label="الهدف (اختياري)" htmlFor="tf-tp" suffix="ج.م">
+          <input
+            id="tf-tp"
+            inputMode="decimal"
+            value={takeProfit}
+            onChange={(e) => setTakeProfit(e.target.value)}
+            dir="ltr"
+            className={inputCls}
+          />
+        </Field>
       </div>
 
-      <dl className="grid gap-3 rounded-lg border border-border-default bg-surface p-4 sm:p-5 sm:grid-cols-3">
-        <Metric label="المبلغ المعرّض للخطر" value={money(calc.riskEgp)} tone={calc.over} />
-        <Metric label="نسبة المخاطرة" value={percent(calc.riskPct)} tone={calc.over} />
-        <Metric label="قيمة المركز" value={money(calc.positionValue)} />
-      </dl>
+      {sizing.capitalTooSmall && needsSizing(status) && (
+        <p className="rounded-md border border-border-default bg-surface-low p-3 text-xs leading-relaxed text-fg-muted">
+          المسافة بين الدخول والاستوب أكبر من ميزانية الخسارة{' '}
+          <span className="num">({money(sizing.maxLoss)})</span> — مش هينفع
+          تشتري ولا سهم واحد في الحد ده.
+        </p>
+      )}
 
-      {calc.over && (
+      {sizing.overRisk && (
         <p
           role="status"
           className="rounded-md border border-loss-border bg-loss-surface p-3 text-sm font-semibold text-loss"
         >
           {isExecuted(status)
-            ? `المخاطرة في الصفقة دي كانت أعلى من حدك (${percent(maxRisk)}) — متسجّلة زي ما هي، ودرجة الانضباط هتعكسها.`
-            : `المخاطرة أعلى من الحد اللي اخترته (${percent(maxRisk)}). رادار هيعلّم الصفقة دي بالأحمر.`}
+            ? `المخاطرة في الصفقة دي كانت أعلى من حدك (${percent(accountMaxRisk)}) — متسجّلة زي ما هي، ودرجة الانضباط هتعكسها.`
+            : `المخاطرة أعلى من الحد اللي اخترته (${percent(accountMaxRisk)}). رادار هيعلّم الصفقة دي بالأحمر.`}
         </p>
       )}
+
+      {/* The app's LivePreviewCard, same three rows in the same order. */}
+      <dl className="grid gap-3 rounded-lg border border-border-default bg-surface p-4 sm:p-5 sm:grid-cols-3">
+        <Metric label="قيمة المركز" value={money(sizing.positionValue)} />
+        <Metric label="المخاطرة بالجنيه" value={money(sizing.riskEgp)} tone={sizing.overRisk} />
+        <Metric label="نسبة المخاطرة" value={percent(sizing.riskPct)} tone={sizing.overRisk} />
+      </dl>
+
+      <Field label="سبب الدخول والتحليل الفني" htmlFor="tf-reason">
+        <textarea
+          id="tf-reason"
+          rows={3}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="ليه بتدخل الصفقة دي؟ ده اللي هترجعله بعد شهور."
+          className={inputCls}
+        />
+      </Field>
 
       {showsExit && (
         <fieldset className="rounded-lg border border-border-default bg-surface-low p-4 sm:p-5">
@@ -510,7 +521,7 @@ export function TradeForm({
           <p className="mb-4 text-xs text-fg-muted">
             {needsExit
               ? 'الصفقة مقفولة، فلازم تكتب سعر وتاريخ الخروج.'
-              : 'سيبهم فاضيين لو الصفقة لسه مفتوحة — أول ما تكتبهم وتخليها «عملتها وخلصت» تتحسب في أداءك.'}
+              : 'املا الاتنين وهي تتقفل لوحدها وتتحسب في أداءك. سيبهم فاضيين لو لسه مفتوحة.'}
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
           <Field label="سعر الخروج" htmlFor="tf-exit" suffix="ج.م">
@@ -539,38 +550,10 @@ export function TradeForm({
         </fieldset>
       )}
 
-      <Field label="سبب الدخول" htmlFor="tf-reason">
-        <textarea
-          id="tf-reason"
-          rows={3}
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="ليه بتدخل الصفقة دي؟ ده اللي هترجعله بعد شهور."
-          className={inputCls}
-        />
-      </Field>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="التصنيفات (بفاصلة)" htmlFor="tf-tags">
-          <input
-            id="tf-tags"
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            placeholder="بريك أوت، سوينج"
-            className={inputCls}
-          />
-        </Field>
-        <Field label="المصدر (اختياري)" htmlFor="tf-source">
-          <input
-            id="tf-source"
-            value={source}
-            onChange={(e) => setSource(e.target.value)}
-            placeholder="مين رشّح لك الصفقة"
-            className={inputCls}
-          />
-        </Field>
-      </div>
-
+      {/* Left OUT of the collapsible on purpose. The app asks these at save
+          time, in a sheet you cannot miss; folding them away here would make
+          them easier to skip than on either surface, and the discipline score
+          counts them. */}
       <fieldset className="rounded-lg border border-border-default p-4">
         <legend className="px-2 text-sm font-bold">
           <span className="inline-flex items-center gap-2">
@@ -597,37 +580,73 @@ export function TradeForm({
         </ul>
       </fieldset>
 
-      <TimelineEditor entries={timeline} onChange={setTimeline} />
+      {/* ONE COLLAPSIBLE, same title as the app's ExpansionTile. Tags, source,
+          the timeline and the closing note were four expanded blocks here and
+          one folded panel there, which is most of why the two screens did not
+          look like the same product. */}
+      <details className="rounded-lg border border-border-default bg-surface">
+        <summary className="cursor-pointer list-none p-4 text-sm font-bold sm:p-5">
+          أدوات ومرفقات إضافية (صور، تصنيفات، سجل)
+        </summary>
+        <div className="space-y-5 border-t border-border-default p-4 sm:p-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="التصنيفات (بفاصلة)" htmlFor="tf-tags">
+              <input
+                id="tf-tags"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="بريك أوت، سوينج"
+                className={inputCls}
+              />
+            </Field>
+            <Field label="المصدر (اختياري)" htmlFor="tf-source">
+              <input
+                id="tf-source"
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                placeholder="مين رشّح لك الصفقة"
+                className={inputCls}
+              />
+            </Field>
+          </div>
 
-      {/* THIS NO LONGER EXPLAINS A LOST 20 POINTS — the discipline score dropped
-          the screenshot component precisely because a browser could never earn
-          it. What is left is a plain statement about where images live, which
-          still matters: a user editing a trade from here needs to know the
-          images on their phone survive the save.
+          <TimelineEditor entries={timeline} onChange={setTimeline} />
 
-          The note only appears when the trade actually HAS images. There is no
-          reason to tell somebody about a feature of a device they may not be
-          using, on a form that is otherwise complete. */}
-      {initial && initial.screenshotPaths.length > 0 && (
-        <p className="rounded-md border border-border-default bg-surface-low p-3 text-xs leading-relaxed text-fg-subtle">
-          الصفقة دي عليها{' '}
-          <span className="num font-bold">
-            {initial.screenshotPaths.length}
-          </span>{' '}
-          صورة شارت على تليفونك. الصور متخزّنة على الجهاز ومش بترفع على السيرفر،
-          فمش بتظهر من المتصفح — وهتفضل زي ما هي بعد الحفظ من هنا.
-        </p>
-      )}
+          {/* THIS NO LONGER EXPLAINS A LOST 20 POINTS. It used to, and it had to
+              — the discipline score carried a fifth component for "a chart
+              screenshot is attached" that a browser could never earn, so this
+              paragraph existed to stop the score looking broken.
 
-      <Field label="ملاحظات (اختياري)" htmlFor="tf-notes">
-        <textarea
-          id="tf-notes"
-          rows={2}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className={inputCls}
-        />
-      </Field>
+              The score dropped that component instead (four components of 25
+              now; see lib/core/calc/risk_score.dart), which makes the apology
+              unnecessary and the old wording wrong.
+
+              What remains is a plain fact worth stating, and only when it
+              applies: somebody editing a trade from here needs to know the
+              images sitting on their phone survive the save. On a trade with no
+              images there is nothing to say. */}
+          {initial && initial.screenshotPaths.length > 0 && (
+            <p className="rounded-md border border-border-default bg-surface-low p-3 text-xs leading-relaxed text-fg-subtle">
+              الصفقة دي عليها{' '}
+              <span className="num font-bold">
+                {initial.screenshotPaths.length}
+              </span>{' '}
+              صورة شارت على تليفونك. الصور متخزّنة على الجهاز ومش بترفع على
+              السيرفر، فمش بتظهر من المتصفح — وهتفضل زي ما هي بعد الحفظ من هنا.
+            </p>
+          )}
+
+          <Field label="ملاحظات ختامية" htmlFor="tf-notes">
+            <textarea
+              id="tf-notes"
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className={inputCls}
+            />
+          </Field>
+        </div>
+      </details>
 
       {error && (
         <p

@@ -6,10 +6,18 @@ import '../../core/formatters.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/risk_warning.dart';
 
-/// «ملخص الصفقة» — every number the trader would otherwise work out by hand.
+/// «ملخص الصفقة» — ONLY what was worked out, never what was typed in.
 ///
-/// Framed green when the reward strictly beats the risk, red otherwise, so the
-/// verdict is readable before any of the individual figures are.
+/// It used to open with سعر الدخول, سعر الهدف and سعر وقف الخسارة. The entry is
+/// something the trader typed two fields above; the other two now appear
+/// underneath their own inputs the moment either half is known (see
+/// [LevelField]). Reading them back a third time pushed the four figures that
+/// are actually an answer — how many shares, what it costs, what it wins, what
+/// it loses — below the fold on a phone.
+///
+/// «أقصى خسارة مسموحة» went the same way: it is capital × risk% from settings,
+/// identical on every trade, so it belongs beside the risk it bounds rather
+/// than on a row of its own.
 class TradeSummaryCard extends StatelessWidget {
   final SmartTradePlan plan;
 
@@ -19,16 +27,18 @@ class TradeSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.resultColors;
-    final positive = plan.rewardBeatsRisk;
-    final hasPrices = plan.entryPrice != null;
-    final accent = positive ? colors.win : colors.loss;
-    final borderColor = hasPrices ? accent : theme.colorScheme.outlineVariant;
     final quality = plan.quality;
+    final positive = plan.rewardBeatsRisk;
+    final resolved = plan.rewardRiskRatio != null;
+    final accent = positive ? colors.win : colors.loss;
 
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: borderColor, width: hasPrices ? 1.5 : 1),
+        side: BorderSide(
+          color: resolved ? accent : theme.colorScheme.outlineVariant,
+          width: resolved ? 1.5 : 1,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -37,92 +47,75 @@ class TradeSummaryCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(
-                  'ملخص الصفقة',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    'ملخص الصفقة',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                const Spacer(),
-                NumericText(
-                  plan.rewardRiskRatio == null
-                      ? kEmptyValue
-                      : '${plan.rewardRiskRatio!.toStringAsFixed(2)}R/R',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: accent,
-                  ),
-                ),
+                // The verdict, as one badge instead of a ratio in the header
+                // and an emoji banner underneath it saying the same thing.
+                if (quality != null)
+                  _QualityBadge(quality: quality, plan: plan),
               ],
             ),
 
-            if (quality != null) ...[
+            if (!resolved) ...[
               const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.surfaceFor(_qualityColor(quality, colors)),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  quality.label,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: _qualityColor(quality, colors),
-                  ),
+              Text(
+                'اكتب سعر الدخول وحدّد الهدف والاستوب، والباقي هيتحسب هنا.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
+            ] else ...[
+              const SizedBox(height: 16),
+              // Two by two, so the pair a trader compares sits side by side:
+              // the size on top, the two outcomes it produces underneath.
+              Row(
+                children: [
+                  Expanded(
+                    child: _Tile(
+                      label: 'الأسهم المقترحة',
+                      value: quantity(plan.sizing.effectiveQty),
+                      big: true,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _Tile(
+                      label: 'قيمة المركز',
+                      value: money(plan.sizing.positionValue),
+                      big: true,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _Tile(
+                      label: 'لو وصل الهدف',
+                      value: signedMoney(plan.expectedProfit),
+                      color: colors.win,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _Tile(
+                      label: 'لو ضرب الاستوب',
+                      value: signedMoney(plan.expectedLoss),
+                      color: colors.loss,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _RiskLine(plan: plan),
             ],
-
-            const SizedBox(height: 8),
-            ReadoutRow(label: 'سعر الدخول', value: money(plan.entryPrice)),
-            ReadoutRow(
-              label: 'سعر الهدف',
-              value: money(plan.takeProfitPrice),
-              valueColor: colors.win,
-            ),
-            ReadoutRow(
-              label: 'سعر وقف الخسارة',
-              value: money(plan.stopLossPrice),
-              valueColor: colors.loss,
-            ),
-            const Divider(height: 20),
-            ReadoutRow(
-              label: 'الأسهم المقترحة',
-              value: quantity(plan.sizing.effectiveQty),
-              emphasise: true,
-            ),
-            ReadoutRow(
-              label: 'قيمة المركز',
-              value: money(plan.sizing.positionValue),
-            ),
-            const Divider(height: 20),
-            ReadoutRow(
-              label: 'الربح المتوقع',
-              value: money(plan.expectedProfit),
-              valueColor: colors.win,
-              emphasise: true,
-            ),
-            ReadoutRow(
-              label: 'الخسارة المتوقعة',
-              value: money(plan.expectedLoss),
-              valueColor: colors.loss,
-              emphasise: true,
-            ),
-            ReadoutRow(
-              label: 'نسبة المخاطرة',
-              value: percent(plan.sizing.riskPct),
-              valueColor: plan.sizing.overRisk ? colors.loss : null,
-            ),
-            ReadoutRow(
-              label: 'أقصى خسارة مسموحة',
-              value: money(plan.sizing.maxLoss),
-            ),
 
             if (plan.sizing.overRisk) ...[
               const SizedBox(height: 12),
@@ -136,13 +129,184 @@ class TradeSummaryCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  static Color _qualityColor(TradeQuality quality, ResultColors colors) =>
-      switch (quality) {
-        TradeQuality.good => colors.win,
-        TradeQuality.warning => colors.breakeven,
-        TradeQuality.bad => colors.loss,
-      };
+class _QualityBadge extends StatelessWidget {
+  final TradeQuality quality;
+  final SmartTradePlan plan;
+
+  const _QualityBadge({required this.quality, required this.plan});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.resultColors;
+    final color = switch (quality) {
+      TradeQuality.good => colors.win,
+      TradeQuality.warning => colors.breakeven,
+      TradeQuality.bad => colors.loss,
+    };
+    final icon = switch (quality) {
+      TradeQuality.good => Icons.check_circle_rounded,
+      TradeQuality.warning => Icons.warning_amber_rounded,
+      TradeQuality.bad => Icons.cancel_rounded,
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.surfaceFor(color),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          // The ratio is the verdict's evidence, so the two travel together
+          // rather than sitting at opposite ends of the header.
+          NumericText(
+            '${plan.rewardRiskRatio!.toStringAsFixed(2)}R',
+            style: theme.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            quality.plainLabel,
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Tile extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? color;
+  final bool big;
+
+  const _Tile({
+    required this.label,
+    required this.value,
+    this.color,
+    this.big = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 2),
+          // FittedBox, not a smaller font: a six-figure position value at
+          // titleLarge does not fit half a 320px phone, and shrinking every
+          // tile to suit the widest possible number wastes the space the rest
+          // of the time.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: NumericText(
+              value,
+              style:
+                  (big
+                          ? theme.textTheme.titleLarge
+                          : theme.textTheme.titleMedium)
+                      ?.copyWith(fontWeight: FontWeight.bold, color: color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The risk, with the limit it is measured against on the same line.
+class _RiskLine extends StatelessWidget {
+  final SmartTradePlan plan;
+
+  const _RiskLine({required this.plan});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.resultColors;
+    final over = plan.sizing.overRisk;
+
+    // Two lines, not one. Laid out as label + «2.0%» + « من » + «340.00 ج.م» +
+    // « مسموحة» in a single Row it overflowed by 76px at 320 — four fixed
+    // children after an Expanded label cannot shrink, so the row simply ran off
+    // the card.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'المخاطرة من رأس المال',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            NumericText(
+              percent(plan.sizing.riskPct),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: over ? colors.loss : null,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text.rich(
+          TextSpan(
+            children: [
+              const TextSpan(text: 'حدّك المسموح '),
+              // The figure keeps its own LTR run so «ج.م» cannot jump to the
+              // head of the line — the same reason NumericText exists.
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: NumericText(
+                  money(plan.sizing.maxLoss),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const TextSpan(text: ' على الصفقة'),
+            ],
+          ),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _CopyRow extends StatelessWidget {

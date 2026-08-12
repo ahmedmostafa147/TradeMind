@@ -53,6 +53,15 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
   /// to be typeable here and not only in the full form.
   final _quantityController = TextEditingController();
 
+  /// «هدخل بفلوس قد ايه» — the cash going into THIS position.
+  ///
+  /// The same field the calculator has. Without it the suggestion is the risk
+  /// rule alone, which sizes as if the whole account were behind every trade —
+  /// so the sheet kept proposing hundreds of shares to someone who came to
+  /// spend a few thousand pounds, and the number had to be worked out by hand
+  /// before it could be typed into عدد الأسهم.
+  final _budgetController = TextEditingController();
+
   @override
   void dispose() {
     _tickerController.dispose();
@@ -60,6 +69,7 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
     _stopController.dispose();
     _targetController.dispose();
     _quantityController.dispose();
+    _budgetController.dispose();
     super.dispose();
   }
 
@@ -94,7 +104,7 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
     );
   }
 
-  void _openFullForm() {
+  void _openFullForm(SizingResult sizing) {
     final ticker = _tickerController.text.trim().toUpperCase();
     final entry = parseNumber(_entryController.text);
     final stop = parseNumber(_stopController.text);
@@ -105,7 +115,11 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
       entryPrice: entry,
       stopPrice: stop,
       takeProfitPrice: target,
-      quantity: parseInteger(_quantityController.text),
+      // The full form has no budget field, so a budget typed here would be the
+      // one thing «التفاصيل الكاملة ←» threw away. Carrying the quantity it
+      // produced keeps the answer even though the question cannot follow.
+      quantity: parseInteger(_quantityController.text) ??
+          (sizing.limitedByBudget ? sizing.effectiveQty : null),
       reason: 'صفقة سريعة',
     );
 
@@ -128,6 +142,7 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
       entry: entry,
       stop: stop,
       userQty: parseInteger(_quantityController.text),
+      budget: parseNumber(_budgetController.text),
     );
 
     final isValid = _tickerController.text.trim().isNotEmpty &&
@@ -173,7 +188,7 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
                 ),
               ),
               TextButton(
-                onPressed: _openFullForm,
+                onPressed: () => _openFullForm(sizing),
                 child: const Text('التفاصيل الكاملة ←'),
               ),
             ],
@@ -226,6 +241,27 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          // Full width and above عدد الأسهم on purpose: it is the input that
+          // decides the suggestion shown under that field.
+          TextField(
+            key: const ValueKey('quick-budget-field'),
+            controller: _budgetController,
+            onChanged: (_) => setState(() {}),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.٠-٩]')),
+            ],
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.right,
+            decoration: InputDecoration(
+              labelText: 'المبلغ اللي هدخل بيه (اختياري)',
+              suffixText: kCurrencySuffix,
+              helperText: sizing.limitedByBudget
+                  ? 'الكمية اتحددت بالمبلغ ده، مش بحد المخاطرة'
+                  : 'سيبه فاضي عشان يستخدم حد المخاطرة بس',
+            ),
           ),
           const SizedBox(height: 12),
           Row(

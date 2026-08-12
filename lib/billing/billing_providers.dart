@@ -77,6 +77,26 @@ final billingProvider =
       BillingController.new,
     );
 
+/// True when the subscription document exists but cannot be READ.
+///
+/// A denial and a fresh account both look like «مفيش مستند» from
+/// [FirestoreSyncService.pullSubscription], and the difference matters more
+/// than anything else in this file: if `firestore.rules` was never deployed,
+/// the `billing` block does not exist, the read falls to the default deny, and
+/// EVERY account — new or old — resolves to [Entitlement.free]. No trial ever
+/// starts and all four paid surfaces lock themselves on day one, without a
+/// single error anywhere, because the denial is caught by design.
+///
+/// This is the check that makes that state visible. Null means "not
+/// applicable" — signed out, or no Firebase app, as under `flutter test`.
+final billingReadableProvider = FutureProvider<bool?>((ref) async {
+  final user = ref.watch(authProvider);
+  if (!user.isLoggedIn || user.id == 'guest' || Firebase.apps.isEmpty) {
+    return null;
+  }
+  return FirestoreSyncService.canReadSubscription(user.id);
+});
+
 /// The entitlement, with a safe answer while the read is in flight.
 ///
 /// **LOADING RESOLVES TO FULL ACCESS, NOT TO FREE.** Showing a paywall over a

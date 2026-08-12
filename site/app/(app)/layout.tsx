@@ -1,21 +1,3 @@
-import Link from 'next/link';
-
-import { disclaimer, site } from '@/lib/site';
-
-/**
- * The legal links, repeated here rather than imported from SiteFooter.
- *
- * SiteFooter is the marketing footer — disclaimer callout, tagline, install
- * instructions, copyright — and dropping all of that under a journal would bury
- * the working surface under a sales page. What a signed-in user needs is the
- * three documents and nothing else.
- */
-const legalLinks = [
-  { href: '/privacy', label: 'سياسة الخصوصية' },
-  { href: '/terms', label: 'شروط الاستخدام' },
-  { href: '/delete', label: 'حذف الحساب' },
-];
-
 /**
  * Shell for the signed-in surfaces.
  *
@@ -27,6 +9,13 @@ const legalLinks = [
  *
  * The controls did not go away, they moved INTO the dashboard header where
  * they belong beside the other actions. Only the second bar is gone.
+ *
+ * AND NO FOOTER. The «تنويه» paragraph and the three legal links used to be
+ * pinned here, which put them under every tab — قرار اليوم, صفقاتي, السوق, the
+ * calculator — so an empty daily screen on a phone ended in a legal paragraph.
+ * They live in «الإعدادات» now ([LegalNotice]), which is where the app keeps
+ * them; the sentence is still stated outright on every marketing page through
+ * SiteFooter.
  */
 export default function AppLayout({
   children,
@@ -43,43 +32,6 @@ export default function AppLayout({
       </a>
 
       <main id="main">{children}</main>
-
-      {/* The three documents, reachable from the product itself.
-          RELEASE.md requires the "not investment advice" line stated outright,
-          and this is the surface where a user is actually looking at position
-          sizes and P&L — the one place the sentence is doing real work rather
-          than satisfying a reviewer. */}
-      <footer className="mt-16 border-t border-border-default bg-surface-low">
-        <div className="mx-auto max-w-6xl px-5 py-8">
-          <p className="max-w-3xl text-xs leading-relaxed text-fg-subtle">
-            <strong className="font-semibold text-fg-muted">تنويه: </strong>
-            {disclaimer}
-          </p>
-
-          <nav aria-label="روابط قانونية" className="mt-5">
-            <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
-              {legalLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-xs text-fg-muted underline-offset-4 transition-colors hover:text-fg hover:underline"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-              <li>
-                <a
-                  href={`mailto:${site.contactEmail}`}
-                  className="text-xs text-fg-muted underline-offset-4 transition-colors hover:text-fg hover:underline"
-                >
-                  تواصل معنا
-                </a>
-              </li>
-            </ul>
-          </nav>
-        </div>
-      </footer>
     </>
   );
 }

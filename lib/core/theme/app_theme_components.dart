@@ -123,12 +123,25 @@ class AppThemeComponents {
         }),
       );
 
+  /// A snackbar sits on [PaletteScheme.inverseSurface], which FLIPS WITH THE
+  /// THEME — charcoal in the light palettes, cream in the dark ones. The text
+  /// was hard-coded to `Colors.white`, so in dark mode it was white on cream
+  /// and the message could not be read at all.
+  ///
+  /// Both the message and the action take [PaletteScheme.onInverseSurface],
+  /// the only token that is guaranteed to read on that background in either
+  /// brightness. `brand` is not an option here for the same reason it is not
+  /// text anywhere else: 1.15:1 lemon on the cream inverse surface.
   static SnackBarThemeData snackBar(PaletteScheme p) => SnackBarThemeData(
     backgroundColor: p.inverseSurface,
-    contentTextStyle: const TextStyle(
-      color: Colors.white,
+    contentTextStyle: TextStyle(
+      color: p.onInverseSurface,
       fontFamily: _fontFamily,
     ),
+    // Left to Material this defaults to `colorScheme.inversePrimary`, a colour
+    // this palette never defines — so it came from the seeded fallback with no
+    // contrast guarantee against our own inverse surface.
+    actionTextColor: p.onInverseSurface,
     behavior: SnackBarBehavior.floating,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
   );

@@ -1,24 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/calc/goal_plan.dart';
 import '../core/calc/goal_projection.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
 import '../settings/settings_providers.dart';
 import '../trades/trades_providers.dart';
 import 'dashboard_providers.dart';
+import 'widgets/goal_planner_card.dart';
 
-/// «الهدف» — how long the journal says a target actually takes.
+/// «الهدف» — two questions about the same target, kept apart on purpose.
 ///
-/// The counterpart of site/components/dashboard/goal-panel.tsx, over the same
-/// arithmetic in core/calc/goal_projection.dart.
+/// 1. «بالتداول» — how long the JOURNAL says the target takes, over
+///    core/calc/goal_projection.dart. It never invents a return rate: every
+///    figure comes from closed trades the user logged themselves, and when
+///    those trades say the target is unreachable it says so plainly rather than
+///    producing a large but survivable-looking number of months. A projection
+///    tool that always returns an encouraging answer is a slot machine with a
+///    spreadsheet on it.
 ///
-/// THE RULE THIS SCREEN IS BUILT AROUND: it never invents a return rate. Every
-/// figure comes from closed trades the user logged themselves, and when those
-/// trades say the target is unreachable it says so plainly rather than
-/// producing a large but survivable-looking number of months. A projection tool
-/// that always returns an encouraging answer is a slot machine with a
-/// spreadsheet on it.
+/// 2. «بالادخار» — [GoalPlannerCard], the landing page's calculator, over
+///    core/calc/goal_plan.dart. Its rate IS an assumption, which is why it is
+///    labelled as one everywhere it appears.
+///
+/// THE TWO ARE NOT MERGED, AND MUST NOT BE. Feeding the journal's measured rate
+/// into the planner as an unmarked default would turn a measurement into a
+/// forecast — the exact move the projection was written to avoid. It is offered
+/// as one tap, with its source on the label.
+///
+/// The counterpart of site/components/dashboard/goal-panel.tsx.
 class GoalView extends ConsumerStatefulWidget {
   const GoalView({super.key});
 
@@ -64,7 +75,10 @@ class _GoalViewState extends ConsumerState<GoalView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('الهدف', style: theme.textTheme.titleMedium),
+                Text(
+                  'بالتداول: هتوصل إمتى',
+                  style: theme.textTheme.titleMedium,
+                ),
                 const SizedBox(height: 4),
                 Text(
                   'اكتب المبلغ اللي عايز توصله، والحساب بيتعمل على أداءك '
@@ -108,6 +122,16 @@ class _GoalViewState extends ConsumerState<GoalView> {
           const SizedBox(height: 16),
           _Answer(projection: projection, capital: settings.capital),
         ],
+        const SizedBox(height: 16),
+        GoalPlannerCard(
+          capital: settings.capital,
+          // Null whenever the journal has no usable edge, and a house number is
+          // NOT substituted: a default that looks measured but is not is worse
+          // than an obviously arbitrary one.
+          suggestedAnnualReturn: projection?.kind == ProjectionKind.reachable
+              ? annualReturnFromMonthlyRate(projection!.monthlyRate)
+              : null,
+        ),
       ],
     );
   }

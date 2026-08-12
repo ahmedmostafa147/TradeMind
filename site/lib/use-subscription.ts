@@ -46,14 +46,29 @@ const toDate = (value: unknown): Date | null =>
 export function useSubscription(user: User | null): {
   entitlement: Entitlement | null;
   subscription: Subscription | null;
+  /**
+   * False when the document exists but cannot be READ.
+   *
+   * A denial and a fresh account both arrive here as "no document", and both
+   * resolve to FREE — so if `firestore.rules` was never deployed, the `billing`
+   * block does not exist, every account falls to the default deny, no trial
+   * ever starts and all four paid surfaces lock themselves. Silently: the
+   * denial is swallowed by the error handler below, by design.
+   *
+   * This separates the two so the settings panel can say which one it is.
+   * Null while the first read is in flight, or signed out.
+   */
+  readable: boolean | null;
 } {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [ready, setReady] = useState(false);
+  const [readable, setReadable] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!user) {
       setSubscription(null);
       setReady(false);
+      setReadable(null);
       return;
     }
 
@@ -66,6 +81,7 @@ export function useSubscription(user: User | null): {
         if (!snap.exists()) {
           setSubscription(null);
           setReady(true);
+          setReadable(true);
           // Ask once per mount. A denial is silent and correct: it means the
           // document already exists (a race with another tab) or the write was
           // not honest, and the listener will deliver whatever is really there.
@@ -78,6 +94,7 @@ export function useSubscription(user: User | null): {
           }
           return;
         }
+        setReadable(true);
         const data = snap.data();
         setSubscription({
           plan: typeof data.plan === 'string' ? data.plan : null,
@@ -88,19 +105,25 @@ export function useSubscription(user: User | null): {
         setReady(true);
       },
       () => {
-        // Offline, or rules denied the read. Free is the safe shape: it shows
-        // the paywall rather than opening paid surfaces to an unknown account.
+        // Offline, or rules denied the read. Free stays the safe shape — it
+        // shows the paywall rather than opening paid surfaces to an unknown
+        // account — but the settings panel now says the read failed instead of
+        // presenting the fallback as a decision.
         setSubscription(null);
         setReady(true);
+        setReadable(false);
       }
     );
 
     return () => stop();
   }, [user]);
 
-  if (!user || !ready) return { entitlement: null, subscription: null };
+  if (!user || !ready) {
+    return { entitlement: null, subscription: null, readable: null };
+  }
 
   return {
+    readable,
     entitlement:
       subscription === null
         ? FREE_ENTITLEMENT

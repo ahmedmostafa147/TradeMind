@@ -12,6 +12,17 @@ enum TradeQuality {
     TradeQuality.warning => '⚠️ المخاطرة مرتفعة',
     TradeQuality.bad => '❌ العائد لا يبرر المخاطرة',
   };
+
+  /// The same verdict without the emoji, for surfaces that draw their own icon.
+  ///
+  /// [label] is pinned to its exact strings by a spec test, so this is a second
+  /// getter rather than an edit: a themed icon scales with the text and takes
+  /// the palette's win/loss colour, which an emoji cannot.
+  String get plainLabel => switch (this) {
+    TradeQuality.good => 'صفقة جيدة',
+    TradeQuality.warning => 'المخاطرة مرتفعة',
+    TradeQuality.bad => 'العائد لا يبرر المخاطرة',
+  };
 }
 
 /// Turns "entry price + target % + stop %" into a complete, sized trade.
@@ -90,6 +101,11 @@ class SmartTradePlan {
     // price the trader typed is used exactly rather than round-tripped through
     // a percentage. Null keeps the original percentage-driven behaviour.
     double? stopPrice,
+    // The same escape hatch for the target: traders read a resistance level off
+    // a chart as a PRICE, not as a percentage of their entry. When given and
+    // above the entry it wins over [takeProfitPercent], and the percentage is
+    // derived from it for display so the two input modes stay consistent.
+    double? targetPrice,
     /// Cash committed to this position. Forwarded to [SizingResult]; see the
     /// note there on how it interacts with the risk limit.
     double? budget,
@@ -99,9 +115,22 @@ class SmartTradePlan {
         ? entryPrice
         : null;
 
-    final validTp = takeProfitPercent.isFinite && takeProfitPercent > 0
-        ? takeProfitPercent
-        : 0.0;
+    final overrideTarget =
+        (targetPrice != null &&
+            targetPrice.isFinite &&
+            targetPrice > 0 &&
+            entry != null &&
+            targetPrice > entry)
+        ? roundToPiastre(targetPrice)
+        : null;
+
+    // With an explicit target price the percentage is whatever that price
+    // implies; otherwise it is the value picked directly.
+    final validTp = overrideTarget != null
+        ? (overrideTarget - entry!) / entry
+        : (takeProfitPercent.isFinite && takeProfitPercent > 0
+              ? takeProfitPercent
+              : 0.0);
 
     final overrideStop =
         (stopPrice != null &&
@@ -123,10 +152,12 @@ class SmartTradePlan {
               ? stopLossPercent
               : 0.0);
 
-    double? takeProfitPrice;
+    double? takeProfitPrice = overrideTarget;
     double? stopLossPrice = overrideStop;
     if (entry != null) {
-      if (validTp > 0) takeProfitPrice = roundToPiastre(entry * (1 + validTp));
+      if (overrideTarget == null && validTp > 0) {
+        takeProfitPrice = roundToPiastre(entry * (1 + validTp));
+      }
       if (overrideStop == null && validSl > 0) {
         stopLossPrice = roundToPiastre(entry * (1 - validSl));
       }

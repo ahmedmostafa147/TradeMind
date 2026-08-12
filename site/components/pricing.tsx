@@ -177,6 +177,15 @@ export function Pricing() {
                   </li>
                 ))}
               </ul>
+              {/* Stated on the page that takes the money. The exchange's own
+                  site is behind bot defence, so investor flows are recorded
+                  session by session rather than streamed, and closing prices
+                  are yesterday's close — not a live feed. Selling either as
+                  more than it is would be the one claim worth avoiding. */}
+              <p className="mt-4 text-[11px] leading-relaxed text-on-brand/70">
+                تدفّقات المستثمرين بتتسجّل جلسة بجلسة بعد الإقفال، وأسعار
+                الإغلاق يومية — مش أسعار لحظية.
+              </p>
             </div>
             <Link
               href="/dashboard#signup"

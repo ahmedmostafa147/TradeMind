@@ -58,6 +58,13 @@ export function QuickAddSheet({
    * be typeable here and not only in the full form.
    */
   const [qty, setQty] = useState('');
+  /**
+   * «هدخل بفلوس قد ايه» — the cash going into THIS position, mirroring the
+   * field the app's sheet and the calculator both have. Without it the
+   * suggestion comes from the risk rule alone, which sizes as if the whole
+   * account were behind every trade.
+   */
+  const [budget, setBudget] = useState('');
   const [saving, setSaving] = useState(false);
 
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -86,6 +93,7 @@ export function QuickAddSheet({
     entry: entryValue,
     stop: stopValue,
     userQty: parseInteger(qty),
+    budget: parseNumber(budget),
   });
 
   const isValid =
@@ -154,7 +162,18 @@ export function QuickAddSheet({
           </h2>
           <button
             type="button"
-            onClick={() => onFullDetails(draft(parseInteger(qty) ?? 0))}
+            onClick={() =>
+              onFullDetails(
+                // The full form has no budget field, so a budget typed here
+                // would be the one thing «التفاصيل الكاملة ←» threw away.
+                // Carrying the quantity it produced keeps the answer even
+                // though the question cannot follow.
+                draft(
+                  parseInteger(qty) ??
+                    (sizing.limitedByBudget ? (sizing.effectiveQty ?? 0) : 0)
+                )
+              )
+            }
             className="shrink-0 text-sm font-semibold text-brand-ink underline-offset-4 hover:underline"
           >
             التفاصيل الكاملة ←
@@ -188,6 +207,20 @@ export function QuickAddSheet({
             </QuickField>
           </div>
 
+          {/* Full width and above عدد الأسهم on purpose: it is the input that
+              decides the suggestion shown under that field. */}
+          <QuickField
+            label="المبلغ اللي هدخل بيه (اختياري)"
+            htmlFor="qa-budget"
+            hint={
+              sizing.limitedByBudget
+                ? 'الكمية اتحددت بالمبلغ ده، مش بحد المخاطرة'
+                : 'سيبه فاضي عشان يستخدم حد المخاطرة بس'
+            }
+          >
+            <PriceInput id="qa-budget" value={budget} onChange={setBudget} />
+          </QuickField>
+
           <div className="grid grid-cols-2 gap-3">
             <QuickField label="الهدف (اختياري)" htmlFor="qa-target">
               <PriceInput id="qa-target" value={target} onChange={setTarget} />
@@ -196,9 +229,14 @@ export function QuickAddSheet({
               label="عدد الأسهم"
               htmlFor="qa-qty"
               hint={
-                sizing.suggestedQty != null
-                  ? `المقترح: ${formatQuantity(sizing.suggestedQty)}`
-                  : undefined
+                sizing.suggestedQty != null ? (
+                  <>
+                    المقترح:{' '}
+                    <span className="num">
+                      {formatQuantity(sizing.suggestedQty)}
+                    </span>
+                  </>
+                ) : undefined
               }
             >
               <PriceInput
@@ -277,7 +315,7 @@ function QuickField({
 }: {
   label: string;
   htmlFor: string;
-  hint?: string;
+  hint?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -286,7 +324,10 @@ function QuickField({
         {label}
       </label>
       <div className="mt-1">{children}</div>
-      {hint && <p className="num mt-1 text-xs text-fg-subtle">{hint}</p>}
+      {/* No `.num` on the paragraph: it sets `direction: ltr`, which throws a
+          trailing «،» or «%» to the head of an Arabic line. Hints that carry a
+          number wrap the number itself instead. */}
+      {hint && <p className="mt-1 text-xs text-fg-subtle">{hint}</p>}
     </div>
   );
 }

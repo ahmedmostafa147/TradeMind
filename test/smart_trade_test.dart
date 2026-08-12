@@ -190,9 +190,78 @@ void main() {
     });
   });
 
+  /// Traders read a resistance level off a chart as a PRICE. The stop has had
+  /// this escape hatch since it was written; the target was percent-only, so
+  /// the number had to be divided by the entry in the trader's head first.
+  group('a target given as a price', () {
+    SmartTradePlan byPrice(double? target, {double? entry = 40.00}) =>
+        SmartTradePlan.compute(
+          capital: 17000,
+          maxRiskPercent: 0.02,
+          // Zero, exactly as the builder passes it in price mode: the typed
+          // price is the whole instruction.
+          takeProfitPercent: 0,
+          stopLossPercent: 0.02,
+          entryPrice: entry,
+          targetPrice: target,
+        );
+
+    test('the typed price is used exactly, not round-tripped', () {
+      expect(byPrice(48.00).takeProfitPrice, 48.00);
+    });
+
+    test('the percentage is derived from it, so both modes agree', () {
+      // 48.00 on a 40.00 entry is 20%.
+      expect(byPrice(48.00).takeProfitPercent, closeTo(0.20, 1e-9));
+    });
+
+    test('it wins over the percentage rather than fighting it', () {
+      final p = SmartTradePlan.compute(
+        capital: 17000,
+        maxRiskPercent: 0.02,
+        takeProfitPercent: 0.05,
+        stopLossPercent: 0.02,
+        entryPrice: 40.00,
+        targetPrice: 48.00,
+      );
+      expect(p.takeProfitPrice, 48.00, reason: 'not 42.00 from the 5%');
+    });
+
+    test('a target at or below the entry is ignored, never negative reward',
+        () {
+      // Falls back to the percentage, which is zero here — so there is simply
+      // no target, rather than a "reward" that is a loss.
+      expect(byPrice(39.00).takeProfitPrice, isNull);
+      expect(byPrice(40.00).takeProfitPrice, isNull);
+      expect(byPrice(39.00).rewardPerShare, isNull);
+    });
+
+    test('it is ignored without an entry price to measure it against', () {
+      expect(byPrice(48.00, entry: null).takeProfitPrice, isNull);
+    });
+
+    test('it rounds to the piastre like every other level', () {
+      expect(byPrice(48.005).takeProfitPrice, 48.01);
+    });
+
+    test('reward, ratio and expected profit all follow the typed price', () {
+      final p = byPrice(48.00);
+      expect(p.rewardPerShare, closeTo(8.00, 1e-9));
+      // Stop 2% of 40.00 → 39.20, so 0.80 of risk against 8.00 of reward.
+      expect(p.rewardRiskRatio, closeTo(10.0, 1e-9));
+      expect(p.quality, TradeQuality.good);
+    });
+  });
+
   test('quality labels match the specified strings', () {
     expect(TradeQuality.good.label, '✅ صفقة جيدة');
     expect(TradeQuality.warning.label, '⚠️ المخاطرة مرتفعة');
     expect(TradeQuality.bad.label, '❌ العائد لا يبرر المخاطرة');
+  });
+
+  test('plainLabel drops the emoji so a themed icon can carry the meaning', () {
+    expect(TradeQuality.good.plainLabel, 'صفقة جيدة');
+    expect(TradeQuality.warning.plainLabel, 'المخاطرة مرتفعة');
+    expect(TradeQuality.bad.plainLabel, 'العائد لا يبرر المخاطرة');
   });
 }

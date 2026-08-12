@@ -24,20 +24,28 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   /// Substrings that constitute selling, pricing, or directing to payment.
   ///
-  /// Deliberately narrow. «باقة» is NOT here — `Paywall.lockedLabel` says «مش
-  /// متاح في باقتك الحالية», and naming a plan tier is not a purchase
-  /// instruction. What Play forbids is telling the user how to pay.
+  /// DELIBERATELY NARROW, AND IT WAS ONCE TOO BROAD. «باقة» is not here —
+  /// `Paywall.lockedLabel` says «مش متاح في باقتك الحالية», and naming a tier is
+  /// not a purchase instruction. Neither is «الاشتراك» on its own, which this
+  /// list used to ban outright: `PlanCard` legitimately reports «مش قادرين نقرا
+  /// حالة اشتراكك» when the rules are unpublished, and that is a diagnostic about
+  /// the account, not an offer. A guard that fires on honest copy gets deleted by
+  /// the next person it inconveniences, so what is listed here is the DIRECTIVE —
+  /// how to pay, what to buy, what it costs.
   const banned = <String, String>{
     'ابعتلنا': 'directs the user to contact the operator to pay',
     'بنفعّله': 'describes a manual activation after payment',
+    'الاشتراك بيتم': 'explains how to arrange payment',
+    'أول ما تدفع': 'conditions a feature on paying us',
     'رادار Pro': 'advertises a paid plan by name',
     'Radar Pro': 'advertises a paid plan by name',
     'اشترك': 'a call to action to subscribe',
-    'الاشتراك': 'refers to the act of subscribing',
-    'ج.م شهريًا': 'a price',
     'محتاج اشتراك': 'names a subscription as the remedy',
+    'ج.م شهريًا': 'a price',
+    'ج.م سنويًا': 'a price',
     'instapay': 'a payment method',
     'إنستاباي': 'a payment method',
+    'تحويل بنكي': 'a payment method',
   };
 
   /// Money words that are legitimate everywhere else in a trading journal —

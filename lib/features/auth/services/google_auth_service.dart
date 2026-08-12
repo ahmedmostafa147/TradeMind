@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'auth_exception.dart';
@@ -41,6 +40,8 @@ class GoogleAuthService {
   static Future<UserCredential> signIn() async {
     if (!_firebaseReady) throw AuthException.backendUnavailable;
 
+    // Web and some desktop targets use a different (button-based) flow; this
+    // app ships Android, where authenticate() is supported.
     if (!GoogleSignIn.instance.supportsAuthenticate()) {
       throw AuthException.googleMisconfigured;
     }
@@ -60,29 +61,52 @@ class GoogleAuthService {
       final credential = GoogleAuthProvider.credential(idToken: idToken);
       return await FirebaseAuth.instance.signInWithCredential(credential);
     } on GoogleSignInException catch (e) {
-      // EVERY DIAGNOSTIC HERE IS BEHIND kDebugMode, and none of them carries an
-      // address, a uid or a token.
+      // EVERY NON-CANCEL FAILURE USED TO BE REPORTED AS A NETWORK PROBLEM.
       //
-      // `debugPrint` is NOT stripped from a release build — it writes to logcat
-      // in production, where any app holding READ_LOGS, and adb over a cable,
-      // can read it. A step-by-step trace of this method printing the signing-in
-      // account's email and the resulting uid was exactly that: the identity of
-      // every user who ever signed in, in the clear, on their own device.
-      _debug('GoogleSignInException: ${e.code}');
+      // That is the one message guaranteed to be wrong here: the flow that
+      // actually breaks on a fresh install is a CONFIGURATION one — no Android
+      // OAuth client for this package, so Credential Manager finds nothing to
+      // hand back — and telling the user to check their internet sends them to
+      // look at the only thing that was never at fault.
       throw switch (e.code) {
+        // A deliberate dismissal. Stays silent; see the caller.
         GoogleSignInExceptionCode.canceled => AuthException.cancelled,
-        _ => const AuthException(
+
+        // The SHA-1 of the signing key is not registered on the Firebase
+        // project, or the account cannot mint a token for this app. The picker
+        // opens, the user chooses, and nothing comes back.
+        GoogleSignInExceptionCode.unknownError
+            when (e.description ?? '').contains('No credential available') =>
+          AuthException.googleNotRegistered,
+
+        GoogleSignInExceptionCode.clientConfigurationError ||
+        GoogleSignInExceptionCode.providerConfigurationError =>
+          AuthException.googleMisconfigured,
+
+        // Play services missing or disabled, or no activity to draw on.
+        GoogleSignInExceptionCode.uiUnavailable => const AuthException(
+          AuthFailure.unknown,
+          'مقدرش يفتح شاشة جوجل. اتأكد إن Google Play Services متسطّبة وشغّالة.',
+        ),
+
+        GoogleSignInExceptionCode.interrupted => const AuthException(
           AuthFailure.network,
-          'تعذّر تسجيل الدخول بجوجل. اتأكد من النت وجرّب تاني.',
+          'اتقطع تسجيل الدخول بجوجل. جرّب تاني.',
+        ),
+
+        _ => AuthException(
+          AuthFailure.unknown,
+          // The SDK's own words are kept: this branch exists for the codes
+          // nobody predicted, and swallowing the description there leaves the
+          // next person with nothing to search for.
+          'تعذّر تسجيل الدخول بجوجل${_detail(e.description)}',
         ),
       };
     } on FirebaseAuthException catch (e) {
-      _debug('FirebaseAuthException: ${e.code}');
       throw AuthException.fromCode(e.code);
     } on AuthException {
       rethrow;
-    } catch (e) {
-      _debug('unexpected: ${e.runtimeType}');
+    } catch (_) {
       throw const AuthException(
         AuthFailure.unknown,
         'تعذّر تسجيل الدخول بجوجل. جرّب تاني.',
@@ -90,9 +114,15 @@ class GoogleAuthService {
     }
   }
 
-  /// Failure codes only, and only in debug. See the note in [signIn].
-  static void _debug(String message) {
-    if (kDebugMode) debugPrint('[GoogleAuth] $message');
+  /// A short, safe tail for an unexpected SDK message.
+  ///
+  /// Truncated because these strings can carry a stack trace, and a dialog that
+  /// grows to fill the screen is a worse failure than the one it is reporting.
+  static String _detail(String? description) {
+    final text = description?.trim() ?? '';
+    if (text.isEmpty) return '. جرّب تاني.';
+    final short = text.length > 120 ? '${text.substring(0, 120)}…' : text;
+    return ' — $short';
   }
 
   /// Clears the Google session so the next sign-in shows the account chooser.
