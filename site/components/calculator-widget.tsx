@@ -47,7 +47,7 @@ export function CalculatorWidget(props: {
       : null;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5 rounded-2xl border border-border-default bg-surface p-5 sm:p-7 shadow-lg">
+    <div className="mx-auto max-w-2xl space-y-5 rounded-2xl border border-border-default bg-surface p-4 sm:p-7 pb-8 shadow-lg">
       <div className="space-y-1">
         <h2 className="text-lg font-extrabold text-fg sm:text-xl">حاسبة الصفقة — منشئ الصفقة الذكي</h2>
         <p className="text-xs text-fg-subtle">

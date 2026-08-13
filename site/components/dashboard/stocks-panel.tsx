@@ -1,45 +1,49 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-
-import { money } from '@/lib/format';
 import { useBoard } from '@/lib/use-board';
 import { DELAY_LABEL } from '@/lib/tradingview';
 import { TradingViewChartDialog } from '@/components/dashboard/tradingview-chart-dialog';
+import { StockCard } from '@/components/dashboard/stock-card';
 
-type SortKey = 'name' | 'change';
+type FilterType = 'all' | 'gainers' | 'losers' | 'alphabetical';
 
-export function StocksPanel({
-  onPick,
-}: {
-  onPick: (ticker: string) => void;
-}) {
+const FILTER_PRESETS: { id: FilterType; label: string }[] = [
+  { id: 'all', label: 'الجميع' },
+  { id: 'gainers', label: '🚀 الأكثر صعوداً' },
+  { id: 'losers', label: '🔻 الأكثر هبوطاً' },
+  { id: 'alphabetical', label: '🔤 أبجدي' },
+];
+
+export function StocksPanel({ onPick }: { onPick: (ticker: string) => void }) {
   const { rows: board, loading, error } = useBoard();
   const [query, setQuery] = useState('');
-  const [sort, setSort] = useState<SortKey>('change');
+  const [filter, setFilter] = useState<FilterType>('all');
   const [chartSymbol, setChartSymbol] = useState<string | null>(null);
 
-  const rows = useMemo(() => {
-    const q = query.trim();
-    const upper = q.toUpperCase();
-
-    const list = board.filter(
+  const filteredRows = useMemo(() => {
+    const q = query.trim().toUpperCase();
+    let list = board.filter(
       (row) =>
-        q === '' || row.symbol.includes(upper) || row.name.includes(q)
+        q === '' ||
+        row.symbol.includes(q) ||
+        row.name.toUpperCase().includes(q)
     );
 
-    if (sort === 'name') {
-      return [...list].sort((a, b) => a.symbol.localeCompare(b.symbol));
+    if (filter === 'gainers') {
+      list = list
+        .filter((r) => (r.changePercent ?? 0) > 0)
+        .sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0));
+    } else if (filter === 'losers') {
+      list = list
+        .filter((r) => (r.changePercent ?? 0) < 0)
+        .sort((a, b) => (a.changePercent ?? 0) - (b.changePercent ?? 0));
+    } else if (filter === 'alphabetical') {
+      list = [...list].sort((a, b) => a.symbol.localeCompare(b.symbol));
     }
-    return [...list].sort((a, b) => {
-      const av = a.changePercent;
-      const bv = b.changePercent;
-      if (av == null && bv == null) return a.symbol.localeCompare(b.symbol);
-      if (av == null) return 1;
-      if (bv == null) return -1;
-      return bv - av;
-    });
-  }, [board, query, sort]);
+
+    return list;
+  }, [board, query, filter]);
 
   return (
     <section className="mt-4 space-y-4">
@@ -50,110 +54,86 @@ export function StocksPanel({
         />
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-bold">الأسهم</h2>
-          <p className="mt-1 text-xs text-fg-muted">
-            كل الأسهم المقيدة في البورصة المصرية. اضغط على أي سهم لبدء صفقة أو عاين الشارت.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setSort(sort === 'name' ? 'change' : 'name')}
-            className="rounded-md border border-border-default px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-surface-high"
-          >
-            {sort === 'name' ? 'رتّب بالتغيّر' : 'رتّب بالاسم'}
-          </button>
-        </div>
+      <div className="space-y-1">
+        <h2 className="text-lg font-extrabold text-fg sm:text-xl">أسهم البورصة المصرية</h2>
+        <p className="text-xs text-fg-muted">
+          اختر أي سهم لبدء صفقة جديدة أو عاين الشارت التفاعلي المباشر.
+        </p>
       </div>
 
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="دوّر بالرمز أو بالاسم…"
-        aria-label="ابحث عن سهم"
-        className="w-full rounded-md border border-border-default bg-surface-low px-3 py-2.5 text-sm outline-none focus:border-brand-ink"
-      />
+      {/* Search Input */}
+      <div className="relative">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="ابحث بالرمز أو بالاسم (مثال: COMI)..."
+          className="w-full rounded-xl border border-border-default bg-surface-low px-4 py-3 text-sm font-semibold outline-none focus:border-brand-ink transition-all"
+        />
+        {query && (
+          <button
+            type="button"
+            onClick={() => setQuery('')}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-fg-subtle hover:text-fg"
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
+      {/* Filter Presets Bar */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+        {FILTER_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => setFilter(p.id)}
+            aria-pressed={filter === p.id}
+            className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all ${
+              filter === p.id
+                ? 'border-transparent bg-brand text-on-brand shadow-xs'
+                : 'border-border-default bg-surface-high text-fg-muted hover:bg-surface-subtle'
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* States */}
       {loading && (
-        <p role="status" className="text-xs text-fg-subtle">
-          جاري تحميل الأسعار…
-        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-28 animate-pulse rounded-2xl bg-surface-high" />
+          ))}
+        </div>
       )}
 
       {error !== null && (
-        <p
-          role="alert"
-          className="rounded-md border border-loss-border bg-loss-surface p-4 text-sm font-semibold text-loss"
-        >
+        <p role="alert" className="rounded-xl border border-loss-border bg-loss-surface p-4 text-xs font-bold text-loss">
           {error}
         </p>
       )}
 
-      {!loading && error === null && rows.length === 0 ? (
-        <p className="rounded-lg border border-border-default bg-surface p-6 text-center text-sm text-fg-muted">
-          مفيش سهم بالاسم ده.
-        </p>
+      {!loading && error === null && filteredRows.length === 0 ? (
+        <div className="rounded-2xl border border-border-default bg-surface p-8 text-center text-xs text-fg-muted">
+          مفيش نتائج مطابقة للبحث الحجم ده.
+        </div>
       ) : (
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {rows.map(({ symbol, name, price, changePercent }) => {
-            const pct = changePercent;
-            const tone =
-              pct == null || pct === 0
-                ? 'text-fg-muted'
-                : pct > 0
-                  ? 'text-win'
-                  : 'text-loss';
-
-            return (
-              <li
-                key={symbol}
-                className="flex items-center justify-between gap-2 rounded-lg border border-border-default bg-surface p-3 transition-colors hover:border-border-strong hover:bg-surface-high"
-              >
-                <button
-                  type="button"
-                  onClick={() => onPick(symbol)}
-                  className="flex flex-1 items-center justify-between text-start"
-                >
-                  <span className="min-w-0">
-                    <span className="num block text-sm font-bold" dir="ltr">
-                      {symbol}
-                    </span>
-                    <span className="mt-0.5 block truncate text-xs text-fg-muted">
-                      {name}
-                    </span>
-                  </span>
-
-                  <span className="shrink-0 text-end">
-                    <span className="num block text-sm font-bold">
-                      {money(price)}
-                    </span>
-                    <span className={`num mt-0.5 block text-xs font-semibold ${tone}`}>
-                      {pct == null ? '' : `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`}
-                    </span>
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  title="عرض شارت TradingView"
-                  onClick={() => setChartSymbol(symbol)}
-                  className="rounded p-1.5 text-fg-subtle hover:bg-surface-highest hover:text-fg"
-                >
-                  📈
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredRows.map((stock) => (
+            <StockCard
+              key={stock.symbol}
+              stock={stock}
+              onPick={onPick}
+              onChart={setChartSymbol}
+            />
+          ))}
+        </div>
       )}
 
-      <p className="text-xs leading-relaxed text-fg-subtle">
-        الأسعار {DELAY_LABEL} ومن مصدر غير رسمي — مش أسعار لحظية. رادار بيعرضها
-        كما هي ومش بيقدّم أي توصية بيع أو شراء.
+      <p className="text-[11px] leading-relaxed text-fg-subtle pt-2">
+        الأسعار {DELAY_LABEL} — رادار يمنحك التغطية الشاملة ولا يقدم أي توصيات استثمارية ماليّة.
       </p>
     </section>
   );
