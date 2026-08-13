@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 
 import {
   CheckCircleIcon,
@@ -9,8 +9,8 @@ import {
   SparkIcon,
   TrendingUpIcon,
   WarningIcon,
-} from '@/components/icons';
-import { decisionsOf, type DecisionItem } from '@/lib/decisions';
+} from "@/components/icons";
+import { decisionsOf, type DecisionItem } from "@/lib/decisions";
 import {
   dateLabel,
   EMPTY_VALUE,
@@ -19,11 +19,14 @@ import {
   quantity as formatQuantity,
   signedMoney,
   signedPercent,
-} from '@/lib/format';
-import { normalizeTicker } from '@/lib/egx-directory';
-import { unrealised, type Quote } from '@/lib/quote';
-import type { Trade, TradeStatus } from '@/lib/trade';
-import { useQuotes } from '@/lib/use-quotes';
+} from "@/lib/format";
+import { normalizeTicker } from "@/lib/egx-directory";
+import { unrealised, type Quote } from "@/lib/quote";
+import type { Trade, TradeStatus } from "@/lib/trade";
+import { useQuotes } from "@/lib/use-quotes";
+import { TodaySummaryBanner } from "@/components/dashboard/today-summary-banner";
+import { QuoteBadge } from "@/components/dashboard/quote-badge";
+import { TickerAvatar } from "@/components/dashboard/ticker-avatar";
 
 /**
  * «قرار اليوم» — what needs a decision today, not a list of everything.
@@ -75,9 +78,9 @@ export function TodayPanel({
   const { quotes } = useQuotes(
     showLivePrices
       ? trades
-          .filter((t) => t.status === 'open' && t.quantity > 0)
+          .filter((t) => t.status === "open" && t.quantity > 0)
           .map((t) => normalizeTicker(t.ticker))
-      : []
+      : [],
   );
 
   // `today` is passed rather than read inside, so the pure function stays
@@ -97,13 +100,13 @@ export function TodayPanel({
       onEdit(trade);
       return;
     }
-    await onUpdate({ ...trade, status: 'open' as TradeStatus });
+    await onUpdate({ ...trade, status: "open" as TradeStatus });
   }
 
   /** CancelTradeButton: an idea you decided against. Confirmed, like the app. */
   async function cancel(trade: Trade) {
     if (!window.confirm(`متأكد إنك عايز تلغي فكرة ${trade.ticker}؟`)) return;
-    await onUpdate({ ...trade, status: 'cancelled' as TradeStatus });
+    await onUpdate({ ...trade, status: "cancelled" as TradeStatus });
   }
 
   /**
@@ -121,13 +124,13 @@ export function TodayPanel({
       date: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
       text,
     };
-    const existingNotes = (trade.notes ?? '').trim();
+    const existingNotes = (trade.notes ?? "").trim();
     await onUpdate({
       ...trade,
       // The whole array, always — Firestore replaces an array field rather than
       // merging its items, so a partial write would drop the earlier entries.
       timeline: [...trade.timeline, entry],
-      notes: asLesson && existingNotes === '' ? text : trade.notes,
+      notes: asLesson && existingNotes === "" ? text : trade.notes,
     });
     setNoteFor(null);
   }
@@ -146,6 +149,7 @@ export function TodayPanel({
 
   return (
     <div className="space-y-5">
+      <TodaySummaryBanner trades={trades} capital={capital} />
       <SummaryCard
         openCount={d.open.length}
         overRiskCount={d.overRisk.length}
@@ -173,7 +177,7 @@ export function TodayPanel({
             <Action kind="ghost" onClick={() => onEdit(item.trade)}>
               تعديل
             </Action>
-            {item.trade.status === 'open' && (
+            {item.trade.status === "open" && (
               <Action kind="primary" onClick={() => close(item.trade)}>
                 إقفال
               </Action>
@@ -319,10 +323,14 @@ function SummaryCard({
         <Tile
           label="تجاوزت الحد"
           value={overRiskCount}
-          tone={overRiskCount > 0 ? 'loss' : undefined}
+          tone={overRiskCount > 0 ? "loss" : undefined}
         />
         <Tile label="مخططة" value={plannedCount} />
-        <Tile label="أُقفلت الأسبوع ده" value={closedThisWeekCount} tone="win" />
+        <Tile
+          label="أُقفلت الأسبوع ده"
+          value={closedThisWeekCount}
+          tone="win"
+        />
         {watchlistCount > 0 && <Tile label="متابعة" value={watchlistCount} />}
       </div>
     </section>
@@ -336,21 +344,21 @@ function Tile({
 }: {
   label: string;
   value: number;
-  tone?: 'win' | 'loss';
+  tone?: "win" | "loss";
 }) {
   return (
     <div
       className={`min-w-[84px] flex-1 rounded-xl px-3 py-2.5 text-center ${
-        tone === 'loss'
-          ? 'bg-loss-surface'
-          : tone === 'win'
-            ? 'bg-win-surface'
-            : 'bg-surface-low'
+        tone === "loss"
+          ? "bg-loss-surface"
+          : tone === "win"
+            ? "bg-win-surface"
+            : "bg-surface-low"
       }`}
     >
       <p
         className={`num text-xl font-bold ${
-          tone === 'loss' ? 'text-loss' : tone === 'win' ? 'text-win' : ''
+          tone === "loss" ? "text-loss" : tone === "win" ? "text-win" : ""
         }`}
       >
         {value}
@@ -374,7 +382,7 @@ function Section({
   title: string;
   note: string;
   items: DecisionItem[];
-  tone?: 'loss' | 'win';
+  tone?: "loss" | "win";
   Icon: (props: { className?: string }) => React.ReactElement;
   capital: number;
   quotes: Map<string, Quote>;
@@ -395,33 +403,33 @@ function Section({
         <div className="flex items-center gap-2.5">
           <span
             className={`flex size-8 shrink-0 items-center justify-center rounded-[10px] ${
-              tone === 'loss'
-                ? 'bg-loss-surface text-loss'
-                : tone === 'win'
-                  ? 'bg-win-surface text-win'
-                  : 'bg-brand/25 text-brand-ink'
+              tone === "loss"
+                ? "bg-loss-surface text-loss"
+                : tone === "win"
+                  ? "bg-win-surface text-win"
+                  : "bg-brand/25 text-brand-ink"
             }`}
           >
             <Icon className="size-4" />
           </span>
           <h2
             className={`font-bold ${
-              tone === 'loss'
-                ? 'text-loss'
-                : tone === 'win'
-                  ? 'text-win'
-                  : 'text-brand-ink'
+              tone === "loss"
+                ? "text-loss"
+                : tone === "win"
+                  ? "text-win"
+                  : "text-brand-ink"
             }`}
           >
             {title}
           </h2>
           <span
             className={`num rounded-full px-2.5 py-0.5 text-xs font-bold ${
-              tone === 'loss'
-                ? 'bg-loss-surface text-loss'
-                : tone === 'win'
-                  ? 'bg-win-surface text-win'
-                  : 'bg-brand/25 text-brand-ink'
+              tone === "loss"
+                ? "bg-loss-surface text-loss"
+                : tone === "win"
+                  ? "bg-win-surface text-win"
+                  : "bg-brand/25 text-brand-ink"
             }`}
           >
             {items.length}
@@ -430,90 +438,103 @@ function Section({
         <p className="mt-1.5 text-xs text-fg-subtle">{note}</p>
       </div>
 
-      <ul className="space-y-3">
+      <ul className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
           <li
             key={`${title}-${item.trade.id}`}
-            className={`rounded-2xl border bg-surface-low p-4 ${
-              item.overRisk ? 'border-loss-border' : 'border-border-default'
+            className={`flex flex-col justify-between rounded-2xl border bg-surface-low p-4 ${
+              item.overRisk ? "border-loss-border" : "border-border-default"
             }`}
           >
-            {/* Ticker and the trade's own state, exactly as the app's card
-                opens. */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="num text-lg font-bold">
-                {item.trade.ticker || '—'}
-              </span>
-              <StatusChip status={item.trade.status} result={item.metrics.result} />
-              {item.trade.isFavorite && (
-                <span className="text-xs text-fg-subtle">★</span>
+            <div>
+              {/* Ticker and the trade's own state */}
+              <div className="flex flex-wrap items-center gap-2">
+                <TickerAvatar ticker={item.trade.ticker} size="sm" />
+                <span className="num text-lg font-bold">
+                  {item.trade.ticker || "—"}
+                </span>
+                <StatusChip
+                  status={item.trade.status}
+                  result={item.metrics.result}
+                />
+                {item.trade.isFavorite && (
+                  <span className="text-xs text-fg-subtle">★</span>
+                )}
+              </div>
+
+              {/* Stock Live Quote Badge */}
+              <div className="my-2">
+                <QuoteBadge symbol={item.trade.ticker} enabled={true} />
+              </div>
+
+              {item.overRisk && (
+                <p className="mt-2.5 rounded-xl bg-loss-surface px-3 py-2 text-xs font-bold text-loss">
+                  تحذير: المخاطرة أعلى من الحد المسموح
+                </p>
               )}
-            </div>
 
-            {item.overRisk && (
-              <p className="mt-2.5 rounded-xl bg-loss-surface px-3 py-2 text-xs font-bold text-loss">
-                تحذير: المخاطرة أعلى من الحد المسموح
-              </p>
-            )}
-
-            {/* TradeLevels, one for one. Missing values render «—» rather than
+              {/* TradeLevels, one for one. Missing values render «—» rather than
                 vanishing, so the five slots keep their order and place on every
                 card — a target that disappears reads as "no target" only if you
                 already knew a slot was there. */}
-            <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
-              <Level label="الدخول" value={money(item.trade.entryPrice)} />
-              <Level label="الاستوب" value={money(item.trade.stopPrice)} />
-              <Level label="الهدف" value={money(item.trade.takeProfitPrice)} />
-              <Level
-                label="عدد الأسهم"
-                value={
-                  item.trade.quantity > 0
-                    ? formatQuantity(item.trade.quantity)
-                    : EMPTY_VALUE
-                }
-              />
-              <Level
-                label="قيمة المركز"
-                value={money(item.metrics.positionValue)}
-              />
-            </dl>
-
-            <dl className="mt-2.5 flex flex-wrap gap-x-4 gap-y-2">
-              <Level
-                label="المخاطرة"
-                value={percent(item.metrics.riskPct)}
-                tone={item.overRisk ? 'loss' : undefined}
-              />
-              <Level
-                label="الأيام"
-                value={formatQuantity(item.daysSinceEntry)}
-              />
-              {item.metrics.pnl !== null && (
+              <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+                <Level label="الدخول" value={money(item.trade.entryPrice)} />
+                <Level label="الاستوب" value={money(item.trade.stopPrice)} />
                 <Level
-                  label="الناتج"
-                  value={signedMoney(item.metrics.pnl)}
-                  tone={
-                    item.metrics.result === 'win'
-                      ? 'win'
-                      : item.metrics.result === 'loss'
-                        ? 'loss'
-                        : undefined
+                  label="الهدف"
+                  value={money(item.trade.takeProfitPrice)}
+                />
+                <Level
+                  label="عدد الأسهم"
+                  value={
+                    item.trade.quantity > 0
+                      ? formatQuantity(item.trade.quantity)
+                      : EMPTY_VALUE
                   }
                 />
-              )}
-            </dl>
-
-            {/* Only an open position has a running result. A planned idea has
-                not risked money yet — the app's own rule. */}
-            {item.trade.status === 'open' &&
-              item.trade.ticker.trim() !== '' &&
-              showLivePrices && (
-                <LivePnl
-                  quote={quotes.get(normalizeTicker(item.trade.ticker))}
-                  entryPrice={item.trade.entryPrice}
-                  quantity={item.trade.quantity}
+                <Level
+                  label="قيمة المركز"
+                  value={money(item.metrics.positionValue)}
                 />
-              )}
+              </dl>
+
+              <dl className="mt-2.5 flex flex-wrap gap-x-4 gap-y-2">
+                <Level
+                  label="المخاطرة"
+                  value={percent(item.metrics.riskPct)}
+                  tone={item.overRisk ? "loss" : undefined}
+                />
+                <Level
+                  label="الأيام"
+                  value={formatQuantity(item.daysSinceEntry)}
+                />
+                {item.metrics.pnl !== null && (
+                  <Level
+                    label="الناتج"
+                    value={signedMoney(item.metrics.pnl)}
+                    tone={
+                      item.metrics.result === "win"
+                        ? "win"
+                        : item.metrics.result === "loss"
+                          ? "loss"
+                          : undefined
+                    }
+                  />
+                )}
+              </dl>
+
+              {/* Only an open position has a running result. A planned idea has
+                not risked money yet — the app's own rule. */}
+              {item.trade.status === "open" &&
+                item.trade.ticker.trim() !== "" &&
+                showLivePrices && (
+                  <LivePnl
+                    quote={quotes.get(normalizeTicker(item.trade.ticker))}
+                    entryPrice={item.trade.entryPrice}
+                    quantity={item.trade.quantity}
+                  />
+                )}
+            </div>
 
             {/* Equal width, like the app's Row of Expanded buttons — the row
                 reads as one control strip instead of three loose chips. */}
@@ -533,7 +554,7 @@ function Level({
 }: {
   label: string;
   value: string;
-  tone?: 'win' | 'loss';
+  tone?: "win" | "loss";
 }) {
   const unset = value === EMPTY_VALUE;
   return (
@@ -542,12 +563,12 @@ function Level({
       <dd
         className={`num mt-0.5 text-sm font-bold ${
           unset
-            ? 'text-fg-subtle'
-            : tone === 'loss'
-              ? 'text-loss'
-              : tone === 'win'
-                ? 'text-win'
-                : ''
+            ? "text-fg-subtle"
+            : tone === "loss"
+              ? "text-loss"
+              : tone === "win"
+                ? "text-win"
+                : ""
         }`}
       >
         {value}
@@ -570,27 +591,27 @@ function StatusChip({
   result,
 }: {
   status: TradeStatus;
-  result: 'win' | 'loss' | 'breakeven' | 'open';
+  result: "win" | "loss" | "breakeven" | "open";
 }) {
   const label =
-    status === 'planned'
-      ? 'مخططة'
-      : status === 'cancelled'
-        ? 'ملغاة'
-        : status === 'open'
-          ? 'مفتوحة'
-          : result === 'win'
-            ? 'ربح'
-            : result === 'loss'
-              ? 'خسارة'
-              : 'تعادل';
+    status === "planned"
+      ? "مخططة"
+      : status === "cancelled"
+        ? "ملغاة"
+        : status === "open"
+          ? "مفتوحة"
+          : result === "win"
+            ? "ربح"
+            : result === "loss"
+              ? "خسارة"
+              : "تعادل";
 
   const tone =
-    status === 'closed' && result === 'win'
-      ? 'border-win-border bg-win-surface text-win'
-      : status === 'closed' && result === 'loss'
-        ? 'border-loss-border bg-loss-surface text-loss'
-        : 'border-border-strong text-fg-muted';
+    status === "closed" && result === "win"
+      ? "border-win-border bg-win-surface text-win"
+      : status === "closed" && result === "loss"
+        ? "border-loss-border bg-loss-surface text-loss"
+        : "border-border-strong text-fg-muted";
 
   return (
     <span
@@ -611,16 +632,16 @@ function Action({
   onClick,
   children,
 }: {
-  kind: 'primary' | 'tonal' | 'ghost';
+  kind: "primary" | "tonal" | "ghost";
   onClick: () => void;
   children: React.ReactNode;
 }) {
   const cls =
-    kind === 'primary'
-      ? 'bg-brand text-on-brand hover:opacity-90'
-      : kind === 'tonal'
-        ? 'bg-surface-high text-fg hover:opacity-90'
-        : 'border border-border-strong text-fg-muted hover:bg-surface-high hover:text-fg';
+    kind === "primary"
+      ? "bg-brand text-on-brand hover:opacity-90"
+      : kind === "tonal"
+        ? "bg-surface-high text-fg hover:opacity-90"
+        : "border border-border-strong text-fg-muted hover:bg-surface-high hover:text-fg";
   return (
     <button
       type="button"
@@ -644,12 +665,12 @@ function NoteDialog({
   onCancel: () => void;
   onSave: (text: string) => Promise<void>;
 }) {
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submit() {
     const trimmed = text.trim();
-    if (trimmed === '' || busy) return;
+    if (trimmed === "" || busy) return;
     setBusy(true);
     try {
       await onSave(trimmed);
@@ -671,7 +692,7 @@ function NoteDialog({
         className="w-full max-w-md rounded-t-2xl border border-border-default bg-surface p-4 shadow-2xl sm:rounded-2xl sm:p-5"
       >
         <h2 className="font-bold">
-          {asLesson ? 'الدرس المستفاد' : 'إضافة ملاحظة'}
+          {asLesson ? "الدرس المستفاد" : "إضافة ملاحظة"}
           <span className="num ps-2 font-normal text-fg-subtle">{ticker}</span>
         </h2>
 
@@ -682,8 +703,8 @@ function NoteDialog({
           onChange={(e) => setText(e.target.value)}
           placeholder={
             asLesson
-              ? 'إيه اللي اتعلمته من الصفقة دي؟'
-              : 'مثال: حركت الاستوب لسعر الدخول'
+              ? "إيه اللي اتعلمته من الصفقة دي؟"
+              : "مثال: حركت الاستوب لسعر الدخول"
           }
           className="mt-3 w-full rounded-md border border-border-default bg-surface-low px-3 py-2 text-sm outline-none focus:border-brand-ink"
         />
@@ -692,7 +713,8 @@ function NoteDialog({
             note only lands in the timeline, so saving one used to close the
             dialog and change nothing visible — reported as a broken button. */}
         <p className="mt-2 text-xs leading-relaxed text-fg-subtle">
-          بتتسجّل في تايم لاين الصفقة بتاريخ النهاردة، وهتلاقيها على التطبيق كمان.
+          بتتسجّل في تايم لاين الصفقة بتاريخ النهاردة، وهتلاقيها على التطبيق
+          كمان.
         </p>
 
         <div className="mt-4 flex justify-end gap-2">
@@ -706,10 +728,10 @@ function NoteDialog({
           <button
             type="button"
             onClick={() => void submit()}
-            disabled={text.trim() === '' || busy}
+            disabled={text.trim() === "" || busy}
             className="rounded-md bg-brand px-5 py-2 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {busy ? 'بيتحفظ…' : 'حفظ'}
+            {busy ? "بيتحفظ…" : "حفظ"}
           </button>
         </div>
       </div>
@@ -756,29 +778,35 @@ function LivePnl({
   }
 
   const tone =
-    result.pnl > 0 ? 'text-win' : result.pnl < 0 ? 'text-loss' : 'text-fg-muted';
+    result.pnl > 0
+      ? "text-win"
+      : result.pnl < 0
+        ? "text-loss"
+        : "text-fg-muted";
 
   return (
     <div
       className={`mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md px-3 py-2 ${
         result.pnl > 0
-          ? 'bg-win-surface'
+          ? "bg-win-surface"
           : result.pnl < 0
-            ? 'bg-loss-surface'
-            : 'bg-surface'
+            ? "bg-loss-surface"
+            : "bg-surface"
       }`}
     >
       <div>
         <p className="text-[11px] text-fg-muted">ربح/خسارة غير محققة</p>
         <p className={`num whitespace-nowrap font-bold ${tone}`}>
-          {signedMoney(result.pnl)}{' '}
+          {signedMoney(result.pnl)}{" "}
           <span className="text-xs">({signedPercent(result.pct)})</span>
         </p>
       </div>
       <div className="text-end">
         <p className="text-[11px] text-fg-muted">آخر إغلاق</p>
         <p className="num text-sm font-semibold">{money(quote.price)}</p>
-        <p className="num text-[11px] text-fg-subtle">{dateLabel(quote.asOf)}</p>
+        <p className="num text-[11px] text-fg-subtle">
+          {dateLabel(quote.asOf)}
+        </p>
       </div>
     </div>
   );

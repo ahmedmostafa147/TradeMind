@@ -72,7 +72,18 @@ class ActionSection extends StatelessWidget {
             ],
           ),
         ),
-        ...children,
+        if (MediaQuery.of(context).size.width >= 900)
+          GridView.count(
+            crossAxisCount: 3,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.4,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: children,
+          )
+        else
+          ...children,
         const SizedBox(height: 16),
       ],
     );

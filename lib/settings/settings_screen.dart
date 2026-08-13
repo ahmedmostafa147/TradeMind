@@ -8,6 +8,7 @@ import '../core/formatters.dart';
 import '../features/auth/widgets/delete_account_tile.dart';
 import '../features/auth/widgets/user_profile_tile.dart';
 import 'settings_providers.dart';
+import 'widgets/export_csv_tile.dart';
 import 'widgets/legal_tiles.dart';
 import 'widgets/settings_tiles.dart';
 
@@ -32,16 +33,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _capitalController = TextEditingController(
       text: settings.capital.toStringAsFixed(2),
     );
-    // Displayed as a PERCENT (2.0) while stored as a fraction (0.02). This
-    // screen owns the conversion in both directions; nothing downstream has to
-    // guess the unit.
     _riskController = TextEditingController(
       text: (settings.maxRiskPercent * 100).toStringAsFixed(1),
     );
-    // The drafts back the max-loss readout and the two error messages. They are
-    // only reassigned in the onChanged handlers, so without seeding them here
-    // the screen opens claiming both fields are empty and shows "—" instead of
-    // the saved limit — until the user types.
     _draftCapital = settings.capital;
     _draftRiskPercent = settings.maxRiskPercent * 100;
   }
@@ -92,8 +86,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           const UserProfileTile(),
           const SizedBox(height: 16),
-          // Where the web keeps it, and the answer to «أنا على أنهي باقة»
-          // without having to walk into a paywall first.
           const PlanCard(),
           const SizedBox(height: 16),
           TextField(
@@ -130,7 +122,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 24),
           MaxLossCard(maxLoss: maxLoss),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          const ExportCsvTile(),
+          const SizedBox(height: 16),
           const Divider(),
           const DefaultPercentTiles(),
           const Divider(),
@@ -143,8 +137,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const ReplayIntroTile(),
           const Divider(),
           const LegalTiles(),
-          // Last, and only for a signed-in user: destructive and irreversible,
-          // so it sits below everything rather than next to a toggle.
           const SizedBox(height: 24),
           const DeleteAccountTile(),
         ],

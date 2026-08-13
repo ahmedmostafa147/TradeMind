@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,6 +7,7 @@ import '../billing/entitlements.dart';
 import '../billing/widgets/paywall.dart';
 import '../calculator/calculator_screen.dart';
 import '../dashboard/goal_screen.dart';
+import '../features/auth/providers/auth_providers.dart';
 import '../features/market/screens/market_screen.dart';
 import '../features/market/screens/stocks_screen.dart';
 import '../features/sync/providers/sync_provider.dart';
@@ -20,7 +22,6 @@ class ShellIndex extends Notifier<int> {
 }
 
 final shellIndexProvider = NotifierProvider<ShellIndex, int>(ShellIndex.new);
-
 const int kSettingsIndex = 5;
 
 class HomeShell extends ConsumerStatefulWidget {
@@ -40,31 +41,95 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
     final index = ref.watch(shellIndexProvider);
     final entitlement = ref.watch(entitlementProvider);
+    final user = ref.watch(authProvider);
+    final isDesktop = (kIsWeb || TargetPlatform.windows == defaultTargetPlatform) &&
+        MediaQuery.of(context).size.width >= 900;
 
-    return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: IndexedStack(
-              index: index,
-              children: [
-                const TradesHubScreen(),
-                if (entitlement.can(Feature.marketFlows))
-                  const MarketScreen()
-                else
-                  const Paywall(
-                    title: 'السوق',
-                    what: 'مين اشترى ومين باع في كل جلسة — بيانات وأسهم البورصة المصرية.',
+    final body = IndexedStack(
+      index: index,
+      children: [
+        const TradesHubScreen(),
+        if (entitlement.can(Feature.marketFlows))
+          const MarketScreen()
+        else
+          const Paywall(
+            title: 'السوق',
+            what: 'مين اشترى ومين باع في كل جلسة — بيانات وأسهم البورصة المصرية.',
+          ),
+        const StocksScreen(),
+        const CalculatorScreen(),
+        const GoalScreen(),
+        const SettingsScreen(),
+      ],
+    );
+
+    if (isDesktop) {
+      final initial = user.name.isNotEmpty
+          ? user.name.substring(0, 1)
+          : (user.email.isNotEmpty ? user.email.substring(0, 1) : 'أ');
+
+      return Scaffold(
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: index > 4 ? 0 : index,
+              onDestinationSelected: _select,
+              labelType: NavigationRailLabelType.all,
+              leading: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  child: Text(initial),
+                ),
+              ),
+              trailing: Expanded(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: IconButton(
+                    icon: const Icon(Icons.logout_rounded),
+                    tooltip: 'تسجيل الخروج',
+                    onPressed: () => ref.read(authProvider.notifier).logout(),
                   ),
-                const StocksScreen(),
-                const CalculatorScreen(),
-                const GoalScreen(),
-                const SettingsScreen(),
+                ),
+              ),
+              destinations: const [
+                NavigationRailDestination(
+                  icon: Icon(Icons.receipt_long_outlined),
+                  selectedIcon: Icon(Icons.receipt_long),
+                  label: Text('صفقاتي'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.insights_outlined),
+                  selectedIcon: Icon(Icons.insights),
+                  label: Text('السوق'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.candlestick_chart_outlined),
+                  selectedIcon: Icon(Icons.candlestick_chart),
+                  label: Text('الأسهم'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.calculate_outlined),
+                  selectedIcon: Icon(Icons.calculate),
+                  label: Text('حاسبة الصفقة'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.track_changes_outlined),
+                  selectedIcon: Icon(Icons.track_changes),
+                  label: Text('الهدف'),
+                ),
               ],
             ),
-          ),
-        ],
-      ),
+            const VerticalDivider(thickness: 1, width: 1),
+            Expanded(child: body),
+          ],
+        ),
+      );
+    }
+
+    return Scaffold(
+      body: body,
       bottomNavigationBar: NavigationBar(
         selectedIndex: index > 4 ? 0 : index,
         onDestinationSelected: _select,
@@ -90,8 +155,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             label: 'حاسبة الصفقة',
           ),
           NavigationDestination(
-            icon: Icon(Icons.flag_outlined),
-            selectedIcon: Icon(Icons.flag),
+            icon: Icon(Icons.track_changes_outlined),
+            selectedIcon: Icon(Icons.track_changes),
             label: 'الهدف',
           ),
         ],

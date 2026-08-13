@@ -56,13 +56,12 @@ export const SCANNER_COLUMNS = [
 ] as const;
 
 export const SCANNER_BODY = {
-  filter: [{ left: 'type', operation: 'equal', right: 'stock' }],
+  filter: [{ left: 'market', operation: 'equal', right: 'egypt' }],
+  markets: ['egypt'],
   options: { lang: 'ar' },
   columns: SCANNER_COLUMNS,
   sort: { sortBy: 'volume', sortOrder: 'desc' },
-  // Comfortably above the ~293 listed today, so a new listing is not silently
-  // cut off. The scanner caps the page itself if it disagrees.
-  range: [0, 600],
+  range: [0, 300],
 };
 
 export const SCANNER_URL = 'https://scanner.tradingview.com/egypt/scan';
@@ -99,7 +98,19 @@ export function parseBoard(body: unknown): BoardRow[] {
 
     const [name, description, close, change, volume, mode] = cells;
 
-    const symbol = typeof name === 'string' ? name.trim().toUpperCase() : '';
+    const rawTicker =
+      typeof (entry as { s?: string }).s === 'string'
+        ? (entry as { s?: string }).s!
+        : typeof name === 'string'
+        ? name
+        : '';
+
+    const symbol = rawTicker
+      .trim()
+      .toUpperCase()
+      .replace(/^EGX:/i, '')
+      .replace(/\.CA$/i, '');
+
     const price = num(close);
     if (symbol === '' || price === null || price <= 0) continue;
 

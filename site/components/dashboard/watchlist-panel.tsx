@@ -11,6 +11,8 @@ import {
   type WatchPriority,
   type WatchlistItem,
 } from '@/lib/watchlist';
+import { TickerAvatar } from '@/components/dashboard/ticker-avatar';
+import { QuoteBadge } from '@/components/dashboard/quote-badge';
 
 /**
  * The watchlist: tickers being watched for a future entry.
@@ -71,12 +73,38 @@ export function WatchlistPanel({
       </div>
 
       {sorted.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border-default p-8 text-center">
-          <h2 className="font-bold">قائمة المراقبة فاضية</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-fg-muted">
-            ضيف سهم بتراقبه بسعر شراء مستهدف واستوب، وأول ما يوصل حوّله لصفقة
-            بضغطة.
+        <div className="rounded-xl border border-dashed border-border-strong bg-surface-low p-6 text-center sm:p-8">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-brand/15 text-brand-ink">
+            <span className="text-xl font-bold">👁️</span>
+          </div>
+          <h2 className="mt-3 text-base font-bold sm:text-lg">قائمة المراقبة فارغة حالياً</h2>
+          <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-fg-muted sm:text-sm">
+            قائمة المراقبة تمكّنك من متابعة الأسهم التي تترقب دخولها قبل الشراء، مع تحديد السعر المستهدف والاستوب بنقرة واحدة.
           </p>
+
+          <div className="mx-auto mt-6 max-w-lg rounded-lg border border-border-default bg-surface p-4 text-start text-xs space-y-2">
+            <p className="font-bold text-fg">📌 كيف تضيف سهم للمراقبة؟</p>
+            <div className="flex items-start gap-2 text-fg-muted">
+              <span className="font-bold text-brand-ink">1.</span>
+              <p>اضغط على زر <strong className="text-fg">"+ ضيف سهم"</strong> بالأعلى أو بالأسفل.</p>
+            </div>
+            <div className="flex items-start gap-2 text-fg-muted">
+              <span className="font-bold text-brand-ink">2.</span>
+              <p>اكتب كود السهم (مثل <code className="num bg-surface-high px-1 rounded">COMI</code> أو <code className="num bg-surface-high px-1 rounded">ORHD</code>) وسعر الشراء المستهدف والاستوب.</p>
+            </div>
+            <div className="flex items-start gap-2 text-fg-muted">
+              <span className="font-bold text-brand-ink">3.</span>
+              <p>عندما يصل السهم للسعر المناسب، اضغط <strong className="text-fg">"حوّلها لصفقة"</strong> ليتم نقلها تلقائياً إلى صفقاتك المخططة.</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="mt-6 rounded-lg bg-brand px-6 py-2.5 text-sm font-bold text-on-brand shadow-md transition-opacity hover:opacity-90"
+          >
+            + ابدأ بإضافة أول سهم للمتابعة
+          </button>
         </div>
       ) : (
         <ul className="grid gap-4 md:grid-cols-2">
@@ -86,13 +114,20 @@ export function WatchlistPanel({
               className="rounded-lg border border-border-default bg-surface p-4 sm:p-5"
             >
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="num text-lg font-bold">{item.ticker || '—'}</p>
-                  <p className="mt-1 text-xs text-fg-subtle">
-                    من <span className="num">{dateLabel(item.dateAdded)}</span>
-                  </p>
+                <div className="flex items-center gap-3">
+                  <TickerAvatar ticker={item.ticker} size="md" />
+                  <div>
+                    <p className="num text-lg font-bold">{item.ticker || '—'}</p>
+                    <p className="mt-0.5 text-xs text-fg-subtle">
+                      من <span className="num">{dateLabel(item.dateAdded)}</span>
+                    </p>
+                  </div>
                 </div>
                 <PriorityBadge priority={item.priority} />
+              </div>
+
+              <div className="my-2">
+                <QuoteBadge symbol={item.ticker} enabled={true} />
               </div>
 
               <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">

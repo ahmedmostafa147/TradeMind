@@ -5,17 +5,11 @@ import { useEffect, useState } from 'react';
 import { money, signedMoney } from '@/lib/format';
 import type { FlowTable, InvestorClass, Nationality } from '@/lib/market-flows';
 import { loadRecentFlows, type StoredFlows } from '@/lib/market-flows-store';
-
-/**
- * «مين اشترى ومين باع» — the market side of the product.
- *
- * The claim this screen makes is factual and nothing more: on this date, these
- * groups bought and sold these amounts, as reported by the exchange. It draws
- * no conclusion and suggests no action, which is both what the disclaimer
- * requires and what makes the data worth showing — a trader reading that
- * foreign institutions were net buyers three sessions running does not need to
- * be told what to do about it.
- */
+import type { BoardRow } from '@/lib/tradingview';
+import { TradingViewChartDialog } from '@/components/dashboard/tradingview-chart-dialog';
+import { QuoteBadge } from '@/components/dashboard/quote-badge';
+import { EGX_DIRECTORY } from '@/lib/egx-directory';
+import { EgxBotHeroWidget } from '@/components/dashboard/egxbot-hero-widget';
 
 const NATIONALITY_LABELS: Record<Nationality, string> = {
   egyptian: 'مصريين',
@@ -31,135 +25,203 @@ const CLASS_LABELS: Record<InvestorClass, string> = {
 
 export function MarketFlowsPanel() {
   const [sessions, setSessions] = useState<StoredFlows[] | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [stocks, setStocks] = useState<BoardRow[]>([]);
+  const [loadingStocks, setLoadingStocks] = useState(true);
   const [investorClass, setInvestorClass] = useState<InvestorClass>('all');
+  const [chartSymbol, setChartSymbol] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const rows = await loadRecentFlows(30);
+
+    loadRecentFlows(30)
+      .then((rows) => {
         if (!cancelled) setSessions(rows);
-      } catch {
-        if (!cancelled) setFailed(true);
-      }
-    })();
+      })
+      .catch(() => {
+        if (!cancelled) setSessions([]);
+      });
+
+    fetch('/api/stocks')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data.ok && Array.isArray(data.stocks)) {
+          setStocks(data.stocks);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingStocks(false);
+      });
+
     return () => {
       cancelled = true;
     };
   }, []);
 
-  if (failed) {
-    return (
-      <p
-        role="alert"
-        className="rounded-md border border-loss-border bg-loss-surface p-4 text-sm font-semibold text-loss"
-      >
-        تعذّر تحميل بيانات السوق.
-      </p>
-    );
-  }
+  const sortedStocks = [...stocks].sort(
+    (a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0)
+  );
 
-  if (sessions === null) {
-    return (
-      <div
-        className="space-y-3"
-        role="status"
-        aria-busy="true"
-        aria-label="جاري التحميل"
-      >
-        {[0, 1].map((i) => (
-          <div key={i} className="h-32 animate-pulse rounded-lg bg-surface-high" />
-        ))}
-      </div>
-    );
-  }
+  const top5Gainers = sortedStocks.slice(0, 5);
+  const top5Losers = [...sortedStocks].reverse().slice(0, 5);
 
-  if (sessions.length === 0) {
-    return (
-      <div className="rounded-lg border border-dashed border-border-default p-12 text-center">
-        <h2 className="text-lg font-bold">لسه مفيش بيانات سوق</h2>
-        {/* SAYS WHY, because the honest answer is not "any second now".
-            egx.com.eg sits behind F5 bot defence, so the automated pull is
-            blocked and every session is entered by hand from the admin panel.
-            A paid surface that shows an empty box with an encouraging sentence
-            is worse than one that explains itself. */}
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-fg-muted">
-          أرقام تداولات المستثمرين بتتنشر من البورصة المصرية، وبتتسجّل هنا جلسة
-          بجلسة. لسه مفيش جلسة مخزّنة — ارجع بعد إقفال الجلسة الجاية.
-        </p>
-      </div>
-    );
-  }
-
-  const latest = sessions[0];
-  const table = latest[investorClass];
+  const latestSession = sessions && sessions.length > 0 ? sessions[0] : null;
+  const table = latestSession ? latestSession[investorClass] : null;
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="font-bold">مين اشترى ومين باع</h2>
-            <p className="num mt-1 text-xs text-fg-subtle" dir="ltr">
-              {latest.date}
-            </p>
-          </div>
+    <div className="space-y-6">
+      <EgxBotHeroWidget />
 
-          <div className="flex flex-wrap gap-2">
-            {(['all', 'institutions', 'individuals'] as const).map((id) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setInvestorClass(id)}
-                aria-current={investorClass === id ? 'true' : undefined}
-                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  investorClass === id
-                    ? 'bg-brand text-on-brand'
-                    : 'border border-border-default text-fg-muted hover:bg-surface-high'
-                }`}
-              >
-                {CLASS_LABELS[id]}
-              </button>
-            ))}
-          </div>
+      {chartSymbol && (
+        <TradingViewChartDialog
+          symbol={chartSymbol}
+          onClose={() => setChartSymbol(null)}
+        />
+      )}
+
+      {/* TradingView Top 5 Movers Section */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-bold sm:text-lg">
+            أداء أسهم البورصة اليوم
+          </h2>
+          <span className="rounded-full bg-surface-high px-2.5 py-1 text-xs font-semibold text-fg-muted">
+            TradingView
+          </span>
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {(['egyptian', 'arab', 'foreign'] as const).map((nationality) => (
-            <NetCard
-              key={nationality}
-              label={NATIONALITY_LABELS[nationality]}
-              row={table[nationality]}
+        {loadingStocks ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="h-48 animate-pulse rounded-lg bg-surface-high" />
+            <div className="h-48 animate-pulse rounded-lg bg-surface-high" />
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <MoversCard
+              title="أعلى 5 أسهم (الأكثر ارتفاعاً)"
+              type="gainers"
+              rows={top5Gainers}
+              onSelect={setChartSymbol}
             />
-          ))}
-        </div>
-
-        <FlowBar table={table} />
+            <MoversCard
+              title="أقل 5 أسهم (الأكثر انخفاضاً)"
+              type="losers"
+              rows={top5Losers}
+              onSelect={setChartSymbol}
+            />
+          </div>
+        )}
       </section>
 
-      {sessions.length > 1 && (
+      {/* Investor Flows Section (if available) */}
+      {latestSession && table && (
+        <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="font-bold">مين اشترى ومين باع</h2>
+              <p className="num mt-1 text-xs text-fg-subtle" dir="ltr">
+                {latestSession.date}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {(['all', 'institutions', 'individuals'] as const).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setInvestorClass(id)}
+                  aria-current={investorClass === id ? 'true' : undefined}
+                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    investorClass === id
+                      ? 'bg-brand text-on-brand'
+                      : 'border border-border-default text-fg-muted hover:bg-surface-high'
+                  }`}
+                >
+                  {CLASS_LABELS[id]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            {(['egyptian', 'arab', 'foreign'] as const).map((nationality) => (
+              <NetCard
+                key={nationality}
+                label={NATIONALITY_LABELS[nationality]}
+                row={table[nationality]}
+              />
+            ))}
+          </div>
+
+          <FlowBar table={table} />
+        </section>
+      )}
+
+      {sessions && sessions.length > 1 && (
         <History sessions={sessions} investorClass={investorClass} />
       )}
 
       <p className="text-xs leading-relaxed text-fg-subtle">
-        المصدر: البورصة المصرية — صفحة تداولات المستثمرين. الأرقام زي ما البورصة
-        نشرتها، وممكن تتعدّل بعد إقفال الجلسة. دي بيانات تاريخية عن اللي حصل،
-        <strong> مش توصية ولا تحليل</strong>، ورادار مبيقولش لك تعمل إيه بيها.
+        المصدر: TradingView Egypt Scanner و البورصة المصرية. الأرقام متاحة للاسترشاد،
+        <strong> مش توصية ولا تحليل</strong>.
       </p>
     </div>
   );
 }
 
-/**
- * One group's net.
- *
- * WIN/LOSS COLOURS ARE USED HERE AND THE REASON IS NARROW: this is money with a
- * direction, which is exactly what those two tokens mean everywhere else in the
- * product. Green is net buying, red is net selling — NOT "good" and "bad". A
- * trader seeing foreigners in red must read "they sold", and the label says so
- * in words so the colour is never carrying the meaning alone.
- */
+function MoversCard({
+  title,
+  type,
+  rows,
+  onSelect,
+}: {
+  title: string;
+  type: 'gainers' | 'losers';
+  rows: BoardRow[];
+  onSelect: (symbol: string) => void;
+}) {
+  const isGainer = type === 'gainers';
+
+  return (
+    <div className="rounded-lg border border-border-default bg-surface p-4">
+      <h3 className={`text-sm font-bold ${isGainer ? 'text-win' : 'text-loss'}`}>
+        {title}
+      </h3>
+      <ul className="mt-3 divide-y divide-border-default">
+        {rows.map((row) => {
+          const pct = row.changePercent ?? 0;
+          const positive = pct >= 0;
+
+          return (
+            <li
+              key={row.symbol}
+              onClick={() => onSelect(row.symbol)}
+              className="flex cursor-pointer items-center justify-between py-2 text-xs transition-colors hover:bg-surface-high"
+            >
+              <div className="flex items-center gap-2">
+                <QuoteBadge symbol={row.symbol} enabled={true} />
+              </div>
+              <div className="flex items-center gap-2 text-end">
+                <div>
+                  <span className="num font-bold">{money(row.price)}</span>
+                  <p
+                    className={`num font-semibold ${
+                      positive ? 'text-win' : 'text-loss'
+                    }`}
+                  >
+                    {positive ? '+' : ''}
+                    {pct.toFixed(2)}%
+                  </p>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function NetCard({
   label,
   row,
@@ -197,22 +259,10 @@ function NetCard({
           <dd className="num">{money(row.sold)}</dd>
         </div>
       </dl>
-
-      {/* Surfaced rather than swallowed: if the exchange's own net does not
-          equal bought − sold, the reader should know the figure is theirs and
-          not ours before drawing anything from it. */}
-      {row.netMismatch && (
-        <p className="mt-3 text-[11px] leading-relaxed text-fg-subtle">
-          صافي البورصة مش مطابق للفرق بين الشراء والبيع — الرقم المعروض هو
-          بتاعهم زي ما هو.
-        </p>
-      )}
     </div>
   );
 }
 
-/** Share of the session's buying, as one bar. Sums the BUY side, which is the
- *  side that always totals the session's turnover. */
 function FlowBar({ table }: { table: FlowTable }) {
   const total =
     table.egyptian.bought + table.arab.bought + table.foreign.bought;
@@ -243,30 +293,16 @@ function FlowBar({ table }: { table: FlowTable }) {
           <div
             key={p.nationality}
             style={{ width: `${p.share * 100}%` }}
-            // Neutral ramp, not win/loss: a share of turnover has no direction,
-            // and reusing the money colours here would drain them of meaning
-            // two hundred pixels above where they carry it.
             className={
               index === 0
-                ? 'bg-fg'
+                ? 'bg-brand'
                 : index === 1
-                  ? 'bg-fg-muted'
-                  : 'bg-fg-subtle'
+                ? 'bg-brand-ink'
+                : 'bg-fg-muted'
             }
           />
         ))}
       </div>
-
-      <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-fg-muted">
-        {parts.map((p) => (
-          <li key={p.nationality} className="flex items-center gap-1.5">
-            <span>{NATIONALITY_LABELS[p.nationality]}</span>
-            <span className="num font-semibold text-fg">
-              {Math.round(p.share * 100)}%
-            </span>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
@@ -281,52 +317,62 @@ function History({
   return (
     <section className="rounded-lg border border-border-default bg-surface p-4 sm:p-5">
       <h3 className="font-bold">الجلسات السابقة</h3>
-      <p className="mt-1 text-xs text-fg-subtle">
-        صافي التعامل لكل فئة — {CLASS_LABELS[investorClass]}
+      <p className="mt-1 text-xs text-fg-muted">
+        صافي التعامل — {CLASS_LABELS[investorClass]}
       </p>
 
-      <div className="mt-5 overflow-x-auto">
-        <table className="w-full min-w-[32rem] border-collapse text-sm">
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full text-start text-xs">
           <thead>
-            <tr className="border-b border-border-default">
-              <th scope="col" className="px-3 py-2 text-start font-semibold">
-                التاريخ
-              </th>
-              {(['egyptian', 'arab', 'foreign'] as const).map((n) => (
-                <th
-                  key={n}
-                  scope="col"
-                  className="px-3 py-2 text-start font-semibold"
-                >
-                  {NATIONALITY_LABELS[n]}
-                </th>
-              ))}
+            <tr className="border-b border-border-default text-fg-muted">
+              <th className="py-2 text-start">التاريخ</th>
+              <th className="py-2 text-start">مصريين</th>
+              <th className="py-2 text-start">عرب</th>
+              <th className="py-2 text-start">أجانب</th>
             </tr>
           </thead>
-          <tbody>
-            {sessions.map((session) => (
-              <tr
-                key={session.date}
-                className="border-b border-border-default last:border-0"
-              >
-                <td className="num px-3 py-2 text-fg-muted" dir="ltr">
-                  {session.date}
-                </td>
-                {(['egyptian', 'arab', 'foreign'] as const).map((n) => {
-                  const net = session[investorClass][n].net;
-                  return (
-                    <td
-                      key={n}
-                      className={`num px-3 py-2 font-semibold ${
-                        net > 0 ? 'text-win' : net < 0 ? 'text-loss' : ''
-                      }`}
-                    >
-                      {signedMoney(net)}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+          <tbody className="divide-y divide-border-default">
+            {sessions.map((s) => {
+              const t = s[investorClass];
+              return (
+                <tr key={s.date}>
+                  <td className="num py-2">{s.date}</td>
+                  <td
+                    className={`num py-2 font-semibold ${
+                      t.egyptian.net > 0
+                        ? 'text-win'
+                        : t.egyptian.net < 0
+                        ? 'text-loss'
+                        : ''
+                    }`}
+                  >
+                    {signedMoney(t.egyptian.net)}
+                  </td>
+                  <td
+                    className={`num py-2 font-semibold ${
+                      t.arab.net > 0
+                        ? 'text-win'
+                        : t.arab.net < 0
+                        ? 'text-loss'
+                        : ''
+                    }`}
+                  >
+                    {signedMoney(t.arab.net)}
+                  </td>
+                  <td
+                    className={`num py-2 font-semibold ${
+                      t.foreign.net > 0
+                        ? 'text-win'
+                        : t.foreign.net < 0
+                        ? 'text-loss'
+                        : ''
+                    }`}
+                  >
+                    {signedMoney(t.foreign.net)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -66,7 +66,7 @@ class MarketTopMoversCard extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: stocks.length,
-                separatorBuilder: (_, __) => const Divider(height: 12),
+                separatorBuilder: (context, index) => const Divider(height: 12),
                 itemBuilder: (context, index) {
                   final stock = stocks[index];
                   final isPositive = stock.changePercent >= 0;

@@ -7,15 +7,9 @@ import 'widgets/no_tasks_banner.dart';
 import 'widgets/summary_card.dart';
 import 'widgets/today_empty_state.dart';
 import 'widgets/today_sections_list.dart';
+import 'widgets/today_summary_banner.dart';
 
 /// «اليوم» — the trades that need a decision right now.
-///
-/// A tab body, not a screen: it carries no Scaffold or AppBar of its own. It
-/// used to be one of five equal bottom-nav destinations alongside «سجل
-/// الصفقات» and «لوحة التحكم», which are the same trades shown differently —
-/// three siblings a new user had to open one by one to tell apart. All three
-/// now live under «صفقاتي», where being views of one thing is stated rather
-/// than left to be discovered. See [TradesHubScreen].
 class TodayView extends ConsumerWidget {
   const TodayView({super.key});
 
@@ -31,9 +25,9 @@ class TodayView extends ConsumerWidget {
 
     return ListView(
       key: const ValueKey('today-list'),
-      // Bottom padding clears the hub's floating action button.
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
       children: [
+        const TodaySummaryBanner(),
         if (noActions) ...[
           const NoTasksBanner(),
           const SizedBox(height: 16),

@@ -27,7 +27,7 @@ class MarketScreen extends ConsumerWidget {
             child: Text('بيحمّل أسعار البورصة...'),
           ),
         ),
-        error: (_, __) => _MarketErrorView(
+        error: (_, stack) => _MarketErrorView(
           onRetry: () => ref.refresh(tradingViewBoardProvider),
         ),
         data: (stocks) {

@@ -213,11 +213,7 @@ void main() {
   /// content is now inside the hub's TabBarView rather than a route of its own,
   /// which is why callers scroll [hubList] and not [contentScrollable].
   Future<void> openAnalytics(WidgetTester tester) async {
-    // By tooltip, not by type: PopupMenuButton is generic over the hub's own
-    // private action enum, so no byType finder here can name it.
-    await tester.tap(find.byTooltip('المزيد'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('الإحصائيات التفصيلية').last);
+    await tester.tap(find.text('التحليلات').last);
     await tester.pumpAndSettle();
   }
 

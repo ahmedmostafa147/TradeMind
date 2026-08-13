@@ -4,6 +4,7 @@ import '../../core/calc/daily_decisions.dart';
 import '../../core/formatters.dart';
 import '../../core/theme.dart';
 import '../../features/market/widgets/live_pnl_view.dart';
+import '../../features/market/widgets/ticker_avatar.dart';
 import '../../trades/widgets/result_badge.dart';
 import '../../trades/widgets/trade_levels.dart';
 
@@ -51,6 +52,8 @@ class TradeActionCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
+                    TickerAvatar(ticker: trade.ticker, size: 36),
+                    const SizedBox(width: 10),
                     Text(
                       trade.ticker,
                       style: theme.textTheme.titleLarge?.copyWith(

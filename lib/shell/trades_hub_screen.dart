@@ -11,8 +11,8 @@ import '../dashboard/dashboard_screen.dart';
 import '../features/ai_parser/widgets/ai_trade_sheet.dart';
 import '../today/today_screen.dart';
 import '../trades/trades_screen.dart';
+import '../trades/widgets/export_csv_view.dart';
 import '../trades/widgets/quick_add_trade_sheet.dart';
-import '../watchlist/watchlist_form_screen.dart';
 
 class TradesHubScreen extends ConsumerWidget {
   const TradesHubScreen({super.key});
@@ -21,7 +21,7 @@ class TradesHubScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final entitlement = ref.watch(entitlementProvider);
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
           toolbarHeight: 44,
@@ -49,30 +49,6 @@ class TradesHubScreen extends ConsumerWidget {
                       builder: (_) => const AiTradeSheet(),
                     ),
             ),
-            Builder(
-              builder: (tabContext) => PopupMenuButton<_HubAction>(
-                tooltip: 'المزيد',
-                onSelected: (action) => _run(tabContext, action),
-                itemBuilder: (_) => const [
-                  PopupMenuItem(
-                    value: _HubAction.analytics,
-                    child: ListTile(
-                      leading: Icon(Icons.insights_outlined),
-                      title: Text('الإحصائيات التفصيلية'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: _HubAction.addToWatchlist,
-                    child: ListTile(
-                      leading: Icon(Icons.playlist_add_rounded),
-                      title: Text('إضافة للمتابعة'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ],
-              ),
-            ),
             const SettingsAction(),
           ],
           bottom: const TabBar(
@@ -84,6 +60,7 @@ class TradesHubScreen extends ConsumerWidget {
               Tab(text: 'تخطيط'),
               Tab(text: 'الأداء'),
               Tab(text: 'التحليلات'),
+              Tab(text: 'تصدير CSV'),
             ],
           ),
         ),
@@ -111,24 +88,10 @@ class TradesHubScreen extends ConsumerWidget {
                 title: 'التحليلات',
                 what: 'معامل الربح ومتوسط R وسلاسل الربح والخسارة ومتوسط مدة الاحتفاظ.',
               ),
+            const ExportCsvView(),
           ],
         ),
       ),
     );
   }
-
-  static const int _analyticsTab = 4;
-
-  static void _run(BuildContext context, _HubAction action) {
-    switch (action) {
-      case _HubAction.analytics:
-        DefaultTabController.of(context).animateTo(_analyticsTab);
-      case _HubAction.addToWatchlist:
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const WatchlistFormScreen()),
-        );
-    }
-  }
 }
-
-enum _HubAction { analytics, addToWatchlist }

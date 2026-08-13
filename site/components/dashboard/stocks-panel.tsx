@@ -2,59 +2,27 @@
 
 import { useMemo, useState } from 'react';
 
-import { money, percent } from '@/lib/format';
+import { money } from '@/lib/format';
 import { useBoard } from '@/lib/use-board';
 import { DELAY_LABEL } from '@/lib/tradingview';
-
-/**
- * «الأسهم» — EVERY stock listed on the Egyptian Exchange, with its price during
- * the session.
- *
- * MIRROR OF lib/features/market/screens/stocks_screen.dart. The two are the same
- * screen on two devices, and the tap does the same thing on both: seeds a new
- * trade with the ticker already filled in.
- *
- * ── IT LISTED THIRTY, AND THE EXCHANGE HAS ABOUT 293 ───────────────────────
- *
- * The first version read `EGX_DIRECTORY` and asked `/api/quote` for its thirty
- * keys. That directory exists to VALIDATE a ticker someone types — it was never
- * a claim about what trades in Egypt — so a screen called «الأسهم» built from it
- * silently omitted seven listings in eight, and the prices it did show were
- * yesterday's close.
- *
- * `/api/stocks` returns the whole board in one request, with each company's name
- * and a price from during the session. See lib/tradingview.ts for what that
- * source is and what it is not.
- *
- * NEVER A ZERO IN AN EMPTY ROW. The project's rule everywhere prices are shown: a
- * price that did not arrive must not look like a stock that did not move. Rows
- * with no usable price are dropped upstream in `parseBoard` rather than rendered
- * as 0.
- */
+import { TradingViewChartDialog } from '@/components/dashboard/tradingview-chart-dialog';
 
 type SortKey = 'name' | 'change';
 
 export function StocksPanel({
   onPick,
 }: {
-  /** Starts a new trade seeded with this ticker. */
   onPick: (ticker: string) => void;
 }) {
-  // THE WHOLE BOARD, NOT THIRTY HARDCODED CODES. `EGX_DIRECTORY` has thirty
-  // entries and exists to validate a ticker someone types; it was never the list
-  // of what trades on the exchange. `/api/stocks` returns every listing — 293
-  // when this was wired up — with the name and the price in one request.
   const { rows: board, loading, error } = useBoard();
-
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortKey>('change');
+  const [chartSymbol, setChartSymbol] = useState<string | null>(null);
 
   const rows = useMemo(() => {
     const q = query.trim();
     const upper = q.toUpperCase();
 
-    // By code OR by name, the same rule the ticker field uses — most people know
-    // «البنك التجاري الدولي», not COMI.
     const list = board.filter(
       (row) =>
         q === '' || row.symbol.includes(upper) || row.name.includes(q)
@@ -63,8 +31,6 @@ export function StocksPanel({
     if (sort === 'name') {
       return [...list].sort((a, b) => a.symbol.localeCompare(b.symbol));
     }
-    // Biggest mover first. A row with no percent sinks rather than counting as
-    // 0% — an unknown is not a flat day.
     return [...list].sort((a, b) => {
       const av = a.changePercent;
       const bv = b.changePercent;
@@ -77,12 +43,18 @@ export function StocksPanel({
 
   return (
     <section className="mt-4 space-y-4">
+      {chartSymbol && (
+        <TradingViewChartDialog
+          symbol={chartSymbol}
+          onClose={() => setChartSymbol(null)}
+        />
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-bold">الأسهم</h2>
           <p className="mt-1 text-xs text-fg-muted">
-            كل الأسهم المقيدة في البورصة المصرية. اضغط على أي سهم عشان تبدأ
-            صفقة بيه.
+            كل الأسهم المقيدة في البورصة المصرية. اضغط على أي سهم لبدء صفقة أو عاين الشارت.
           </p>
         </div>
 
@@ -112,9 +84,6 @@ export function StocksPanel({
         </p>
       )}
 
-      {/* REPORTED, NOT SWALLOWED. This is the whole screen, not one blank cell
-          beside a trade — an empty list with no reason reads as "the Egyptian
-          exchange has no stocks". */}
       {error !== null && (
         <p
           role="alert"
@@ -140,11 +109,14 @@ export function StocksPanel({
                   : 'text-loss';
 
             return (
-              <li key={symbol}>
+              <li
+                key={symbol}
+                className="flex items-center justify-between gap-2 rounded-lg border border-border-default bg-surface p-3 transition-colors hover:border-border-strong hover:bg-surface-high"
+              >
                 <button
                   type="button"
                   onClick={() => onPick(symbol)}
-                  className="flex w-full items-center justify-between gap-3 rounded-lg border border-border-default bg-surface p-3 text-start transition-colors hover:border-border-strong hover:bg-surface-high"
+                  className="flex flex-1 items-center justify-between text-start"
                 >
                   <span className="min-w-0">
                     <span className="num block text-sm font-bold" dir="ltr">
@@ -164,14 +136,21 @@ export function StocksPanel({
                     </span>
                   </span>
                 </button>
+
+                <button
+                  type="button"
+                  title="عرض شارت TradingView"
+                  onClick={() => setChartSymbol(symbol)}
+                  className="rounded p-1.5 text-fg-subtle hover:bg-surface-highest hover:text-fg"
+                >
+                  📈
+                </button>
               </li>
             );
           })}
         </ul>
       )}
 
-      {/* THE DELAY IS STATED, AND IT IS READ OFF THE RESPONSE. Selling a
-          fifteen-minute feed as live is the claim this product keeps clear of. */}
       <p className="text-xs leading-relaxed text-fg-subtle">
         الأسعار {DELAY_LABEL} ومن مصدر غير رسمي — مش أسعار لحظية. رادار بيعرضها
         كما هي ومش بيقدّم أي توصية بيع أو شراء.

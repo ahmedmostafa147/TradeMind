@@ -6,6 +6,7 @@ import '../../../core/theme.dart';
 import '../market_providers.dart';
 import '../models/egx_stock_info.dart';
 import '../services/egx_market_service.dart';
+import 'trading_view_chart_sheet.dart';
 
 class StockRowWidget extends ConsumerWidget {
   final String code;
@@ -36,26 +37,36 @@ class StockRowWidget extends ConsumerWidget {
           color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          NumericText(
-            info == null ? kEmptyValue : money(info.price),
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          if (pct != null) ...[
-            const SizedBox(height: 2),
-            NumericText(
-              '${pct > 0 ? '+' : ''}${pct.toStringAsFixed(2)}%',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: color,
-                fontWeight: FontWeight.bold,
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              NumericText(
+                info == null ? kEmptyValue : money(info.price),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-          ],
+              if (pct != null) ...[
+                const SizedBox(height: 2),
+                NumericText(
+                  '${pct > 0 ? '+' : ''}${pct.toStringAsFixed(2)}%',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          IconButton(
+            icon: const Icon(Icons.candlestick_chart_outlined, size: 20),
+            tooltip: 'عرض الشارت التفاعلي',
+            onPressed: () => TradingViewChartSheet.show(context, code, info),
+          ),
         ],
       ),
     );

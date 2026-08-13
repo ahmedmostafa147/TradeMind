@@ -16,6 +16,7 @@ import {
   CalculatorIcon,
   CandlesIcon,
   ChartIcon,
+  TargetIcon,
   PlusIcon,
   MoreIcon,
   ReceiptIcon,
@@ -42,6 +43,8 @@ import { StocksPanel } from '@/components/dashboard/stocks-panel';
 import { SignInPanel } from '@/components/dashboard/sign-in-panel';
 import { InstallButton } from '@/components/pwa';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { QuoteBadge } from '@/components/dashboard/quote-badge';
+import { TickerAvatar } from '@/components/dashboard/ticker-avatar';
 import { TodayPanel } from '@/components/dashboard/today-panel';
 import { TradeForm, type TradeDraft } from '@/components/dashboard/trade-form';
 import { WatchlistPanel } from '@/components/dashboard/watchlist-panel';
@@ -62,6 +65,7 @@ import {
   type PortfolioScenarios,
 } from '@/lib/portfolio-scenarios';
 import { readGeminiKey, writeGeminiKey } from '@/lib/gemini-key';
+import { exportTradesToCsv } from '@/lib/csv-export';
 import { can, FREE_ENTITLEMENT, type Entitlement } from '@/lib/subscription';
 import { useSubscription } from '@/lib/use-subscription';
 import { exceedsRiskLimit, parseNumber } from '@/lib/risk-math';
@@ -117,7 +121,7 @@ type Tab =
   | 'today'
   | 'overview'
   | 'analytics'
-  | 'goal'
+  | 'export'
   | 'trades'
   | 'planning'
   | 'watchlist';
@@ -132,7 +136,13 @@ type Tab =
  * A phone got all eight as wrapping pills, which took three rows of the first
  * screen and read as eight separate features.
  */
-type Section = 'journal' | 'market' | 'stocks' | 'calculator' | 'settings';
+type Section =
+  | 'journal'
+  | 'market'
+  | 'stocks'
+  | 'calculator'
+  | 'goal'
+  | 'settings';
 
 /**
  * The bar itself. Labels and order are the app's, so the same slot holds the
@@ -146,11 +156,9 @@ const SECTIONS: {
 }[] = [
   { id: 'journal', label: 'صفقاتي', Icon: ReceiptIcon },
   { id: 'market', label: 'السوق', Icon: ChartIcon },
-  // «الأسهم» sits between «السوق» and the calculator on BOTH surfaces: the two
-  // market-facing destinations together, then the tools. HomeShell has the same
-  // order.
   { id: 'stocks', label: 'الأسهم', Icon: CandlesIcon },
   { id: 'calculator', label: 'حاسبة الصفقة', Icon: CalculatorIcon },
+  { id: 'goal', label: 'الهدف', Icon: TargetIcon },
   { id: 'settings', label: 'الإعدادات', Icon: SettingsIcon },
 ];
 
@@ -478,51 +486,94 @@ function Journal() {
     { id: 'planning', label: 'تخطيط', badge: plannedTrades.length },
     { id: 'overview', label: 'الأداء' },
     { id: 'analytics', label: 'التحليلات' },
-    { id: 'goal', label: 'الهدف' },
     { id: 'watchlist', label: 'قائمة المراقبة', badge: watchlist.length },
+    { id: 'export', label: 'تصدير CSV' },
   ];
 
-  // Gates the performance views on REAL trades, not on the journal being
-  // non-empty. A user holding nothing but plans has an analytics page whose
-  // every figure is «—»; the empty state, which says what to do next, is the
-  // more useful answer to the same situation.
   const hasTrades = realTrades.length > 0;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-4 sm:px-5 sm:py-6 lg:py-8">
-      {/* Compact on a phone, for the reason the app's hub AppBar has no title:
-          the bar at the bottom already says which destination you are in, so a
-          heading repeating it spends a row saying the same word twice. The
-          account line and the actions live in «الإعدادات» now — where the app
-          keeps them — and stay in the header from `sm` up, where there is room
-          and there is no bottom bar. */}
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default pb-3 sm:pb-4">
-        <h1 className="text-lg font-bold tracking-tight sm:text-2xl">
-          {SECTIONS.find((d) => d.id === section)?.label ?? 'دفتر صفقاتك'}
-        </h1>
+    <div className="min-h-screen sm:flex">
+      {/* Desktop Sidebar Layout */}
+      <aside className="hidden w-64 shrink-0 flex-col justify-between border-e border-border-default bg-surface p-4 sm:flex">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-xl font-bold text-brand">رادار</h1>
+            <p className="text-xs text-fg-subtle">دفتر صفقات البورصة المصرية</p>
+          </div>
 
-        {/* «الإعدادات» ON A PHONE LIVES HERE, not in the bottom bar — see
-            PHONE_SECTIONS. `sm:hidden` because the desktop row above already
-            carries it, and two ways to reach one screen on one viewport is how
-            a header ends up with a button nobody can explain. */}
-        <button
-          type="button"
-          onClick={() => setSection('settings')}
-          aria-current={section === 'settings' ? 'page' : undefined}
-          aria-label="الإعدادات"
-          title="الإعدادات"
-          className={`rounded-md p-2 transition-colors hover:bg-surface-high sm:hidden ${
-            section === 'settings' ? 'text-brand-ink' : 'text-fg-muted'
-          }`}
-        >
-          <SettingsIcon className="size-5" />
-        </button>
+          <button
+            type="button"
+            onClick={() => setQuickAdd(true)}
+            className="w-full rounded-md bg-brand px-4 py-2.5 text-center text-sm font-semibold text-on-brand transition-opacity hover:opacity-90"
+          >
+            + {ADD_TRADE_LABEL}
+          </button>
 
-        {/* The app's hub AppBar actions, in the app's place: above the tab
-            strip, not inside it. Inline with the tabs they sat on top of a row
-            that scrolls horizontally, so the last label slid under them. */}
-        {section === 'journal' && (
-          <div className="flex items-center gap-1 sm:order-3">
+          <nav aria-label="الأقسام الجانبية">
+            <ul className="space-y-1">
+              {SECTIONS.map((d) => (
+                <li key={d.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSection(d.id)}
+                    aria-current={section === d.id ? 'page' : undefined}
+                    className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition-colors ${
+                      section === d.id
+                        ? 'bg-brand text-on-brand'
+                        : 'text-fg-muted hover:bg-surface-high hover:text-fg'
+                    }`}
+                  >
+                    <d.Icon className="size-5" />
+                    {d.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+
+        {/* User Profile & Logout section at bottom of sidebar */}
+        <div className="border-t border-border-default pt-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="flex size-9 items-center justify-center rounded-full bg-brand/20 text-brand-ink font-bold text-sm">
+              {user?.email?.[0]?.toUpperCase() ?? 'U'}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-bold text-fg">{user?.email ?? 'مستخدم'}</p>
+              <p className="text-[11px] text-fg-subtle">مسجّل الدخول</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => void logout()}
+            className="w-full rounded-md border border-border-default px-3 py-1.5 text-center text-xs font-semibold text-loss hover:bg-loss-surface"
+          >
+            تسجيل الخروج
+          </button>
+        </div>
+      </aside>
+
+      <main className="flex-1 px-4 py-4 sm:px-8 sm:py-6 max-w-6xl">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default pb-3 sm:pb-4">
+          <h1 className="text-lg font-bold tracking-tight sm:text-2xl">
+            {SECTIONS.find((d) => d.id === section)?.label ?? 'دفتر صفقاتك'}
+          </h1>
+
+          <button
+            type="button"
+            onClick={() => setSection('settings')}
+            aria-current={section === 'settings' ? 'page' : undefined}
+            aria-label="الإعدادات"
+            title="الإعدادات"
+            className={`rounded-md p-2 transition-colors hover:bg-surface-high sm:hidden ${
+              section === 'settings' ? 'text-brand-ink' : 'text-fg-muted'
+            }`}
+          >
+            <SettingsIcon className="size-5" />
+          </button>
+
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() =>
@@ -530,11 +581,7 @@ function Journal() {
                   ? setAiSheet(true)
                   : setSubscribing(true)
               }
-              title={
-                can(entitlement ?? FREE_ENTITLEMENT, 'aiReader')
-                  ? 'تحليل توصيات بالـ AI'
-                  : 'تحليل توصيات بالـ AI — محتاج اشتراك'
-              }
+              title="تحليل توصيات بالـ AI"
               aria-label="تحليل توصيات بالـ AI"
               className={`rounded-md p-2 transition-colors hover:bg-surface-high ${
                 can(entitlement ?? FREE_ENTITLEMENT, 'aiReader')
@@ -544,105 +591,10 @@ function Journal() {
             >
               <SparkIcon className="size-5" />
             </button>
-
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setHubMenu((v) => !v)}
-                aria-expanded={hubMenu}
-                aria-haspopup="menu"
-                title="المزيد"
-                aria-label="المزيد"
-                className="rounded-md p-2 text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
-              >
-                <MoreIcon className="size-5" />
-              </button>
-
-              {hubMenu && (
-                <>
-                  {/* Catches the next click anywhere, the way a native menu
-                      dismisses. */}
-                  <button
-                    type="button"
-                    aria-hidden
-                    tabIndex={-1}
-                    onClick={() => setHubMenu(false)}
-                    className="fixed inset-0 z-30 cursor-default"
-                  />
-                  <ul
-                    role="menu"
-                    className="absolute end-0 z-40 mt-1 w-56 overflow-hidden rounded-md border border-border-strong bg-surface py-1 shadow-lg"
-                  >
-                    {[
-                      { label: 'الإحصائيات التفصيلية', go: () => setTab('analytics') },
-                      { label: 'قائمة المراقبة', go: () => setTab('watchlist') },
-                      { label: 'الإعدادات', go: () => setSection('settings') },
-                    ].map((entry) => (
-                      <li key={entry.label}>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => {
-                            entry.go();
-                            setHubMenu(false);
-                          }}
-                          className="w-full px-4 py-2.5 text-start text-sm transition-colors hover:bg-surface-high"
-                        >
-                          {entry.label}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </div>
+            <InstallButton />
+            <ThemeToggle />
           </div>
-        )}
-
-        <div className="hidden flex-wrap items-center gap-2 sm:flex">
-          <button
-            type="button"
-            onClick={() => setQuickAdd(true)}
-            className="rounded-md bg-brand px-5 py-2 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90"
-          >
-            + {ADD_TRADE_LABEL}
-          </button>
-          {isAdmin && (
-            <Link
-              href="/admin"
-              className="rounded-md border border-border-strong px-4 py-2 text-sm font-semibold transition-colors hover:bg-surface-high"
-            >
-              لوحة الإدارة
-            </Link>
-          )}
-          <InstallButton />
-          <ThemeToggle />
-        </div>
-      </header>
-
-      {/* The destination switcher, as a row here and as the bottom bar below.
-          One navigation model, drawn where each screen expects it. */}
-      <nav aria-label="الأقسام" className="mt-4 hidden sm:block">
-        <ul className="flex flex-wrap gap-2">
-          {SECTIONS.map((d) => (
-            <li key={d.id}>
-              <button
-                type="button"
-                onClick={() => setSection(d.id)}
-                aria-current={section === d.id ? 'page' : undefined}
-                className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-                  section === d.id
-                    ? 'bg-brand text-on-brand'
-                    : 'border border-border-default text-fg-muted hover:bg-surface-high'
-                }`}
-              >
-                <d.Icon className="size-4" />
-                {d.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
+        </header>
 
       {failed && (
         <p
@@ -747,20 +699,7 @@ function Journal() {
                     <EmptyJournal onAdd={() => setQuickAdd(true)} />
                   ))}
 
-                {/* Not gated behind hasTrades like the two above. An empty
-                    journal is exactly when somebody wants to know what the
-                    target needs, and the panel's own «لسه بدري» state answers
-                    that far better than the generic card would. */}
-                {tab === 'goal' && (
-                  <GoalPanel
-                    capital={settings.capital}
-                    expectancy={stats?.expectancy ?? null}
-                    trades={trades.map((t) => ({
-                      exitDate: t.exitDate,
-                      pnl: metricsOf(t, settings.capital).pnl,
-                    }))}
-                  />
-                )}
+
 
                 {tab === 'trades' &&
                   (realTrades.length > 0 ? (
@@ -800,16 +739,51 @@ function Journal() {
                     busyId={busyId}
                     onSave={saveWatch}
                     onDelete={(item) =>
-                      void removeDoc(
-                        'watchlist',
-                        item.id,
-                        `${item.ticker} من المراقبة`
-                      )
+                      void removeDoc('watchlist', item.id, `متابعة ${item.ticker}`)
                     }
-                    onConvert={(item) =>
-                      setView({ kind: 'new', seed: toPlannedTrade(item) })
-                    }
+                    onConvert={(item) => {
+                      setSection('journal');
+                      setView({
+                        kind: 'new',
+                        seed: {
+                          id: newTradeId(),
+                          entryDate: new Date(),
+                          ticker: item.ticker,
+                          reason: item.reason ?? '',
+                          entryPrice: item.targetBuyPrice ?? 0,
+                          stopPrice: item.stopPrice ?? 0,
+                          quantity: 0,
+                          exitPrice: null,
+                          exitDate: null,
+                          notes: null,
+                          status: 'planned',
+                          tags: [],
+                          isFavorite: false,
+                          completedChecklistItems: [],
+                          source: item.source ?? null,
+                          takeProfitPrice: null,
+                          timeline: [],
+                          screenshotPaths: [],
+                        },
+                      });
+                    }}
                   />
+                )}
+
+                {tab === 'export' && (
+                  <div className="rounded-lg border border-border-default bg-surface p-8 text-center space-y-4">
+                    <h2 className="text-lg font-bold">تصدير سجل الصفقات (CSV)</h2>
+                    <p className="mx-auto max-w-md text-sm text-fg-muted">
+                      احصل على جميع صفقاتك المسجلة في ملف CSV منظم يمكنك فتحه في Excel أو Google Sheets.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => exportTradesToCsv(trades ?? [], settings.capital)}
+                      className="rounded-md bg-brand px-6 py-2.5 text-sm font-semibold text-on-brand transition-opacity hover:opacity-90"
+                    >
+                      تنزيل ملف الصفقات (CSV)
+                    </button>
+                  </div>
                 )}
               </div>
             </>
@@ -881,6 +855,19 @@ function Journal() {
             </div>
           )}
 
+          {section === 'goal' && (
+            <div className="mt-4">
+              <GoalPanel
+                trades={trades.map((t) => ({
+                  exitDate: t.exitDate,
+                  pnl: metricsOf(t, settings.capital).pnl,
+                }))}
+                capital={settings.capital}
+                expectancy={stats?.expectancy ?? null}
+              />
+            </div>
+          )}
+
           {section === 'settings' && (
             <div className="mt-4">
               <SettingsSection
@@ -899,9 +886,6 @@ function Journal() {
           )}
         </>
       )}
-
-      {/* Clears the bottom bar and the FAB, which are fixed over the page. */}
-      <div className="h-24 sm:hidden" />
 
       {/* The app's extended FAB, in the app's place — and only where the app
           puts it. It belongs to the trades hub, not to every destination: a
@@ -991,6 +975,7 @@ function Journal() {
           }}
         />
       )}
+      </main>
     </div>
   );
 }
@@ -1710,109 +1695,102 @@ function TradesTable({
   const real = variant === 'real';
 
   return (
-    // The table is the one block here that can exceed a narrow viewport, so it
-    // scrolls inside its own wrapper and the page body never does.
-    <div className="overflow-x-auto rounded-lg border border-border-default">
-      <table
-        className={`w-full border-collapse text-sm ${real ? 'min-w-[56rem]' : 'min-w-[48rem]'}`}
-      >
-        <thead>
-          <tr className="bg-surface-high text-start">
-            <Th>السهم</Th>
-            <Th>الحالة</Th>
-            <Th>الدخول</Th>
-            <Th>الاستوب</Th>
-            <Th>الكمية</Th>
-            {real ? (
-              <>
-                <Th>الربح/الخسارة</Th>
-                <Th>R</Th>
-                <Th>الانضباط</Th>
-              </>
-            ) : (
-              <>
-                {/* What the plan would cost if it were taken — the only two
-                    figures an unexecuted trade can honestly carry. */}
-                <Th>المخاطرة</Th>
-                <Th>% من رأس المال</Th>
-              </>
-            )}
-            <Th>التاريخ</Th>
-            <Th>—</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {trades.map((trade) => {
-            const m = metricsOf(trade, capital);
-            const tone =
-              m.result === 'win'
-                ? 'text-win'
-                : m.result === 'loss'
-                  ? 'text-loss'
-                  : '';
-            const over =
-              m.riskPct !== null && exceedsRiskLimit(m.riskPct, maxRiskPercent);
+    <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      {trades.map((trade) => {
+        const m = metricsOf(trade, capital);
+        const tone =
+          m.result === 'win'
+            ? 'text-win'
+            : m.result === 'loss'
+              ? 'text-loss'
+              : '';
+        const over =
+          m.riskPct !== null && exceedsRiskLimit(m.riskPct, maxRiskPercent);
 
-            return (
-              <tr key={trade.id} className="border-t border-border-default">
-                <Td className="num font-bold">{trade.ticker || '—'}</Td>
-                <Td className="text-fg-muted">{STATUS_LABELS[trade.status]}</Td>
-                <Td className="num">{money(trade.entryPrice)}</Td>
-                <Td className="num">{money(trade.stopPrice)}</Td>
-                <Td className="num">{trade.quantity || '—'}</Td>
+        return (
+          <div
+            key={trade.id}
+            className="flex flex-col justify-between rounded-xl border border-border-default bg-surface p-4 shadow-sm transition-all hover:border-border-strong"
+          >
+            <div>
+              {/* Header: Stock Avatar Logo & Ticker + Status */}
+              <div className="flex items-center justify-between border-b border-border-default pb-3">
+                <div className="flex items-center gap-3">
+                  <TickerAvatar ticker={trade.ticker} size="md" />
+                  <div>
+                    <span className="num font-bold text-base block" dir="ltr">
+                      {trade.ticker || '—'}
+                    </span>
+                    <span className="text-xs text-fg-subtle">
+                      {STATUS_LABELS[trade.status]}
+                    </span>
+                  </div>
+                </div>
+                {over && (
+                  <span className="rounded bg-loss-surface px-2 py-0.5 text-xs font-bold text-loss">
+                    مخاطرة زائدة
+                  </span>
+                )}
+              </div>
 
+              {/* Stock Live Quote Badge (Task 3) */}
+              <div className="my-2">
+                <QuoteBadge symbol={trade.ticker} enabled={true} />
+              </div>
+
+              {/* Trade Details Grid */}
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-fg-subtle block">الدخول:</span>
+                  <span className="num font-semibold">{money(trade.entryPrice)}</span>
+                </div>
+                <div>
+                  <span className="text-fg-subtle block">الاستوب:</span>
+                  <span className="num font-semibold">{money(trade.stopPrice)}</span>
+                </div>
+                <div>
+                  <span className="text-fg-subtle block">الكمية:</span>
+                  <span className="num font-semibold">{trade.quantity}</span>
+                </div>
                 {real ? (
                   <>
-                    <Td className={`num font-bold ${tone}`}>
-                      {signedMoney(m.pnl)}
-                    </Td>
-                    <Td className={`num font-bold ${tone}`}>
-                      {rMultiple(m.rMultiple)}
-                    </Td>
-                    <Td>
-                      <DisciplineBadge
-                        score={riskScoreOf(trade, capital, maxRiskPercent)}
-                      />
-                    </Td>
+                    <div>
+                      <span className="text-fg-subtle block">الربح/الخسارة:</span>
+                      <span className={`num font-bold ${tone}`}>
+                        {m.pnl == null ? '—' : signedMoney(m.pnl)}
+                      </span>
+                    </div>
                   </>
                 ) : (
-                  <>
-                    <Td className="num">{money(m.riskEgp)}</Td>
-                    <Td className={`num font-semibold ${over ? 'text-loss' : ''}`}>
-                      {percent(m.riskPct)}
-                      {/* Not colour alone — the same rule the app's own
-                          over-risk warning follows, so it survives colour
-                          blindness and a greyscale screenshot. */}
-                      {over && <span className="ms-1 text-xs">فوق الحد</span>}
-                    </Td>
-                  </>
-                )}
-
-                <Td className="num text-fg-muted">{dateLabel(trade.entryDate)}</Td>
-                <Td>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => onEdit(trade)}
-                      className="text-xs font-semibold text-brand-ink underline-offset-4 hover:underline"
-                    >
-                      تعديل
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busyId === trade.id}
-                      onClick={() => onDelete(trade)}
-                      className="text-xs font-semibold text-loss underline-offset-4 hover:underline disabled:opacity-50"
-                    >
-                      {busyId === trade.id ? '...' : 'حذف'}
-                    </button>
+                  <div>
+                    <span className="text-fg-subtle block">المخاطرة:</span>
+                    <span className="num font-semibold">{money(m.riskEgp)}</span>
                   </div>
-                </Td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                )}
+              </div>
+            </div>
+
+            {/* Card Actions */}
+            <div className="mt-4 flex items-center justify-end gap-2 border-t border-border-default pt-3">
+              <button
+                type="button"
+                onClick={() => onEdit(trade)}
+                className="rounded-md border border-border-default px-3 py-1 text-xs font-semibold hover:bg-surface-high"
+              >
+                تعديل
+              </button>
+              <button
+                type="button"
+                disabled={busyId === trade.id}
+                onClick={() => onDelete(trade)}
+                className="rounded-md border border-loss-border bg-loss-surface px-3 py-1 text-xs font-semibold text-loss hover:opacity-80"
+              >
+                مسح
+              </button>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

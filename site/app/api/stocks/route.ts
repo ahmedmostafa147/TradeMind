@@ -35,57 +35,45 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 20;
 
 export async function GET() {
-  try {
-    const response = await fetch(SCANNER_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // The scanner answers a plain client, but sends a challenge to some
-        // datacentre ranges without these. Honest values, not a disguise.
-        'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-          '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
-        Origin: 'https://www.tradingview.com',
-      },
-      body: JSON.stringify(SCANNER_BODY),
-      signal: AbortSignal.timeout(15_000),
-      cache: 'no-store',
-    });
+  const urls = [
+    'https://scanner.tradingview.com/egypt/scan',
+    'https://scanner.tradingview.com/global/scan',
+  ];
 
-    if (!response.ok) {
-      // 502, not 500: the failure is upstream, and a caller retrying its way out
-      // of our bug is a different thing from a caller waiting for TradingView.
-      return NextResponse.json(
-        { ok: false, reason: `المصدر رفض الطلب (${response.status})`, stocks: [] },
-        { status: 502 }
-      );
-    }
-
-    const stocks = parseBoard(await response.json());
-
-    if (stocks.length === 0) {
-      return NextResponse.json(
-        {
-          ok: false,
-          reason: 'الرد وصل بس مفيهوش أسهم — الشكل اتغيّر على الأغلب.',
-          stocks: [],
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+            '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+          Origin: 'https://www.tradingview.com',
         },
-        { status: 502 }
-      );
-    }
+        body: JSON.stringify(SCANNER_BODY),
+        signal: AbortSignal.timeout(10_000),
+        cache: 'no-store',
+      });
 
-    return NextResponse.json(
-      { ok: true, stocks, delaySeconds: stocks[0].delaySeconds },
-      {
-        // The feed is fifteen minutes behind anyway, so a minute of CDN caching
-        // costs no freshness and collapses every visitor into one upstream call.
-        headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' },
+      if (response.ok) {
+        const stocks = parseBoard(await response.json());
+        if (stocks.length > 0) {
+          return NextResponse.json(
+            { ok: true, stocks, delaySeconds: stocks[0].delaySeconds },
+            {
+              headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' },
+            }
+          );
+        }
       }
-    );
-  } catch {
-    return NextResponse.json(
-      { ok: false, reason: 'تعذّر الوصول لمصدر الأسعار.', stocks: [] },
-      { status: 502 }
-    );
+    } catch {
+      // Try next endpoint
+    }
   }
+
+  return NextResponse.json(
+    { ok: false, reason: 'تعذّر جلب أسعار البورصة من TradingView', stocks: [] },
+    { status: 502 }
+  );
 }
