@@ -1,5 +1,7 @@
 'use client';
 
+import { XIcon } from '@/components/icons';
+
 import { useState } from 'react';
 
 import { site } from '@/lib/site';
@@ -78,7 +80,7 @@ export function SubscribeDialog({
             aria-label="إغلاق"
             className="rounded-md px-2 py-1 text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
           >
-            ✕
+            <XIcon className="size-4" />
           </button>
         </div>
 

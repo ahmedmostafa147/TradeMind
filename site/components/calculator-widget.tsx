@@ -51,7 +51,7 @@ export function CalculatorWidget(props: {
       <div className="space-y-1">
         <h2 className="text-lg font-extrabold text-fg sm:text-xl">حاسبة الصفقة — منشئ الصفقة الذكي</h2>
         <p className="text-xs text-fg-subtle">
-          اكتب سعر الدخول، وحسّد الهدف والاستوب بنسبة أو بسعر — التطبيق يحسب الباقي.
+          اكتب سعر الدخول، وحدّد الهدف والاستوب بنسبة أو بسعر — والباقي بيتحسب لوحده.
         </p>
       </div>
 
@@ -95,21 +95,30 @@ export function CalculatorWidget(props: {
           </div>
         </div>
 
-        {/* 2. Budget (Required) */}
+        {/* 2. Budget — OPTIONAL, and it used to claim otherwise.
+            It was labelled «إجباري» and painted a `--loss` red error under an
+            untouched field on first paint, while the calculator went ahead and
+            answered anyway — because it can. Leave it blank and the size comes
+            from the risk rule alone; fill it in and it also caps the suggestion
+            at the cash actually being committed. Same field, same behaviour,
+            same wording as quick-add's «(اختياري)».
+
+            The red is worth naming separately: `--loss` is the money colour, and
+            it means «خسارة» on every other surface. Spending it on a form hint
+            wears out the one signal the journal most needs to stay sharp. */}
         <Field
           id="calc-budget"
-          label="المبلغ اللي هدخل بيه (إجباري)"
+          label="المبلغ اللي هدخل بيه (اختياري)"
           suffix="ج.م"
           value={budget}
           onChange={(v) => {
             setBudget(v);
             setOverride(null);
           }}
-          error={!budget.trim() ? 'اكتب المبلغ اللي هتدخل بيه في الصفقة' : null}
           hint={
             plan.sizing.limitedByBudget
               ? 'الكمية اتحددت بالمبلغ ده'
-              : 'ادخل المبلغ المخصص لهذه الصفقة'
+              : 'سيبه فاضي وهيحسب بقاعدة المخاطرة لوحدها'
           }
         />
 

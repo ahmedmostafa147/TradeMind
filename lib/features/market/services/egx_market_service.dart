@@ -24,6 +24,11 @@ class EgxMarketService {
     if (_originOverride != _fallbackOrigin) '$_fallbackOrigin/api/quote',
   ];
 
+  static List<String> get _boardEndpoints => [
+    if (_originOverride.isNotEmpty) '$_originOverride/api/stocks',
+    if (_originOverride != _fallbackOrigin) '$_fallbackOrigin/api/stocks',
+  ];
+
   static const Map<String, String> egxDirectory = {
     'COMI': 'البنك التجاري الدولي (CIB)',
     'TMGH': 'مجموعة طلعت مصطفى القابضة',
@@ -71,14 +76,34 @@ class EgxMarketService {
   static String normalize(String symbol) =>
       symbol.trim().toUpperCase().replaceAll('.CA', '');
 
-  /// Fetches full market quotes from TradingView scanner.
+  /// The whole EGX board.
+  ///
+  /// ── `/api/stocks` FIRST, THE SCANNER ONLY IF THAT IS UNREACHABLE ─────────
+  ///
+  /// The site reads this board from our own route, and the app used to call
+  /// `scanner.tradingview.com` itself with a *different* request body — a
+  /// `type == stock` filter over 600 rows here against `market == egypt` over
+  /// 300 rows there. Two different universes ranked the same way produce two
+  /// different «أعلى ٥ أسهم», and the phone and the browser would each insist
+  /// it was showing the market. Same route, same response, same five names.
+  ///
+  /// The direct call survives as a fallback for the case the route is down, and
+  /// its body is now byte-for-byte the one the route sends, so even the fallback
+  /// agrees. See `TradingViewService`.
   static Future<List<EgxStockInfo>> fetchTradingViewBoard() async {
     if (_lastBoardFetch != null &&
         DateTime.now().difference(_lastBoardFetch!).inMinutes < 3 &&
         _cache.isNotEmpty) {
       return _cache.values.toList();
     }
-    final board = await TradingViewService.fetchBoard();
+
+    var board = const <EgxStockInfo>[];
+    for (final endpoint in _boardEndpoints) {
+      board = await _fetchBoardFromRoute(endpoint);
+      if (board.isNotEmpty) break;
+    }
+    if (board.isEmpty) board = await TradingViewService.fetchBoard();
+
     if (board.isNotEmpty) {
       _lastBoardFetch = DateTime.now();
       for (final stock in board) {
@@ -86,6 +111,58 @@ class EgxMarketService {
       }
     }
     return board.isNotEmpty ? board : _cache.values.toList();
+  }
+
+  /// One `/api/stocks` response into models. Empty on any failure — the caller
+  /// treats empty as "try the next source", never as "the market is empty".
+  static Future<List<EgxStockInfo>> _fetchBoardFromRoute(
+    String endpoint,
+  ) async {
+    try {
+      final response = await http
+          .get(Uri.parse(endpoint), headers: _headers)
+          .timeout(const Duration(seconds: 12));
+      if (response.statusCode != 200) return const [];
+
+      final body = jsonDecode(response.body);
+      if (body is! Map<String, dynamic>) return const [];
+      final rows = body['stocks'];
+      if (rows is! List) return const [];
+
+      final now = DateTime.now();
+      final stocks = <EgxStockInfo>[];
+      for (final row in rows) {
+        if (row is! Map<String, dynamic>) continue;
+        final symbol = (row['symbol'] as String?)?.trim().toUpperCase();
+        final price = (row['price'] as num?)?.toDouble();
+        // A row with no price is DROPPED, not zeroed — the same rule the route
+        // and the app's every other price path already keep.
+        if (symbol == null || symbol.isEmpty) continue;
+        if (price == null || !price.isFinite || price <= 0) continue;
+
+        // The route sends percent units (2.15 = +2.15%), like the board.
+        final changePct = (row['changePercent'] as num?)?.toDouble() ?? 0.0;
+        final change = (price * changePct) / 100.0;
+
+        stocks.add(
+          EgxStockInfo(
+            symbol: symbol,
+            name: (row['name'] as String?)?.trim().isNotEmpty == true
+                ? (row['name'] as String).trim()
+                : symbol,
+            price: price,
+            change: change.isFinite ? change : 0.0,
+            changePercent: changePct.isFinite ? changePct : 0.0,
+            high52: price,
+            low52: price,
+            lastUpdated: now,
+          ),
+        );
+      }
+      return stocks;
+    } catch (_) {
+      return const [];
+    }
   }
 
   static Future<EgxStockInfo?> fetchStockInfo(String symbol) async {

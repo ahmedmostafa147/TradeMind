@@ -19,10 +19,10 @@ class ExportCsvView extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.file_download_outlined,
               size: 56,
-              color: Colors.blueAccent,
+              color: theme.colorScheme.primary,
             ),
             const SizedBox(height: 16),
             Text(

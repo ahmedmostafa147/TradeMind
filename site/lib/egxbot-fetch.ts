@@ -1,12 +1,33 @@
-import { nameForTicker, normalizeTicker } from '@/lib/egx-directory';
+import { normalizeTicker } from '@/lib/egx-directory';
 
+/**
+ * EGXBot's headline pair: the index level, and whoever led the board.
+ *
+ * ── PERCENTS ARE IN PERCENT UNITS ──────────────────────────────────────────
+ *
+ * `changePercent: 2.15` means +2.15%, exactly as in `BoardRow`. An earlier
+ * version stored the fraction here and multiplied by 100 at the one call site,
+ * which put two conventions for one quantity inside a single panel — the shape
+ * that eventually ships a 100x error when a third caller reads the field and
+ * assumes the other convention.
+ *
+ * ── THE SOURCE DECLARES NO DELAY ───────────────────────────────────────────
+ *
+ * TradingView states its EGX delay in every row (`delayed_streaming_900`) and
+ * the UI repeats that number back. This payload states nothing. An undeclared
+ * delay is not a zero delay, so nothing built on this may say «مباشر» or
+ * «لحظي» — the project's standing rule, and here there is not even a figure to
+ * argue with.
+ */
 export type EgxBotHeroData = {
   egx30: {
     price: number;
+    /** Percent units: 2.15 means +2.15%. */
     changePercent: number;
   } | null;
   gainer: {
     code: string;
+    /** Percent units: 2.15 means +2.15%. */
     changePercent: number;
   } | null;
   asOf: string;
@@ -27,7 +48,7 @@ export function parseEgxBotHeroPayload(body: unknown): EgxBotHeroData | null {
     if (typeof e.price === 'number' && Number.isFinite(e.price) && e.price > 0) {
       const changePercent =
         typeof e.change_pct === 'number' && Number.isFinite(e.change_pct)
-          ? e.change_pct / 100
+          ? e.change_pct
           : 0;
       egx30 = { price: e.price, changePercent };
     }
@@ -39,7 +60,7 @@ export function parseEgxBotHeroPayload(body: unknown): EgxBotHeroData | null {
     if (typeof g.code === 'string' && g.code.trim() !== '') {
       const changePercent =
         typeof g.change_pct === 'number' && Number.isFinite(g.change_pct)
-          ? g.change_pct / 100
+          ? g.change_pct
           : 0;
       gainer = { code: normalizeTicker(g.code), changePercent };
     }

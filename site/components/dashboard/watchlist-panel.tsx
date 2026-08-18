@@ -13,6 +13,8 @@ import {
 } from '@/lib/watchlist';
 import { TickerAvatar } from '@/components/dashboard/ticker-avatar';
 import { QuoteBadge } from '@/components/dashboard/quote-badge';
+import { useQuotes } from '@/lib/use-quotes';
+import { EyeIcon, PinIcon } from '@/components/icons';
 
 /**
  * The watchlist: tickers being watched for a future entry.
@@ -38,6 +40,13 @@ export function WatchlistPanel({
   const [adding, setAdding] = useState(false);
 
   const sorted = sortWatchlist(items);
+
+  // ONE request for the whole list. Each row's badge used to fetch its own
+  // quote, so a watchlist of fifteen names opened fifteen connections to the
+  // same route every time this panel mounted.
+  const { quotes, loading: quotesLoading } = useQuotes(
+    sorted.map((item) => item.ticker)
+  );
 
   if (adding || editing) {
     return (
@@ -75,7 +84,7 @@ export function WatchlistPanel({
       {sorted.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border-strong bg-surface-low p-6 text-center sm:p-8">
           <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-brand/15 text-brand-ink">
-            <span className="text-xl font-bold">👁️</span>
+            <EyeIcon className="size-6" />
           </div>
           <h2 className="mt-3 text-base font-bold sm:text-lg">قائمة المراقبة فارغة حالياً</h2>
           <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-fg-muted sm:text-sm">
@@ -83,7 +92,10 @@ export function WatchlistPanel({
           </p>
 
           <div className="mx-auto mt-6 max-w-lg rounded-lg border border-border-default bg-surface p-4 text-start text-xs space-y-2">
-            <p className="font-bold text-fg">📌 كيف تضيف سهم للمراقبة؟</p>
+            <p className="flex items-center gap-1.5 font-bold text-fg">
+              <PinIcon className="size-4 shrink-0" />
+              كيف تضيف سهم للمراقبة؟
+            </p>
             <div className="flex items-start gap-2 text-fg-muted">
               <span className="font-bold text-brand-ink">1.</span>
               <p>اضغط على زر <strong className="text-fg">"+ ضيف سهم"</strong> بالأعلى أو بالأسفل.</p>
@@ -127,7 +139,12 @@ export function WatchlistPanel({
               </div>
 
               <div className="my-2">
-                <QuoteBadge symbol={item.ticker} enabled={true} />
+                <QuoteBadge
+                  symbol={item.ticker}
+                  enabled
+                  quote={quotes.get(item.ticker.trim().toUpperCase()) ?? null}
+                  loading={quotesLoading}
+                />
               </div>
 
               <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">

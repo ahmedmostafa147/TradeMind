@@ -14,10 +14,18 @@ class TradingViewService {
     'Origin': 'https://www.tradingview.com',
   };
 
+  /// IDENTICAL TO `SCANNER_BODY` IN site/lib/tradingview.ts — ON PURPOSE.
+  ///
+  /// This is the app's fallback for when `/api/stocks` cannot be reached, and a
+  /// fallback that asks a different question is not a fallback. The filter used
+  /// to be `type == stock` over 600 rows while the site asked `market == egypt`
+  /// over 300, so the two surfaces ranked different sets of listings and showed
+  /// different «أعلى ٥ أسهم» for the same session. Change one, change both.
   static const _payload = {
     'filter': [
-      {'left': 'type', 'operation': 'equal', 'right': 'stock'}
+      {'left': 'market', 'operation': 'equal', 'right': 'egypt'}
     ],
+    'markets': ['egypt'],
     'options': {'lang': 'ar'},
     'columns': [
       'name',
@@ -28,7 +36,7 @@ class TradingViewService {
       'update_mode'
     ],
     'sort': {'sortBy': 'volume', 'sortOrder': 'desc'},
-    'range': [0, 600],
+    'range': [0, 300],
   };
 
   /// Fetches all listed EGX stocks with live prices from TradingView.

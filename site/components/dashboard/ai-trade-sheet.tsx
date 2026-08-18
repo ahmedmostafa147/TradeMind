@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { SparkIcon } from '@/components/icons';
+import { SparkIcon, XIcon } from '@/components/icons';
 import {
   AiParseError,
   MAX_IMAGES,
@@ -180,7 +180,7 @@ export function AiTradeSheet({
             aria-label="إغلاق"
             className="shrink-0 rounded-md px-2 py-1 text-fg-muted transition-colors hover:bg-surface-high hover:text-fg"
           >
-            ✕
+            <XIcon className="size-4" />
           </button>
         </div>
 

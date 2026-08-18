@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { money, signedMoney } from '@/lib/format';
 import type { FlowTable, InvestorClass, Nationality } from '@/lib/market-flows';
 import { loadRecentFlows, type StoredFlows } from '@/lib/market-flows-store';
-import type { BoardRow } from '@/lib/tradingview';
+import { useBoard } from '@/lib/use-board';
 import { TradingViewChartDialog } from '@/components/dashboard/tradingview-chart-dialog';
 import { EgxBotHeroWidget } from '@/components/dashboard/egxbot-hero-widget';
 import { MarketMoversSection } from '@/components/dashboard/market-movers';
@@ -24,14 +24,17 @@ const CLASS_LABELS: Record<InvestorClass, string> = {
 
 export function MarketFlowsPanel() {
   const [sessions, setSessions] = useState<StoredFlows[] | null>(null);
-  const [stocks, setStocks] = useState<BoardRow[]>([]);
-  const [loadingStocks, setLoadingStocks] = useState(true);
   const [investorClass, setInvestorClass] = useState<InvestorClass>('all');
   const [chartSymbol, setChartSymbol] = useState<string | null>(null);
 
+  // THE SAME HOOK THE STOCKS TAB USES. This panel had its own `fetch`, and it
+  // asked for `/api/stocks` without the trailing slash — a 308 and a second
+  // round trip before the board even started loading. One caller, one path,
+  // and a reader who visits both tabs gets one response out of the HTTP cache.
+  const { rows: stocks, loading: loadingStocks } = useBoard();
+
   useEffect(() => {
     let cancelled = false;
-
     loadRecentFlows(30)
       .then((rows) => {
         if (!cancelled) setSessions(rows);
@@ -39,30 +42,21 @@ export function MarketFlowsPanel() {
       .catch(() => {
         if (!cancelled) setSessions([]);
       });
-
-    fetch('/api/stocks')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled && data.ok && Array.isArray(data.stocks)) {
-          setStocks(data.stocks);
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setLoadingStocks(false);
-      });
-
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const sortedStocks = [...stocks].sort(
-    (a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0)
-  );
-
-  const top5Gainers = sortedStocks.slice(0, 5);
-  const top5Losers = [...sortedStocks].reverse().slice(0, 5);
+  // Sorted once per board change, not on every keystroke elsewhere on the page.
+  const { top5Gainers, top5Losers } = useMemo(() => {
+    const sorted = [...stocks].sort(
+      (a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0)
+    );
+    return {
+      top5Gainers: sorted.slice(0, 5),
+      top5Losers: [...sorted].reverse().slice(0, 5),
+    };
+  }, [stocks]);
 
   const latestSession = sessions && sessions.length > 0 ? sessions[0] : null;
   const table = latestSession ? latestSession[investorClass] : null;

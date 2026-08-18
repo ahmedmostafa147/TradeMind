@@ -104,10 +104,10 @@ class TradingViewChartSheet extends StatelessWidget {
             ),
             child: Column(
               children: [
-                const Icon(
+                Icon(
                   Icons.candlestick_chart_rounded,
                   size: 48,
-                  color: Colors.blueAccent,
+                  color: theme.colorScheme.primary,
                 ),
                 const SizedBox(height: 12),
                 Text(

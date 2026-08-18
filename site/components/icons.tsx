@@ -404,3 +404,34 @@ export function MoreIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/** Two stacked sheets — the copy-to-clipboard action. */
+export function CopyIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M5 15V6a2 2 0 0 1 2-2h9" />
+    </svg>
+  );
+}
+
+/** Letters over an arrow — sort alphabetically. */
+export function SortAlphaIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <path d="M4 15l3 5 3-5" />
+      <path d="M7 20V4" />
+      <path d="M13 8h6l-6 8h6" />
+    </svg>
+  );
+}
+
+/** A pin — "start here" on an empty state. */
+export function PinIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={cls(className)}>
+      <path d="M12 17v5" />
+      <path d="M9 2h6l-1 6 3 3v2H7v-2l3-3z" />
+    </svg>
+  );
+}

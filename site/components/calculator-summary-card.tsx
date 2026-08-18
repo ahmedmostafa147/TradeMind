@@ -3,7 +3,14 @@
 import { useState } from 'react';
 import type { SmartTradePlan } from '@/lib/smart-trade';
 import { money, percent, quantity } from '@/lib/format';
-import { CheckCircleIcon, XIcon } from '@/components/icons';
+import {
+  CheckCircleIcon,
+  CheckIcon,
+  CopyIcon,
+  PlusIcon,
+  WarningIcon,
+  XIcon,
+} from '@/components/icons';
 
 export function CalculatorSummaryCard({
   plan,
@@ -89,8 +96,9 @@ export function CalculatorSummaryCard({
 
       {/* Warning if over risk */}
       {sizing.overRisk && (
-        <div className="rounded-lg border border-loss-border bg-loss-surface p-2.5 text-xs font-bold text-loss">
-          ⚠️ أقصى كمية مسموحة بتتجاوز حد المخاطرة كلياً.
+        <div className="flex items-center gap-1.5 rounded-lg border border-loss-border bg-loss-surface p-2.5 text-xs font-bold text-loss">
+          <WarningIcon className="size-4 shrink-0" />
+          أقصى كمية مسموحة بتتجاوز حد المخاطرة كليًا.
         </div>
       )}
 
@@ -100,25 +108,25 @@ export function CalculatorSummaryCard({
           type="button"
           disabled={!resolved}
           onClick={() => copyText('target', plan.takeProfitPrice ? String(plan.takeProfitPrice) : null)}
-          className="flex-1 rounded-lg border border-border-default bg-surface-high py-2 px-2.5 text-center text-xs font-bold text-fg hover:bg-surface-subtle disabled:opacity-50 disabled:pointer-events-none transition-colors"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border-default bg-surface-high py-2 px-2.5 text-center text-xs font-bold text-fg hover:bg-surface-subtle disabled:opacity-50 disabled:pointer-events-none transition-colors"
         >
-          {copiedKey === 'target' ? '✓ تم النسخ' : '📋 نسخ سعر الهدف'}
+          <CopyLabel copied={copiedKey === 'target'} label="نسخ سعر الهدف" />
         </button>
         <button
           type="button"
           disabled={!resolved}
           onClick={() => copyText('stop', plan.stopLossPrice ? String(plan.stopLossPrice) : null)}
-          className="flex-1 rounded-lg border border-border-default bg-surface-high py-2 px-2.5 text-center text-xs font-bold text-fg hover:bg-surface-subtle disabled:opacity-50 disabled:pointer-events-none transition-colors"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border-default bg-surface-high py-2 px-2.5 text-center text-xs font-bold text-fg hover:bg-surface-subtle disabled:opacity-50 disabled:pointer-events-none transition-colors"
         >
-          {copiedKey === 'stop' ? '✓ تم النسخ' : '📋 نسخ سعر الاستوب'}
+          <CopyLabel copied={copiedKey === 'stop'} label="نسخ سعر الاستوب" />
         </button>
         <button
           type="button"
           disabled={!resolved}
           onClick={() => copyText('qty', sizing.effectiveQty ? String(sizing.effectiveQty) : null)}
-          className="flex-1 rounded-lg border border-border-default bg-surface-high py-2 px-2.5 text-center text-xs font-bold text-fg hover:bg-surface-subtle disabled:opacity-50 disabled:pointer-events-none transition-colors"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border-default bg-surface-high py-2 px-2.5 text-center text-xs font-bold text-fg hover:bg-surface-subtle disabled:opacity-50 disabled:pointer-events-none transition-colors"
         >
-          {copiedKey === 'qty' ? '✓ تم النسخ' : '📋 نسخ الكمية'}
+          <CopyLabel copied={copiedKey === 'qty'} label="نسخ الكمية" />
         </button>
       </div>
 
@@ -128,9 +136,10 @@ export function CalculatorSummaryCard({
           type="button"
           disabled={!resolved}
           onClick={onTradeCreate}
-          className="mt-2 w-full rounded-xl bg-brand py-3 text-center text-sm font-extrabold text-on-brand shadow-md hover:brightness-105 disabled:opacity-50 disabled:pointer-events-none transition-all"
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand py-3 text-center text-sm font-extrabold text-on-brand shadow-md hover:brightness-105 disabled:opacity-50 disabled:pointer-events-none transition-all"
         >
-          ✨ إنشاء الصفقة
+          <PlusIcon className="size-4" />
+          إنشاء الصفقة
         </button>
       )}
     </div>
@@ -155,5 +164,20 @@ function VerdictBadge({ quality, ratio }: { quality: string; ratio: number }) {
       <span className="num">{ratio.toFixed(2)}R</span>
       <span>{label}</span>
     </div>
+  );
+}
+
+/** Copy button face: the action, or its confirmation. */
+function CopyLabel({ copied, label }: { copied: boolean; label: string }) {
+  return copied ? (
+    <>
+      <CheckIcon className="size-3.5 shrink-0" />
+      تم النسخ
+    </>
+  ) : (
+    <>
+      <CopyIcon className="size-3.5 shrink-0" />
+      {label}
+    </>
   );
 }

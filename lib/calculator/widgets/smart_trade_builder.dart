@@ -131,7 +131,14 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
         ),
         const SizedBox(height: 16),
 
-        // 2. Budget (Required)
+        // 2. Budget — OPTIONAL, and it used to claim otherwise.
+        //
+        // It was labelled «إجباري» and showed an errorText under an untouched
+        // field the moment the screen opened, while the plan below it computed
+        // fine — because the budget only ever CAPS the suggestion at the cash
+        // being committed. With it blank the risk rule sizes the trade on its
+        // own, which is a complete answer. quick_add_trade_sheet.dart has
+        // called the same field «(اختياري)» all along.
         TextField(
           key: const ValueKey('budget-field'),
           controller: _budgetController,
@@ -144,14 +151,11 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
           textDirection: TextDirection.ltr,
           textAlign: TextAlign.right,
           decoration: InputDecoration(
-            labelText: 'المبلغ اللي هدخل بيه (إجباري)',
+            labelText: 'المبلغ اللي هدخل بيه (اختياري)',
             suffixText: kCurrencySuffix,
-            errorText: _budgetController.text.trim().isEmpty
-                ? 'اكتب المبلغ اللي هتدخل بيه في الصفقة'
-                : null,
             helperText: plan.sizing.limitedByBudget
                 ? 'الكمية اتحددت بالمبلغ ده'
-                : 'ادخل المبلغ المخصص لهذه الصفقة',
+                : 'سيبه فاضي وهيحسب بقاعدة المخاطرة لوحدها',
           ),
         ),
         const SizedBox(height: 16),

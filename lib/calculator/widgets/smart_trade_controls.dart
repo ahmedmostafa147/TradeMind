@@ -23,8 +23,12 @@ class SmartTradeHeader extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
+          // Word-for-word the line in site/components/calculator-widget.tsx.
+          // It used to end «التطبيق يحسب الباقي», which the site cannot repeat:
+          // «التطبيق» names the Android app specifically (CLAUDE.md §3), and
+          // the same calculator renders on the landing page and the dashboard.
           'اكتب سعر الدخول، وحدّد الهدف والاستوب بنسبة أو بسعر — '
-          'التطبيق يحسب الباقي.',
+          'والباقي بيتحسب لوحده.',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),

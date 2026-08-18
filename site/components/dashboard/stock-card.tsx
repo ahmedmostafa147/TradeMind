@@ -2,6 +2,7 @@
 
 import { money } from '@/lib/format';
 import type { BoardRow } from '@/lib/tradingview';
+import { CandlesIcon, PlusIcon } from '@/components/icons';
 
 export function StockCard({
   stock,
@@ -51,16 +52,18 @@ export function StockCard({
         <button
           type="button"
           onClick={() => onPick(symbol)}
-          className="flex-1 rounded-xl bg-brand/10 py-2 text-center text-xs font-bold text-brand-ink hover:bg-brand/20 transition-colors"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand/10 py-2 text-center text-xs font-bold text-brand-ink hover:bg-brand/20 transition-colors"
         >
-          ⚡ صفقة جديدة
+          <PlusIcon className="size-3.5" />
+          صفقة جديدة
         </button>
         <button
           type="button"
           onClick={() => onChart(symbol)}
-          className="flex-1 rounded-xl border border-border-default bg-surface-high py-2 text-center text-xs font-bold text-fg hover:bg-surface-subtle transition-colors"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-border-default bg-surface-high py-2 text-center text-xs font-bold text-fg hover:bg-surface-subtle transition-colors"
         >
-          📊 الشارت
+          <CandlesIcon className="size-3.5" />
+          الشارت
         </button>
       </div>
     </div>

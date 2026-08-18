@@ -113,10 +113,16 @@ export async function GET(request: Request) {
         // The board reports a percent (2.15 = +2.15%); every consumer of this
         // route expects a FRACTION, the shape Yahoo's path produces. Converting
         // here rather than at four call sites.
-        changePercent: row.changePercent === null ? 0 : row.changePercent / 100,
+        //
+        // NULL WHEN THE BOARD DID NOT SAY, never 0. `Quote.changePercent` is
+        // nullable precisely so that "no figure arrived" keeps its own answer:
+        // a 0 renders as a flat green-grey «0.00%» and reads as a stock that
+        // held its price, which is a claim nobody made.
+        changePercent:
+          row.changePercent === null ? null : row.changePercent / 100,
         change:
           row.changePercent === null
-            ? 0
+            ? null
             : row.price - row.price / (1 + row.changePercent / 100),
         asOf: new Date().toISOString(),
         delaySeconds: row.delaySeconds,

@@ -1,5 +1,7 @@
 'use client';
 
+import { XIcon } from '@/components/icons';
+
 import { useEffect, useRef } from 'react';
 
 export function TradingViewChartDialog({
@@ -47,10 +49,11 @@ export function TradingViewChartDialog({
           </div>
           <button
             type="button"
+            aria-label="اقفل الشارت"
             onClick={onClose}
             className="rounded-md p-1.5 text-fg-muted hover:bg-surface-high hover:text-fg"
           >
-            ✕
+            <XIcon className="size-4" />
           </button>
         </div>
 
