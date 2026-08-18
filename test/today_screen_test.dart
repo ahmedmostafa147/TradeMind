@@ -166,11 +166,18 @@ void main() {
     // The ORDER is load-bearing too: SECTIONS in customer-dashboard.tsx carries
     // the same five in the same order, so the same slot holds the same
     // destination on both surfaces.
-    // FOUR IN THE BAR, AND «الإعدادات» IS NOT ONE OF THEM. Five destinations on
-    // a 360px phone truncated «حاسبة الصفقة», so settings moved to a gear in
-    // each screen's AppBar (`SettingsAction`). It is still a destination — it
-    // just is not a slot down here, and the web does the same below `sm`.
-    expect(labels, ['صفقاتي', 'السوق', 'الأسهم', 'حاسبة الصفقة']);
+    // «الهدف» IS THE FIFTH, AND WHICH OF THE OTHERS IT IS NOT:
+    //   - not «صفقاتي» — that is what you DID; this is what you are aiming at.
+    //   - not «حاسبة الصفقة» — that sizes one trade; this plans years of them.
+    // It answers «أوصل إمتى؟», which nothing else here answered.
+    //
+    // AND «الإعدادات» IS NOT ONE OF THE FIVE. Six destinations on a 360px phone
+    // truncate their labels, and a truncated label in a nav bar is a
+    // destination people stop recognising. Settings is the one that leaves: it
+    // is opened rarely, it is conventionally a gear in a header anyway, and it
+    // is the only one outside the daily loop. It moved to `SettingsAction` in
+    // each screen's AppBar, and the web does the same below `sm`.
+    expect(labels, ['صفقاتي', 'السوق', 'الأسهم', 'حاسبة الصفقة', 'الهدف']);
     expect(find.byKey(settingsActionKey).hitTestable(), findsWidgets);
 
     // «التحليلات» was reachable only from the hub's overflow menu and «الهدف»
@@ -181,7 +188,7 @@ void main() {
           .widgetList<Tab>(find.byType(Tab))
           .map((t) => t.text)
           .toList(),
-      ['قرار اليوم', 'صفقاتي', 'تخطيط', 'الأداء', 'التحليلات', 'الهدف'],
+      ['قرار اليوم', 'صفقاتي', 'تخطيط', 'الأداء', 'التحليلات', 'تصدير CSV'],
     );
   });
 

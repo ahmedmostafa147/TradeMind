@@ -64,8 +64,20 @@ void main() {
   }
 
   /// The smart builder's entry field is the first on the screen.
+  /// BY KEY, NOT `find.byType(TextField).first`.
+  ///
+  /// It was the first TextField, and that stopped being «سعر الدخول» the moment
+  /// «رأس المال» and «المبلغ اللي هدخل بيه» were added above it — so every test
+  /// in this file was typing the entry price into the capital box. The form then
+  /// had no entry price, so no level could resolve, and the four tests that
+  /// assert on a counterpart chip failed looking for a chip that correctly was
+  /// not there. A positional finder in a form that grows is a test that lies
+  /// about what broke.
   Future<void> enterPrice(WidgetTester tester, String price) async {
-    await tester.enterText(find.byType(TextField).first, price);
+    await tester.enterText(
+      find.byKey(const ValueKey('entry-price-field')),
+      price,
+    );
     await tester.pumpAndSettle();
   }
 
