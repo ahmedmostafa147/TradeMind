@@ -133,7 +133,8 @@ class LevelField extends StatelessWidget {
             onChanged: onPriceChanged,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9.٠-٩]')),
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.٠-٩,]')),
+              const ThousandsFormatter(),
             ],
             textDirection: TextDirection.ltr,
             textAlign: TextAlign.right,

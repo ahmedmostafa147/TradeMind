@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 // intl exports its own bidi TextDirection class, which shadows the dart:ui enum
 // that NumericText below needs. Hidden rather than prefixed so the formatter
@@ -127,16 +128,52 @@ String toWesternDigits(String input) {
 /// field goes through this rather than double.tryParse directly.
 double? parseNumber(String? input) {
   if (input == null) return null;
-  final normalised = toWesternDigits(input).trim();
+  final normalised = toWesternDigits(input).replaceAll(',', '').trim();
   if (normalised.isEmpty) return null;
   return double.tryParse(normalised);
 }
 
 int? parseInteger(String? input) {
   if (input == null) return null;
-  final normalised = toWesternDigits(input).trim();
+  final normalised = toWesternDigits(input).replaceAll(',', '').trim();
   if (normalised.isEmpty) return null;
   return int.tryParse(normalised);
+}
+
+class ThousandsFormatter extends TextInputFormatter {
+  const ThousandsFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) return newValue;
+    final text = toWesternDigits(newValue.text).replaceAll(',', '').trim();
+    if (text.isEmpty) return newValue;
+
+    final parts = text.split('.');
+    if (parts.length > 2) return oldValue;
+
+    final integerPart = parts[0];
+    if (integerPart.isNotEmpty && !RegExp(r'^\d+$').hasMatch(integerPart)) {
+      return oldValue;
+    }
+
+    final formattedInteger = integerPart.replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]},',
+    );
+
+    final newText = parts.length == 2
+        ? '$formattedInteger.${parts[1]}'
+        : formattedInteger;
+
+    return TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newText.length),
+    );
+  }
 }
 
 /// Renders a number inside an RTL paragraph without the sign flipping sides.

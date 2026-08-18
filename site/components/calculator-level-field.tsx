@@ -1,6 +1,7 @@
 'use client';
 
 import { PercentPicker } from '@/components/calculator-presets';
+import { formatThousands } from '@/components/calculator-fields';
 import type { InputMode } from '@/components/calculator-state';
 import { money, percent } from '@/lib/format';
 
@@ -103,7 +104,7 @@ export function CalculatorLevelField({
               inputMode="decimal"
               dir="ltr"
               value={value}
-              onChange={(e) => onValueChange(e.target.value)}
+              onChange={(e) => onValueChange(formatThousands(e.target.value))}
               placeholder="0.00"
               className="num w-full bg-transparent text-start font-semibold text-sm text-fg outline-none"
             />

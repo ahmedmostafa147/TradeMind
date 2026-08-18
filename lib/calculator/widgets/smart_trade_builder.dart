@@ -27,12 +27,13 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
   static const List<double> _takeProfitPresets = [0.03, 0.05, 0.07, 0.10];
   static const List<double> _stopLossPresets = [0.01, 0.02, 0.03, 0.05];
 
+  final _capitalController = TextEditingController();
+  final _budgetController = TextEditingController();
   final _entryController = TextEditingController();
   final _takeProfitController = TextEditingController();
   final _takeProfitPriceController = TextEditingController();
   final _stopLossController = TextEditingController();
   final _stopPriceController = TextEditingController();
-  final _budgetController = TextEditingController();
 
   LevelInputMode _stopMode = LevelInputMode.percent;
   LevelInputMode _targetMode = LevelInputMode.percent;
@@ -41,12 +42,13 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
 
   @override
   void dispose() {
+    _capitalController.dispose();
+    _budgetController.dispose();
     _entryController.dispose();
     _takeProfitController.dispose();
     _takeProfitPriceController.dispose();
     _stopLossController.dispose();
     _stopPriceController.dispose();
-    _budgetController.dispose();
     super.dispose();
   }
 
@@ -88,8 +90,10 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
     final stopByPrice = _stopMode == LevelInputMode.price;
     final targetByPrice = _targetMode == LevelInputMode.price;
 
+    final parsedCapital = parseNumber(_capitalController.text) ?? settings.capital;
+
     final plan = SmartTradePlan.compute(
-      capital: settings.capital,
+      capital: parsedCapital,
       maxRiskPercent: settings.maxRiskPercent,
       takeProfitPercent: targetByPrice ? 0.0 : _takeProfitPercent!,
       stopLossPercent: stopByPrice ? 0.0 : _stopLossPercent!,
@@ -105,41 +109,71 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
       children: [
         const SmartTradeHeader(),
         const SizedBox(height: 16),
+
+        // 1. Capital (Optional)
         TextField(
-          key: const ValueKey('entry-price-field'),
-          controller: _entryController,
+          key: const ValueKey('capital-field'),
+          controller: _capitalController,
           onChanged: (_) => setState(() {}),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9.٠-٩]')),
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9.٠-٩,]')),
+            const ThousandsFormatter(),
           ],
           textDirection: TextDirection.ltr,
           textAlign: TextAlign.right,
-          decoration: const InputDecoration(
-            labelText: 'سعر الدخول',
+          decoration: InputDecoration(
+            labelText: 'رأس المال (اختياري)',
+            hintText: money(settings.capital),
             suffixText: kCurrencySuffix,
+            helperText: 'افتراضي من الإعدادات: ${money(settings.capital)}',
           ),
         ),
         const SizedBox(height: 16),
 
-        // Without this the sizing assumes the whole account backs the trade,
-        // which is not how anyone actually buys — most people commit a slice.
+        // 2. Budget (Required)
         TextField(
           key: const ValueKey('budget-field'),
           controller: _budgetController,
           onChanged: (_) => setState(() {}),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9.٠-٩]')),
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9.٠-٩,]')),
+            const ThousandsFormatter(),
           ],
           textDirection: TextDirection.ltr,
           textAlign: TextAlign.right,
           decoration: InputDecoration(
-            labelText: 'المبلغ اللي هدخل بيه (اختياري)',
+            labelText: 'المبلغ اللي هدخل بيه (إجباري)',
             suffixText: kCurrencySuffix,
+            errorText: _budgetController.text.trim().isEmpty
+                ? 'اكتب المبلغ اللي هتدخل بيه في الصفقة'
+                : null,
             helperText: plan.sizing.limitedByBudget
-                ? 'الكمية اتحددت بالمبلغ ده، مش بحد المخاطرة'
-                : 'سيبه فاضي عشان يستخدم حد المخاطرة بس',
+                ? 'الكمية اتحددت بالمبلغ ده'
+                : 'ادخل المبلغ المخصص لهذه الصفقة',
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // 3. Entry Price (Required)
+        TextField(
+          key: const ValueKey('entry-price-field'),
+          controller: _entryController,
+          onChanged: (_) => setState(() {}),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[0-9.٠-٩,]')),
+            const ThousandsFormatter(),
+          ],
+          textDirection: TextDirection.ltr,
+          textAlign: TextAlign.right,
+          decoration: InputDecoration(
+            labelText: 'سعر الدخول',
+            suffixText: kCurrencySuffix,
+            errorText: _entryController.text.trim().isEmpty
+                ? 'ادخل سعر الدخول للسهم'
+                : null,
           ),
         ),
         const SizedBox(height: 20),

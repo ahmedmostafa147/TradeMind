@@ -56,17 +56,18 @@ export function CalculatorWidget(props: {
       </div>
 
       <div className="space-y-4">
-        {/* Capital and Risk */}
+        {/* 1. Capital (Optional) & Risk Presets */}
         <div className="grid gap-3 sm:grid-cols-2">
           <Field
             id="calc-capital"
-            label="رأس المال"
+            label="رأس المال (اختياري)"
             suffix="ج.م"
             value={capital}
             onChange={(v) => {
               setCapital(v);
               setOverride(null);
             }}
+            hint="افتراضي من الإعدادات"
           />
 
           <div>
@@ -94,7 +95,25 @@ export function CalculatorWidget(props: {
           </div>
         </div>
 
-        {/* Entry Price */}
+        {/* 2. Budget (Required) */}
+        <Field
+          id="calc-budget"
+          label="المبلغ اللي هدخل بيه (إجباري)"
+          suffix="ج.م"
+          value={budget}
+          onChange={(v) => {
+            setBudget(v);
+            setOverride(null);
+          }}
+          error={!budget.trim() ? 'اكتب المبلغ اللي هتدخل بيه في الصفقة' : null}
+          hint={
+            plan.sizing.limitedByBudget
+              ? 'الكمية اتحددت بالمبلغ ده'
+              : 'ادخل المبلغ المخصص لهذه الصفقة'
+          }
+        />
+
+        {/* 3. Entry Price (Required) */}
         <Field
           id="calc-entry"
           label="سعر الدخول"
@@ -104,23 +123,7 @@ export function CalculatorWidget(props: {
             setEntry(v);
             setOverride(null);
           }}
-        />
-
-        {/* Optional Budget */}
-        <Field
-          id="calc-budget"
-          label="المبلغ اللي هدخل بيه (اختياري)"
-          suffix="ج.م"
-          value={budget}
-          onChange={(v) => {
-            setBudget(v);
-            setOverride(null);
-          }}
-          hint={
-            plan.sizing.limitedByBudget
-              ? 'الكمية اتحددت بالمبلغ ده، مش بحد المخاطرة'
-              : 'سيبه فاضي عشان يستخدم حد المخاطرة بس'
-          }
+          error={!entry.trim() ? 'ادخل سعر الدخول للسهم' : null}
         />
 
         {/* Take Profit */}

@@ -1,6 +1,19 @@
 "use client";
 
 import type { InputMode } from "@/components/calculator-state";
+import { toWesternDigits } from "@/lib/risk-math";
+
+export function formatThousands(input: string): string {
+  if (!input) return "";
+  const text = toWesternDigits(input).replace(/,/g, "").trim();
+  if (!text) return "";
+  const parts = text.split(".");
+  if (parts.length > 2) return input;
+  const integerPart = parts[0];
+  if (integerPart !== "" && !/^\d+$/.test(integerPart)) return input;
+  const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return parts.length === 2 ? `${formattedInteger}.${parts[1]}` : formattedInteger;
+}
 
 export function Field({
   id,
@@ -9,6 +22,7 @@ export function Field({
   value,
   onChange,
   hint,
+  error,
 }: {
   id: string;
   label: string;
@@ -16,6 +30,7 @@ export function Field({
   value: string;
   onChange: (value: string) => void;
   hint?: string;
+  error?: string | null;
 }) {
   return (
     <div>
@@ -29,14 +44,16 @@ export function Field({
           inputMode="decimal"
           dir="ltr"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange(formatThousands(e.target.value))}
           className="num w-full bg-transparent text-start font-semibold outline-none text-sm"
         />
         <span className="shrink-0 text-xs text-fg-subtle">{suffix}</span>
       </div>
-      {/* No `.num`: it sets `direction: ltr`, which throws a trailing «ج.م» to
-          the head of an Arabic line. */}
-      {hint && <p className="mt-1 text-xs text-fg-subtle">{hint}</p>}
+      {error ? (
+        <p className="mt-1 text-xs font-semibold text-loss">{error}</p>
+      ) : hint ? (
+        <p className="mt-1 text-xs text-fg-subtle">{hint}</p>
+      ) : null}
     </div>
   );
 }
