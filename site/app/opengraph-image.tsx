@@ -51,6 +51,20 @@ function ArabicLine({
    * So the correction belongs to the JOIN, not to the line. Values were set by
    * measuring ink-to-ink distances in the generated PNG and solving for an even
    * optical gap; re-measure after changing any word, size or font here.
+   *
+   * ── AND «RE-MEASURE» IS NOT ADVICE, IT IS THE ONLY WAY THIS STAYS RIGHT ───
+   *
+   * The first set was solved at 84px. A landing redesign later dropped these
+   * lines to 76px and left the numbers alone, and the share card shipped with
+   * «اقرأ» welded to «حركة» and «قبل» welded to «كل» while other joins opened
+   * to 58px — three words rendering as two blobs. Nothing failed; the PNG is
+   * only ever looked at by whoever is sharing the link.
+   *
+   * MEASURE, DO NOT EYEBALL. Threshold the PNG, collect the columns that carry
+   * ink, group them into runs, and read the distance between runs: if a line
+   * yields fewer runs than it has words, two words are touching. Solve each
+   * join with `new = current + (target - measured)` and re-render. Target here
+   * is a ~24px optical gap at 76px.
    */
   gaps?: number[];
 }) {
@@ -164,12 +178,12 @@ export default async function OpengraphImage() {
               belongs to the specific pair of letters that meet at that join. */}
           <ArabicLine
             text="اقرأ حركة السيولة"
-            gaps={[-40, -60]}
+            gaps={[-2, -94]}
             style={{ fontSize: '76px', fontWeight: 700, lineHeight: 1.15 }}
           />
           <ArabicLine
             text="واحسب مخاطرتك قبل كل صفقة"
-            gaps={[-35, -40, -45, -50]}
+            gaps={[-17, -40, 3, -63]}
             style={{ fontSize: '76px', fontWeight: 700, lineHeight: 1.15 }}
           />
           <ArabicLine
@@ -202,7 +216,7 @@ export default async function OpengraphImage() {
               reason. */}
           {[
             { text: 'تداولات المستثمرين', gaps: [-22], lead: -15 },
-            { text: 'دفتر صفقات', gaps: [-24], lead: 0 },
+            { text: 'دفتر صفقات', gaps: [0], lead: 0 },
             { text: 'مجاني بالكامل', gaps: [-23], lead: 0 },
           ].map(({ text, gaps, lead }) => (
             <ArabicLine
