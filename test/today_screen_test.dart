@@ -183,12 +183,25 @@ void main() {
     // «التحليلات» was reachable only from the hub's overflow menu and «الهدف»
     // did not exist. Both are tabs now, because the web carries them as
     // top-level tabs and the two surfaces are meant to be the same product.
+    //
+    // «قائمة المراقبة» is the same story with a sharper edge: the app's overflow
+    // menu is gone, and it took the ONLY route to `WatchlistFormScreen`'s add
+    // mode with it — an item could be edited on the phone but never created
+    // there. Word for word and slot for slot, this is the site's tab strip.
     expect(
       tester
           .widgetList<Tab>(find.byType(Tab))
           .map((t) => t.text)
           .toList(),
-      ['قرار اليوم', 'صفقاتي', 'تخطيط', 'الأداء', 'التحليلات', 'تصدير CSV'],
+      [
+        'قرار اليوم',
+        'صفقاتي',
+        'تخطيط',
+        'الأداء',
+        'التحليلات',
+        'قائمة المراقبة',
+        'تصدير CSV',
+      ],
     );
   });
 

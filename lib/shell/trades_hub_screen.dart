@@ -13,6 +13,7 @@ import '../today/today_screen.dart';
 import '../trades/trades_screen.dart';
 import '../trades/widgets/export_csv_view.dart';
 import '../trades/widgets/quick_add_trade_sheet.dart';
+import '../watchlist/widgets/watchlist_view.dart';
 
 class TradesHubScreen extends ConsumerWidget {
   const TradesHubScreen({super.key});
@@ -21,7 +22,7 @@ class TradesHubScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final entitlement = ref.watch(entitlementProvider);
     return DefaultTabController(
-      length: 6,
+      length: 7,
       child: Scaffold(
         appBar: AppBar(
           toolbarHeight: 44,
@@ -60,6 +61,10 @@ class TradesHubScreen extends ConsumerWidget {
               Tab(text: 'تخطيط'),
               Tab(text: 'الأداء'),
               Tab(text: 'التحليلات'),
+              // Same slot as the site's tab strip. It used to be documented as
+              // living in the app's three-dot menu — a menu this AppBar no
+              // longer has, which left «إضافة للمتابعة» with no caller at all.
+              Tab(text: 'قائمة المراقبة'),
               Tab(text: 'تصدير CSV'),
             ],
           ),
@@ -88,6 +93,7 @@ class TradesHubScreen extends ConsumerWidget {
                 title: 'التحليلات',
                 what: 'معامل الربح ومتوسط R وسلاسل الربح والخسارة ومتوسط مدة الاحتفاظ.',
               ),
+            const WatchlistView(),
             const ExportCsvView(),
           ],
         ),

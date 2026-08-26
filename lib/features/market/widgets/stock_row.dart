@@ -1,36 +1,59 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/formatters.dart';
 import '../../../core/theme.dart';
-import '../market_providers.dart';
 import '../models/egx_stock_info.dart';
 import '../services/egx_market_service.dart';
 import 'trading_view_chart_sheet.dart';
 
-class StockRowWidget extends ConsumerWidget {
+/// One line of the stocks list.
+///
+/// ── IT IS HANDED ITS QUOTE, IT DOES NOT FETCH ONE ──────────────────────────
+///
+/// This used to `ref.watch(livePriceProvider(code))`, which is right beside a
+/// single open position and wrong in a list — every visible row spun up its own
+/// provider for a price that arrives, for all ~292 listings at once, in the one
+/// board response the screen already holds. `livePriceProvider` still exists and
+/// is still correct for `LivePnlView`, where there genuinely is one symbol.
+///
+/// Being a plain StatelessWidget also means scrolling rebuilds nothing but the
+/// rows entering the viewport.
+class StockRowWidget extends StatelessWidget {
   final String code;
+
+  /// Null when the board could not be reached — the row then shows the name and
+  /// «—», never a zero. A price that did not arrive must not read as a stock
+  /// that did not move.
+  final EgxStockInfo? info;
+
   final VoidCallback onTap;
 
-  const StockRowWidget({super.key, required this.code, required this.onTap});
+  const StockRowWidget({
+    super.key,
+    required this.code,
+    required this.info,
+    required this.onTap,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.resultColors;
-    final quote = ref.watch(livePriceProvider(code));
 
-    final EgxStockInfo? info = quote.asData?.value;
     final pct = info?.changePercent;
     final color = pct == null || pct == 0
         ? theme.colorScheme.onSurfaceVariant
         : (pct > 0 ? colors.win : colors.loss);
 
+    // The curated Arabic directory wins over TradingView's own description for
+    // the thirty names it covers; the board's name carries the rest.
+    final name = EgxMarketService.nameFor(code) ?? info?.name ?? code;
+
     return ListTile(
       onTap: onTap,
       title: NumericText(code, style: theme.textTheme.titleSmall),
       subtitle: Text(
-        EgxMarketService.nameFor(code) ?? code,
+        name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: theme.textTheme.bodySmall?.copyWith(
@@ -45,7 +68,7 @@ class StockRowWidget extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               NumericText(
-                info == null ? kEmptyValue : money(info.price),
+                info == null ? kEmptyValue : money(info!.price),
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
