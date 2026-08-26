@@ -56,6 +56,25 @@ void main() {
       );
     });
 
+    test('the policy promises no notice channel that does not exist', () {
+      final privacy = _stripComments(
+        File('site/app/(marketing)/privacy/page.tsx').readAsStringSync(),
+      );
+
+      expect(
+        privacy.contains('هننبّه داخل رادار'),
+        isFalse,
+        reason:
+            '§9 promised an in-app notice before any material change. The tab '
+            'that would have carried it («المستجدات») was deleted with the '
+            'collections behind it, so the promise outlived its only surface — '
+            'and the 26 أغسطس revision shipped three substantive corrections '
+            'with no notice at all. Build the surface before promising it '
+            'again; §7 of the Terms is the wording that matches what the '
+            'product does.',
+      );
+    });
+
     test('nothing is sold while everything is free', () {
       if (!kEverythingFree) return; // Plans are back; §6 should describe them.
 

@@ -264,10 +264,24 @@ export default function PrivacyPage() {
         سنة، ومبنجمعش بيانات عن قصد من الفئة دي.
       </p>
 
+      {/* THE IN-APP NOTICE WAS PROMISED AND NEVER BUILT.
+
+          This clause used to end «وهننبّه داخل رادار قبل ما التغيير يسري». The
+          surface that would have carried it was the «المستجدات» tab, which was
+          deleted along with the collections behind it, so the sentence outlived
+          the only thing that could have kept it. The 26 أغسطس revision — three
+          substantive corrections at once — went out with no notice of any kind,
+          which is what made the gap impossible to keep ignoring.
+
+          A promise with nothing behind it is worth less than a smaller promise
+          that is kept, so the clause now says exactly what the product actually
+          does, which is what §7 of the Terms has always said. If an in-app
+          notice is ever built, widen this again — and only then. */}
       <h2>٩. تغييرات على السياسة</h2>
       <p>
-        لو غيّرنا حاجة جوهرية، هنحدّث تاريخ «آخر تحديث» فوق وهننبّه داخل رادار
-        قبل ما التغيير يسري.
+        لو غيّرنا حاجة جوهرية، هنحدّث تاريخ «آخر تحديث» فوق. التاريخ ده هو
+        الطريقة اللي تعرف بيها إن فيه حاجة اتغيّرت، فلو بتتابع الموضوع ده
+        اعمله bookmark وراجعه من وقت للتاني.
       </p>
 
       <h2>١٠. التواصل</h2>
