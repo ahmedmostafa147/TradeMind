@@ -197,7 +197,8 @@ class _StocksScreenState extends ConsumerState<StocksScreen> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Text(
               'المصدر: TradingView Egypt Scanner — الأسعار متأخرة ١٥ دقيقة، '
-              'ورادار بيعرضها كما هي.',
+              'ورادار بيعرضها كما هي. الترتيب وصف للي حصل في الجلسة، '
+              'وليس توصية بالبيع أو الشراء.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.outline,
               ),

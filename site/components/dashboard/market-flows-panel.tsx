@@ -140,7 +140,12 @@ export function MarketFlowsPanel() {
       )}
 
       <p className="text-[11px] leading-relaxed text-fg-subtle">
-        المصدر: TradingView Egypt Scanner و البورصة المصرية — الأرقام استرشادية فقط.
+        {/* The disclaimer is WEAKEST where the product most looks like it is
+            recommending: a list titled «أعلى ٥ أسهم» is the closest thing here
+            to a pick. «استرشادية فقط» on its own does not say the thing. */}
+        المصدر: TradingView Egypt Scanner والبورصة المصرية — الأسعار متأخرة ١٥
+        دقيقة. الترتيب ده وصف للي حصل في الجلسة، للاسترشاد بس،{' '}
+        <strong>وليس توصية بالبيع أو الشراء</strong>.
       </p>
     </div>
   );

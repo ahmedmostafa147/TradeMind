@@ -92,8 +92,28 @@ export const site = {
    *  third-party market data, which needed its own clause in both documents,
    *  and both documents stopped saying «التطبيق» when they meant Radar — a
    *  reader on the website was being governed by terms that named something
-   *  else. Widened, never narrowed. */
-  legalUpdatedAt: '6 أغسطس 2026',
+   *  else. Widened, never narrowed.
+   *
+   *  26 أغسطس is three substance changes at once, and each one is a correction
+   *  rather than a new practice:
+   *
+   *    · §6 of the Terms still sold «رادار Pro» — a tier switched off months
+   *      earlier — and linked to a pricing anchor that no longer renders. It
+   *      also told the reader to send a payment request «من داخل رادار», the
+   *      exact instruction removed from the Android app for Play's sake, on a
+   *      page the app links to from its settings.
+   *    · §4 of the policy said market requests leave the phone straight for the
+   *      source. They have gone through our server since the app moved onto
+   *      /api/quote, and now /api/stocks too. That sentence exists to tell the
+   *      reader whose server sees their IP, so backwards was the worst state.
+   *    · §5 listed two third parties. The TradingView chart is an embed, so
+   *      opening one puts the reader's browser in touch with TradingView
+   *      directly — a third, and the only one that is the reader's own traffic.
+   *
+   *  The stored-data table also now admits that a manual activation writes the
+   *  amount, method and transfer reference into the billing document.
+   *  Widened, never narrowed. */
+  legalUpdatedAt: '26 أغسطس 2026',
 } as const;
 
 /**

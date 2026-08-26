@@ -88,6 +88,15 @@ const nextConfig: NextConfig = {
             // If sign-in or data loading ever breaks again, read the browser
             // console for a CSP violation FIRST.
             //
+            // THE TRADINGVIEW HOSTS ARE THE SAME STORY, FOUND THE SAME WAY.
+            // The chart dialog injects s3.tradingview.com and that host was
+            // not in script-src, so every «الشارت» button on the deployed site
+            // did nothing at all — `script-src-elem` refused it and the only
+            // trace was a console line nobody was reading. The script then
+            // builds an iframe on tradingview-widget.com, which frame-src has
+            // to name separately. Verified in a browser against a real build,
+            // not reasoned about.
+            //
             // worker-src and manifest-src are stated explicitly for the PWA.
             // Both would otherwise inherit — worker-src from script-src, which
             // carries 'unsafe-inline' and two Google hosts that have no
@@ -97,15 +106,16 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               process.env.NODE_ENV !== 'production'
-                ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com"
-                : "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com",
+                ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://s3.tradingview.com"
+                : "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://s3.tradingview.com",
               "worker-src 'self'",
               "manifest-src 'self'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data:",
               "font-src 'self'",
               "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com",
-              'frame-src https://*.firebaseapp.com https://accounts.google.com',
+              'frame-src https://*.firebaseapp.com https://accounts.google.com ' +
+                'https://www.tradingview-widget.com https://s.tradingview.com',
               "base-uri 'self'",
               "form-action 'none'",
               "frame-ancestors 'none'",

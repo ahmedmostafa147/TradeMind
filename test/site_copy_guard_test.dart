@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:egx_trade_journal/billing/entitlements.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Two owner rules that live in prose and keep getting broken by hand.
@@ -42,6 +43,63 @@ void main() {
     });
   });
 
+  group('the legal pages describe the product that exists', () {
+    test('the free switch reads the same on both surfaces', () {
+      expect(
+        _everythingFreeOnWeb(),
+        kEverythingFree,
+        reason:
+            'EVERYTHING_FREE in site/lib/subscription.ts and kEverythingFree in '
+            'lib/billing/entitlements.dart are two copies of one decision. They '
+            'gate what a user can open; disagreeing means the phone and the '
+            'browser hand the same account different products.',
+      );
+    });
+
+    test('nothing is sold while everything is free', () {
+      if (!kEverythingFree) return; // Plans are back; §6 should describe them.
+
+      final terms = _stripComments(
+        File('site/app/(marketing)/terms/page.tsx').readAsStringSync(),
+      );
+
+      // The exact wording that outlived the plans it described.
+      //
+      // ONLY PHRASES THAT CANNOT APPEAR IN A DENIAL. «تجديد تلقائي» and
+      // «بوابة دفع» were in this list for one run and caught the replacement
+      // text saying «ومفيش تجديد تلقائي» — the sentence promising the opposite
+      // of what the guard was looking for. Same lesson as the «لحظي» rule
+      // below: a word the honest copy also needs is the wrong thing to ban.
+      const sellingPhrases = [
+        'رادار Pro',
+        'صفحة الباقات',
+        '#pricing',
+        'الباقة المجانية بتفضل',
+        'أول ما تدفع',
+      ];
+
+      final found = [
+        for (final phrase in sellingPhrases)
+          if (terms.contains(phrase)) phrase,
+      ];
+
+      expect(
+        found,
+        isEmpty,
+        reason:
+            'The published Terms described «رادار Pro», linked to a pricing '
+            'anchor that is no longer rendered, and told the reader to send a '
+            'request «من داخل رادار» and pay outside — months after the plans '
+            'were switched off. The Android app links to this page from its '
+            'settings, so that removed instruction was still reachable from '
+            'inside the app, which is the exact shape of the Play Billing '
+            'problem it was removed to avoid. '
+            ' Still present: '
+            "${found.join(' · ')}",
+      );
+    });
+  });
+
   group('nothing claims a live price', () {
     test('«لحظي» only ever appears denied', () {
       final offenders = <String>[];
@@ -70,6 +128,24 @@ void main() {
     });
   });
 }
+
+/// `EVERYTHING_FREE` as the web declares it.
+bool _everythingFreeOnWeb() {
+  final source = File('site/lib/subscription.ts').readAsStringSync();
+  final match = RegExp(
+    r'export const EVERYTHING_FREE\s*=\s*(true|false)',
+  ).firstMatch(source);
+  expect(
+    match,
+    isNotNull,
+    reason: 'site/lib/subscription.ts no longer exports EVERYTHING_FREE',
+  );
+  return match!.group(1) == 'true';
+}
+
+/// Prose ABOUT removed wording is not the wording. Both files carry comments
+/// naming what they replaced, on purpose.
+String _stripComments(String source) => _withoutComments(source);
 
 /// The word, in the forms Arabic inflects it into.
 ///

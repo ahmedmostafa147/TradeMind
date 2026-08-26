@@ -95,40 +95,44 @@ export default function TermsPage() {
         </li>
       </ul>
 
-      {/* Added the day plans shipped. A product that takes money owes the
-          customer written terms for the money — what the trial is, what the
-          free plan keeps, and what happens to the journal when a subscription
-          ends. That last one is the question that actually matters. */}
-      <h2>٦. الاشتراكات والتجربة المجانية</h2>
+      {/* THIS SECTION DESCRIBED A PRODUCT THAT NO LONGER EXISTS.
+
+          It was written the day plans shipped and it stayed written after they
+          were switched off — naming «رادار Pro», listing which four features it
+          unlocked, and linking to a `/#pricing` anchor that is not rendered any
+          more. It also told the reader to «ابعتلنا من داخل رادار» and pay
+          outside, which is precisely the instruction that was stripped out of
+          the Android app for Play's sake; the app links to this page from its
+          settings, so a reviewer following that link read the removed sentence
+          anyway.
+
+          The single source of truth is `EVERYTHING_FREE` in site/lib/subscription.ts
+          and `kEverythingFree` in lib/billing/entitlements.dart. WHEN EITHER
+          FLIPS BACK, THIS SECTION HAS TO COME BACK IN THE SAME COMMIT — that is
+          the whole rule in CLAUDE.md §3, and this section is the proof of what
+          happens when it is not followed. The old wording is in git history at
+          the commit that replaced it. */}
+      <h2>٦. الاشتراك والرسوم</h2>
       <ul>
         <li>
-          كل حساب جديد بياخد <strong>14 يوم تجربة مجانية</strong> بكل المميزات،
-          من غير بطاقة ومن غير أي رسوم. بتبدأ من أول مرة تفتح فيها رادار بحسابك،
-          وبتخلص لوحدها من غير ما تلغي حاجة.
+          <strong>رادار مجاني بالكامل دلوقتي.</strong> كل المميزات مفتوحة لكل
+          حساب: تسجيل الصفقات ومتابعتها، حاسبات الحجم والمخاطرة والأهداف، بيانات
+          السوق وأسعار الأسهم، قراءة التوصيات بالذكاء الاصطناعي، وشاشات الأداء
+          والتحليلات.
         </li>
         <li>
-          بعد التجربة، <strong>الباقة المجانية بتفضل شغّالة للأبد</strong>:
-          تسجيل الصفقات ومتابعتها، حاسبة حجم الصفقة والمخاطرة، وحاسبة الأهداف.
+          <strong>مفيش باقات مدفوعة، ومفيش بوابة دفع.</strong> مش بنطلب بطاقة،
+          ومفيش أي مبلغ بيتسحب منك، ومفيش تجديد تلقائي. أي صفحة أو زرار بيقول
+          غير كده يبقى قديم — اللي هنا هو الساري.
         </li>
         <li>
-          باقة <strong>رادار Pro</strong> بتفتح تدفّقات السوق، أسعار الأسهم،
-          قراءة التوصيات بالذكاء الاصطناعي، وشاشات الأداء والتحليلات. الأسعار
-          معروضة في <a href="/#pricing">صفحة الباقات</a> وبالجنيه المصري.
+          <strong>صفقاتك بتفضل بتاعتك في كل الأحوال.</strong> ولو رجعنا باقات
+          مدفوعة في المستقبل، مفيش أي بيانات هتتمسح ومفيش أي صفقة هتتقفل، ودفترك
+          هيفضل مفتوح تكتب فيه وتقراه وتقدر تصدّره.
         </li>
         <li>
-          <strong>صفقاتك بتفضل بتاعتك في كل الأحوال.</strong> لو الاشتراك خلص أو
-          وقف، مفيش أي بيانات بتتمسح ومفيش أي صفقة بتتقفل — اللي بيتقفل هو
-          الأدوات المدفوعة بس، ودفترك يفضل مفتوح تكتب فيه وتقراه وتقدر تصدّره.
-        </li>
-        <li>
-          <strong>الاشتراك بيتم يدوي دلوقتي:</strong> مفيش بوابة دفع أونلاين.
-          بتبعت طلب من داخل رادار أو على بريد التواصل، بنرد بطريقة الدفع، وأول
-          ما تدفع بنفعّل الاشتراك على حسابك. مفيش تجديد تلقائي ومفيش أي مبلغ
-          بيتسحب منك من غير ما تدفعه بنفسك في كل مرة.
-        </li>
-        <li>
-          الأسعار ممكن تتغيّر. أي تغيير بيسري على التجديدات الجاية بس، مش على
-          فترة مدفوعة بالفعل.
+          لو قررنا نضيف باقات مدفوعة، هنكتب شروطها هنا وهنعلن قبلها بوقت كافي،
+          وهي هتسري على اللي يشترك بعد كده بس.
         </li>
       </ul>
 

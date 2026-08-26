@@ -136,7 +136,11 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>حالة اشتراكك:</strong> اسم الباقة وتاريخ بداية التجربة وتاريخ
-          انتهاء الاشتراك، في مستند منفصل على حسابك.{' '}
+          انتهاء الاشتراك، في مستند منفصل على حسابك. ولو حصل في أي وقت إننا
+          فعّلنا لك اشتراك بإيدينا، بنكتب في نفس المستند{' '}
+          <strong>ملاحظة فيها المبلغ وطريقة الدفع ومرجع التحويل</strong> — عشان
+          يكون فيه سجل نرجعله لو حصل خلاف. رادار مجاني بالكامل دلوقتي، فمفيش أي
+          ملاحظة زي دي متكتوبة على أي حساب.{' '}
           <strong>ده المستند الوحيد غير ملف التعريف اللي إدارة رادار بتقدر
           تقراه</strong> — عشان نقدر نفعّل اشتراك أو نرد عليك لو اتقفل عليك حاجة
           بالغلط. مفيهوش أي حاجة عن صفقاتك ولا رأس مالك.
@@ -165,20 +169,30 @@ export default function PrivacyPage() {
         الصفقات المفتوحة. الطلب بيحتوي على <strong>رمز السهم بس</strong>، ومفيش
         أي بيانات شخصية بتتبعت معاه.
       </p>
-      {/* The web cannot call that source from the page — no CORS headers — so
-          the request is relayed. Saying so is not optional: it means our server
-          sees the caller's IP, which the phone's direct call never exposed. */}
+      {/* THIS PARAGRAPH USED TO SAY THE OPPOSITE, AND IT MATTERED.
+
+          It read «على التطبيق الطلب بيروح من تليفونك للمصدر على طول», which
+          stopped being true when the app moved onto /api/quote so that the two
+          surfaces would quote the same number (CLAUDE.md §10), and stopped
+          being true again for the board when it moved onto /api/stocks. Both
+          times the sentence was left behind. It is the one sentence here whose
+          entire job is to tell the reader whose server sees their IP, so having
+          it backwards is not an editorial detail. */}
       <p>
-        على التطبيق الطلب بيروح من تليفونك للمصدر على طول. على الموقع بيعدّي على
-        سيرفر بتاعنا لأن المتصفح مش مسموح له يكلّم المصدر ده مباشرة — يعني
-        السيرفر بيشوف عنوان الـ IP بتاعك وقت الطلب، زي أي طلب صفحة. مش بنربطه
-        بحسابك ومش بنسجّله.
+        الطلبات دي بتعدّي على <strong>سيرفر بتاعنا</strong> من التطبيق ومن
+        الموقع — يعني السيرفر بيشوف عنوان الـ IP بتاعك وقت الطلب، زي أي طلب
+        صفحة. <strong>مش بنربطه بحسابك ومش بنسجّله.</strong> على الموقع ده
+        إجباري أصلًا لأن المتصفح مش مسموح له يكلّم المصدر مباشرة، وعلى التطبيق
+        ده اختيار مننا عشان التليفون والمتصفح يوروك نفس السعر. لو السيرفر
+        بتاعنا مش شغّال، التطبيق بينده المصدر مباشرة وساعتها الطلب مبيعدّيش
+        علينا خالص.
       </p>
       {/* Added when «السوق» shipped. It is the one data flow here that is not
           about the reader at all, and saying so plainly is the point: nothing
           personal leaves, and nothing personal is needed to fetch it. */}
       <p>
-        بيانات تداولات المستثمرين اللي بتظهر في تبويب «السوق» بتيجي من{' '}
+        تبويب «السوق» بيعرض كمان أعلى وأقل الأسهم حركةً من نفس مصدر الأسعار اللي
+        فوق. وبيانات تداولات المستثمرين اللي فيه بتيجي من{' '}
         <strong>البورصة المصرية</strong> وبتتخزّن عندنا مرة واحدة لكل جلسة —
         <strong>مش لكل مستخدم</strong>. هي نفسها لكل الناس، ومالهاش أي علاقة
         ببياناتك: مفيش أي حاجة تخصّك بتتبعت وقت جلبها، ومفيش حاجة بتتسجّل عنك
@@ -187,8 +201,8 @@ export default function PrivacyPage() {
 
       <h2>٥. مشاركة البيانات</h2>
       <p>
-        إحنا <strong>مبنبيعش</strong> بياناتك ومبنشاركهاش لأغراض تسويقية.
-        البيانات بتوصل لطرف تالت في حالتين بس، وهما اللي فوق:
+        إحنا <strong>مبنبيعش</strong> بياناتك ومبنشاركهاش لأغراض تسويقية. دول كل
+        الأطراف التانية اللي ليها أي علاقة ببياناتك:
       </p>
       <ul>
         <li>
@@ -197,6 +211,21 @@ export default function PrivacyPage() {
         <li>
           <strong>Google (Gemini API)</strong> — للصور، وقت استخدام ميزة القراءة
           بس.
+        </li>
+        {/* The chart is an EMBED, not a relay: the widget script and its iframe
+            come from TradingView into the reader's own browser, so their IP and
+            user agent reach TradingView directly and TradingView's own cookie
+            rules apply inside that frame. Every other market request in this
+            product goes out from our server with nothing personal attached,
+            which is why this one needs saying separately — and why it only
+            counts when the reader actually opens a chart. */}
+        <li>
+          <strong>TradingView</strong> — لما <strong>تفتح الشارت</strong> بس. الشارت
+          نفسه بيتحمّل من سيرفراتهم جوّه صفحتنا، فمتصفحك بيكلّمهم على طول: بيشوفوا
+          عنوان الـ IP بتاعك ونوع المتصفح ورمز السهم اللي فتحته، وبتسري قواعد
+          الكوكيز بتاعتهم جوّه إطار الشارت. مبنبعتلهمش اسمك ولا بريدك ولا أي حاجة
+          من دفترك. لو مفتحتش شارت، متصفحك ميكلّمهمش خالص. باقي أسعار السوق
+          بتيجي من عندنا زي ما مكتوب في البند اللي فوق.
         </li>
       </ul>
       <p>ممكن نفصح عن البيانات لو القانون ألزمنا بده.</p>
