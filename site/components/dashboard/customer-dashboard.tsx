@@ -554,7 +554,25 @@ function Journal() {
         </div>
       </aside>
 
-      <main className="flex-1 px-4 py-4 sm:px-8 sm:py-6 max-w-6xl">
+      {/* THE BOTTOM PADDING IS NOT COSMETIC — IT IS THE ONLY THING KEEPING THE
+          LAST ROW REACHABLE.
+
+          Below `sm` the section bar is `fixed bottom-0` and the «أضف صفقة»
+          button floats at `bottom-20`, so both paint OVER this column instead
+          of taking space in it. With `py-4` the last card ended 16px above the
+          viewport floor and roughly 130px of it sat under the bar: reported
+          from a live phone as «آخر صفقة معرفتش أشيلها» — the card was there,
+          its تعديل/حذف buttons were simply underneath the navigation.
+
+          The clearance is the bar (~64px) plus the button that floats above it
+          (80px offset + ~50px tall), so 8rem covers both with room, and the
+          safe-area inset is added on top for notched phones. The app reserves
+          96px for the same reason (`fromLTRB(16, 16, 16, 96)` in every list) —
+          it needs less because Flutter's Scaffold gives the NavigationBar its
+          own space instead of overlaying it, so only the FAB has to be cleared.
+
+          `sm:pb-6` puts it back to normal once the bar is gone. */}
+      <main className="flex-1 px-4 pt-4 pb-[calc(8rem+env(safe-area-inset-bottom))] sm:px-8 sm:pt-6 sm:pb-6 max-w-6xl">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default pb-3 sm:pb-4">
           <h1 className="text-lg font-bold tracking-tight sm:text-2xl">
             {SECTIONS.find((d) => d.id === section)?.label ?? 'دفتر صفقاتك'}
