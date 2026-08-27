@@ -1,0 +1,20 @@
+# Line endings.
+#
+# Git stores LF and hands Windows checkouts CRLF, which is right for source but
+# WRONG for the two kinds of file below — and wrong in a way that produces no
+# error message, only something that quietly stops working.
+
+# Shell scripts must keep LF. `sh` reads a CRLF script as a shebang ending in a
+# carriage return and fails with "no such file or directory" naming a file that
+# is plainly there. tool/hooks/pre-push is the guard that stops a push landing
+# straight on main — a guard that silently stops running is worse than no guard,
+# because nobody notices until something is already on main.
+*.sh          text eol=lf
+tool/hooks/*  text eol=lf
+
+# The compiled calculation layer. Its staleness gate hashes the DART sources
+# with line endings normalised (tool/gen-calc-js.mjs), so CRLF here would not
+# break the check — but this file is generated on one machine and read on
+# another, and a checkout that rewrites 92 KB of it produces a diff nobody
+# asked for every time the platform changes.
+site/lib/generated/radar-calc.js  text eol=lf

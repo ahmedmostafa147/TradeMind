@@ -44,6 +44,16 @@ const plex = localFont({
   fallback: ['system-ui', 'Segoe UI', 'Tahoma', 'sans-serif'],
 });
 
+/**
+ * The share card's alt text.
+ *
+ * It was an exported `alt` in app/opengraph-image.tsx, which Next read by
+ * convention. The card is a route handler now (see app/og/route.tsx), and a
+ * route handler has no such convention — so the string is stated here, where
+ * the tag that carries it is written.
+ */
+const ogAlt = `${site.name} — ${site.tagline}`;
+
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
@@ -70,11 +80,44 @@ export const metadata: Metadata = {
     title: `${site.name} — ${site.tagline}`,
     description: site.description,
     url: site.url,
+
+    // THE TRAILING SLASH IS THE WHOLE POINT OF SPELLING THIS OUT.
+    //
+    // next.config.ts sets `trailingSlash: true`, and Next's own
+    // opengraph-image file convention emitted the card's URL WITHOUT one —
+    // /opengraph-image?<hash>. Vercel answers that with a 308 to
+    // /opengraph-image/?<hash>, and a scraper that does not follow a redirect
+    // on og:image renders no preview at all. WhatsApp is the one that matters
+    // here, and it is the one that does not follow it.
+    //
+    // The page was serving a perfectly good 49KB PNG the whole time. Nothing
+    // logged, nothing failed, and the only symptom was a blank card in
+    // whatever chat the link was pasted into — which is to say the symptom is
+    // only ever visible to the person sharing the link, never to the build.
+    //
+    // Naming the image here makes the emitted URL final instead of a redirect.
+    // It is /og/ and not the convention's own path because THE CONVENTION WINS
+    // OVER THIS FIELD when both exist: file-based metadata overrides
+    // config-based metadata in Next, so leaving app/opengraph-image.tsx in
+    // place would have kept the redirecting URL and quietly ignored this.
+    // The generator moved to app/og/route.tsx — a plain route handler, which
+    // carries no metadata convention — so this field is now the only thing
+    // that decides the URL.
+    images: [
+      {
+        url: '/og/',
+        width: 1200,
+        height: 630,
+        alt: ogAlt,
+        type: 'image/png',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: `${site.name} — ${site.tagline}`,
     description: site.description,
+    images: ['/og/'],
   },
   robots: { index: true, follow: true },
   category: 'finance',

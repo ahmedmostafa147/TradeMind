@@ -1,0 +1,55 @@
+#!/bin/sh
+#
+# Refuses to push anything straight at main.
+#
+# WHY THIS EXISTS ALONGSIDE GITHUB'S BRANCH PROTECTION
+# Protection is the real gate — it is enforced on the server and cannot be
+# skipped by a client that does not have this file. This hook is the FAST one:
+# it fails in a tenth of a second with a message that says what to do instead,
+# rather than after a full upload and a wall of remote-rejected output. It also
+# still works when the protection rule is changed, expires, or the repository is
+# forked somewhere it was never applied.
+#
+# It is a local convenience, not a security boundary. Anything that matters is
+# enforced on GitHub.
+#
+# Enable it (once per clone):
+#     git config core.hooksPath tool/hooks
+#
+# Bypass it for one push, when there is a real reason:
+#     git push --no-verify ...
+# — and note GitHub will still refuse, which is the correct order of authority.
+
+protected="main"
+remote_ref_prefix="refs/heads/$protected"
+
+# git feeds pre-push one line per ref being pushed:
+#   <local ref> <local sha> <remote ref> <remote sha>
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    "$remote_ref_prefix")
+      # A delete (all-zero local sha) is refused too: the point is that nothing
+      # reaches this branch except through a pull request.
+      cat >&2 <<'EOF'
+
+  ✖ الدفع المباشر على main مقفول.
+
+    الشغل بيروح على فرع، وبعدين Pull Request:
+
+        git switch -c fix/<اسم-مختصر>
+        git push -u origin HEAD
+        gh pr create --fill
+
+    وVercel بتبني preview للفرع، فبتشوف التغيير شغّال قبل ما يوصل
+    للإنتاج — الدمج على main هو اللي بينشر.
+
+    لو فيه سبب حقيقي للتخطي:  git push --no-verify
+    (GitHub هترفض برضه — وده الترتيب الصح.)
+
+EOF
+      exit 1
+      ;;
+  esac
+done
+
+exit 0
