@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../data/trade_repository.dart';
+import '../data/trade_repository.dart';
 import '../trade.dart';
 
 /// What the journal screens see.

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:egx_trade_journal/data/trade_repository.dart';
+import 'package:egx_trade_journal/trades/data/trade_repository.dart';
 import 'package:egx_trade_journal/features/sync/services/sync_codec.dart';
 import 'package:egx_trade_journal/trades/cubit/trades_cubit.dart';
 import 'package:egx_trade_journal/trades/trade.dart';

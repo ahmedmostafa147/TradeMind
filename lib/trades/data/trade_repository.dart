@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
-import '../features/sync/services/sync_codec.dart';
-import '../trades/trade.dart';
+import '../../features/sync/services/sync_codec.dart';
+import '../trade.dart';
 
 /// The journal, read straight from Firestore. One store, no second copy.
 ///
@@ -53,10 +54,14 @@ class TradeRepository {
   List<Trade> _decode(QuerySnapshot<Map<String, dynamic>> snapshot) {
     final trades = <Trade>[];
     for (final doc in snapshot.docs) {
-      // A document that cannot be decoded is SKIPPED, not thrown on. One
-      // malformed record — a field written by a future build, a half-finished
-      // write — must not take the whole journal down with it, because the
-      // journal is the product.
+      // A document that cannot be decoded is SKIPPED — one malformed record,
+      // a field written by a future build, a half-finished write, must not
+      // take the whole journal down with it, because the journal is the
+      // product.
+      //
+      // But it is REPORTED, never swallowed. A silent skip means a trade
+      // vanishes from the list with the app behaving as though it never
+      // existed, and nothing anywhere says why.
       try {
         // `keepScreenshots: true` because THIS DEVICE IS NOW THE ONLY READER
         // OF ITS OWN JOURNAL.
@@ -79,7 +84,8 @@ class TradeRepository {
         // and it is the strongest argument yet for moving attachments to
         // Firebase Storage — which is deferred by the owner, not forgotten.
         trades.add(SyncCodec.tradeFromMap(doc.data(), keepScreenshots: true));
-      } catch (_) {
+      } catch (error) {
+        debugPrint('Skipped an unreadable trade (${doc.id}): $error');
         continue;
       }
     }
