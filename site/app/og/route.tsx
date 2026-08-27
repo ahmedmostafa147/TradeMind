@@ -3,15 +3,35 @@ import { join } from 'node:path';
 
 import { ImageResponse } from 'next/og';
 
+/**
+ * The Open Graph share card, as a ROUTE HANDLER rather than Next's
+ * `opengraph-image` file convention.
+ *
+ * WHY IT MOVED, AND IT IS NOT A STYLE PREFERENCE.
+ *
+ * next.config.ts sets `trailingSlash: true`. The file convention emits its own
+ * URL and emits it WITHOUT the slash — /opengraph-image?<hash> — so every
+ * scraper that fetched og:image got a 308 to /opengraph-image/?<hash> instead
+ * of a PNG. The ones that follow redirects showed the card; WhatsApp does not,
+ * and showed nothing. The image itself was never broken, which is exactly why
+ * this survived: the build passes, the route returns 200 with the slash, and
+ * the only place the failure is visible is a chat window.
+ *
+ * Spelling the URL out in `metadata.openGraph.images` is the fix, and it does
+ * not work while the convention exists — file-based metadata overrides
+ * config-based metadata in Next, so the convention would have kept winning and
+ * silently discarded the corrected URL. A route handler carries no metadata
+ * convention at all, so app/layout.tsx is now the single thing that decides
+ * where the card lives.
+ *
+ * Still prerendered: `force-static` below makes this a build-time PNG on disk,
+ * the same as the convention produced. Nothing renders per request.
+ */
 import { site } from '@/lib/site';
 
-export const size = { width: 1200, height: 630 };
-export const contentType = 'image/png';
+const size = { width: 1200, height: 630 };
 
-/** Metadata routes need this under `output: 'export'` — see app/robots.ts. */
 export const dynamic = 'force-static';
-
-export const alt = `${site.name} — ${site.tagline}`;
 
 /**
  * Lays out one line of Arabic as explicit flex items, one per word.
@@ -110,7 +130,7 @@ function ArabicLine({
   );
 }
 
-export default async function OpengraphImage() {
+export async function GET() {
   // TTF, not the woff2 the browser gets: satori cannot decompress woff2, so
   // the uncompressed originals stay in assets/ for this build step alone. They
   // live outside public/ so `output: export` does not also publish 480KB of
