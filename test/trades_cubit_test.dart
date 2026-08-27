@@ -59,7 +59,7 @@ void main() {
     await seed(trade('a'));
     await seed(trade('b'));
 
-    await cubit.signIn(uid);
+    await cubit.followAccount(uid);
     final state = await settled();
 
     expect(state, isA<TradesLoaded>());
@@ -67,7 +67,7 @@ void main() {
   });
 
   test('an account with no trades loads as empty, not as loading forever', () async {
-    await cubit.signIn(uid);
+    await cubit.followAccount(uid);
     final state = await settled();
 
     expect(state, isA<TradesLoaded>());
@@ -76,27 +76,27 @@ void main() {
 
   test('signing out clears the journal and says so', () async {
     await seed(trade('a'));
-    await cubit.signIn(uid);
+    await cubit.followAccount(uid);
     await settled();
 
-    await cubit.signIn(null);
+    await cubit.followAccount(null);
 
     expect(cubit.state, isA<TradesSignedOut>());
     expect(cubit.trades, isEmpty);
   });
 
-  test('re-pointing at the SAME account is ignored', () async {
+  test('re-pointing at the same account is ignored', () async {
     // Firebase Auth re-emits the current user on token refresh. Tearing the
     // subscription down and rebuilding it for that would blank the screen and
     // buy a fresh read every hour for no reason.
     await seed(trade('a'));
-    await cubit.signIn(uid);
+    await cubit.followAccount(uid);
     await settled();
 
     final states = <TradesState>[];
     final sub = cubit.stream.listen(states.add);
 
-    await cubit.signIn(uid);
+    await cubit.followAccount(uid);
     await Future<void>.delayed(Duration.zero);
     await sub.cancel();
 
@@ -105,18 +105,18 @@ void main() {
 
   test('switching accounts does not leak the previous journal', () async {
     await seed(trade('a'));
-    await cubit.signIn(uid);
+    await cubit.followAccount(uid);
     await settled();
     expect(cubit.trades, hasLength(1));
 
-    await cubit.signIn('someone-else');
+    await cubit.followAccount('someone-else');
     final state = await settled();
 
     expect((state as TradesLoaded).trades, isEmpty);
   });
 
   test('a save reaches the store and comes back through the stream', () async {
-    await cubit.signIn(uid);
+    await cubit.followAccount(uid);
     await settled();
 
     await cubit.save(trade('a', ticker: 'SWDY'));
@@ -129,7 +129,7 @@ void main() {
 
   test('a delete reaches the store', () async {
     await seed(trade('a'));
-    await cubit.signIn(uid);
+    await cubit.followAccount(uid);
     await settled();
 
     await cubit.delete('a');
@@ -140,7 +140,7 @@ void main() {
   });
 
   test('writing while signed out is a no-op, not a crash', () async {
-    await cubit.signIn(null);
+    await cubit.followAccount(null);
 
     await cubit.save(trade('a'));
     await cubit.delete('a');
@@ -157,7 +157,7 @@ void main() {
     final c = TradesCubit(failing);
     addTearDown(c.close);
 
-    await c.signIn(uid);
+    await c.followAccount(uid);
     final state = await c.stream.firstWhere((s) => s is! TradesLoading);
 
     expect(state, isA<TradesFailure>());

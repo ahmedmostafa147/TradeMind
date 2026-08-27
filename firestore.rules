@@ -226,7 +226,8 @@ service cloud.firestore {
         allow read, delete: if isOwner(userId);
         allow create, update: if isOwner(userId)
           && request.resource.data.keys().hasOnly([
-               'capital', 'maxRiskPercent', 'waitingThresholdDays'
+               'capital', 'maxRiskPercent', 'waitingThresholdDays',
+               'defaultTakeProfitPercent', 'defaultStopLossPercent'
              ])
           && (!('capital' in request.resource.data)
               || (request.resource.data.capital is number
@@ -239,7 +240,29 @@ service cloud.firestore {
           && (!('waitingThresholdDays' in request.resource.data)
               || (request.resource.data.waitingThresholdDays is number
                   && request.resource.data.waitingThresholdDays >= 1
-                  && request.resource.data.waitingThresholdDays <= 3650));
+                  && request.resource.data.waitingThresholdDays <= 3650))
+
+          // THE TWO DEFAULTS THE SMART BUILDER STARTS FROM, added when the
+          // journal moved off the device.
+          //
+          // They were device-only, and CLAUDE.md §5 recorded the cost as a
+          // known defect: the website HARD-CODED 5% and 2% because there was
+          // no synced value to read, so the two surfaces agreed for anybody
+          // who never changed the defaults and silently disagreed with
+          // everybody who did. Same trade, two verdicts. This is the fix that
+          // note called for.
+          //
+          // Bounds mirror the setters: a fraction, never a percent. The stop
+          // is exclusive of 1 because a 100% stop is the whole position, which
+          // is not a stop.
+          && (!('defaultTakeProfitPercent' in request.resource.data)
+              || (request.resource.data.defaultTakeProfitPercent is number
+                  && request.resource.data.defaultTakeProfitPercent > 0
+                  && request.resource.data.defaultTakeProfitPercent <= 1))
+          && (!('defaultStopLossPercent' in request.resource.data)
+              || (request.resource.data.defaultStopLossPercent is number
+                  && request.resource.data.defaultStopLossPercent > 0
+                  && request.resource.data.defaultStopLossPercent < 1));
       }
     }
 

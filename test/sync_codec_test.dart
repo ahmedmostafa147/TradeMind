@@ -186,7 +186,7 @@ void main() {
       defaultStopLossPercent: 0.03,
     );
 
-    test('round-trips the three synced values', () {
+    test('round-trips the five synced values', () {
       final back = SyncCodec.riskSettingsFromMap(
         SyncCodec.riskSettingsToMap(configured),
         onto: const Settings(),
@@ -195,9 +195,23 @@ void main() {
       expect(back.capital, 250000);
       expect(back.maxRiskPercent, 0.015);
       expect(back.waitingThresholdDays, 45);
+      // The two the builder starts from. They were device-only until the
+      // journal moved to a single store, and that is exactly why the website
+      // hard-coded 5% and 2%: there was nothing synced to read, so the same
+      // trade got two verdicts for anyone who changed a default.
+      expect(back.defaultTakeProfitPercent, 0.08);
+      expect(back.defaultStopLossPercent, 0.03);
     });
 
-    test('leaves device-only preferences alone', () {
+    test('leaves the two habit toggles alone', () {
+      // These stay on the device and the codec never carries them: they are
+      // habits — whether to be shown a checklist, whether to be asked before a
+      // delete — and syncing a habit pushes one device's preference onto
+      // another.
+      //
+      // The two default percentages used to be in this list and no longer are.
+      // The line below proves the difference: the remote value now wins for
+      // them, which is the whole point of moving them.
       final back = SyncCodec.riskSettingsFromMap(
         SyncCodec.riskSettingsToMap(const Settings()),
         onto: configured,
@@ -205,8 +219,8 @@ void main() {
 
       expect(back.enableChecklist, isFalse);
       expect(back.enableConfirmations, isFalse);
-      expect(back.defaultTakeProfitPercent, 0.08);
-      expect(back.defaultStopLossPercent, 0.03);
+      expect(back.defaultTakeProfitPercent, Settings.fallbackTakeProfitPercent);
+      expect(back.defaultStopLossPercent, Settings.fallbackStopLossPercent);
     });
 
     test('an empty document changes nothing', () {
