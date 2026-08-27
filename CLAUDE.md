@@ -193,8 +193,11 @@ npm --prefix site run theme
    صفقات التطبيق شايفها متابَعة.)
 
 الحسابات كلها (`analytics.ts`، `risk-score.ts`، `decisions.ts`، `checklist.ts`،
-`projection.ts`، `goal-plan.ts`، `portfolio-scenarios.ts`، `sizing.ts`،
-`smart-trade.ts`) نسخ مطابقة من `lib/core/calc/`.
+`projection.ts`، `goal-plan.ts`، `portfolio-scenarios.ts`، `smart-trade.ts`) نسخ
+مطابقة من `lib/core/calc/`.
+
+> **`sizing.ts` مبقاش واحد منهم — بقى بينده الـDart نفسه.** شوف §٢٤ تحت.
+
 **ومفيش أي اختبار على نسخ الويب** — مفيش `test` script في `site/package.json`
 ولا ملف اختبار واحد في `site/`. الاستثناء الوحيد `test/legal_notice_test.dart`:
 ده اختبار Dart **بيقرا `site/lib/site.ts` نفسه** ويقارن نص التنويه وبريد
@@ -756,6 +759,45 @@ directive:  script-src-elem
 **ولما الباقات ترجع:** الفلاج بيبقى `false`، الاختبار بيتخطّى نفسه، وبند ٦ لازم
 يترجع في **نفس الكوميت**. النص القديم في git history عند الكوميت اللي شاله.
 
+### ٢٤. `sizing.ts` مبقاش مرآة — بقى نفس الكود
+
+`lib/core/calc/` **ممنوع فيه Flutter imports** (§١٣)، وده اللي خلّى الطبقة دي
+قابلة للنقل من غير ما حد يقصد. وDart بتترجم لـJS. فالموقع بقى **بيشغّل حساب
+التطبيق نفسه** بدل ما يقلّده:
+
+```
+lib/core/calc/*.dart  ──►  tool/calc_js/calc_api.dart  ──►  dart compile js
+                                                              │
+                          site/lib/generated/radar-calc.js  ◄─┘  (مكوميت)
+                                        ▲
+                          site/lib/calc.ts  ──►  site/lib/sizing.ts
+```
+
+**خمس حاجات لازم تعرفها:**
+
+1. **المخرج مكوميت، وVercel عمرها ما بتبنيه.** مفيش Dart على سيرفر البناء.
+   عشان كده `calc:check` **بيهاش المصادر** (SHA-256 على `lib/core/calc/**` +
+   الجسر) ويقارنها بالبصمة المكتوبة في هيدر الملف المولّد — بدل ما يعيد
+   الترجمة زي `theme:check`. يعني بيشتغل في أي مكان فيه Node.
+2. **الحارس اتجرّب بحقن مخالفة فعلية**: تغيير `kQtyEpsilon` من `1e-9` لـ`1e-6`
+   خلّى `calc:check` يسقط بكود `1`، ورجوعه خلّاه يعدّي.
+3. **الجسر JSON داخل وJSON خارج.** البديل إنك تعمل موديل لكل كلاس Dart في JS
+   — نسخة تانية من نفس المشكلة. التكلفة متقاسة: **3.8 ميكروثانية** لنداء
+   `sizing` (اللي بيتحسب مع كل ضغطة زرار)، و**6.6 ms** لتحليلات دفتر ٧٠٠ صفقة.
+4. **الهجرة اتحققت مش اتفرضت.** النسخة القديمة والمترجمة اتشغّلوا على **٤٥٬١٠٦
+   مدخل** — صفر وسالب و`1e-9` و`1e12` و`±Infinity` و`NaN` و`null` و`undefined`
+   لكل بارامتر، وكنس عشوائي ٤٠ ألف حالة — واتفقوا على الـ١١ حقل في كلهم،
+   بمقارنة `Object.is` عشان `-0` و`NaN` ما يعدّوش كأنهم مساويين لحاجة تانية.
+   و`tool/calc_js/verify.dart` + `verify.mjs` بيشغّلوا الـ١٣ دالة على الـVM وعلى
+   المترجم ويقارنوا **٤١٠ قيمة** — دي الحارس الدائم إن الحزمة بتقول نفس كلام
+   الـDart.
+5. **الباقي لسه مرايا.** `sizing.ts` هي اللي اتنقلت. الباقيين بيتنقلوا على
+   **نفس الحزمة** فمش هيزوّدوا حجم — الحزمة كلها **26.3 KB brotli** وفيها
+   الـ١٣ دالة أصلًا. لحد ما يتنقلوا، قاعدة «غيّرها في الاتنين» لسه سارية عليهم.
+
+**ولو غيّرت أي معادلة في Dart:** `npm --prefix site run calc` وكوميت المخرج.
+نسيت؟ البناء بيقع عند `calc:check` — مش بيعدّي في صمت.
+
 ---
 
 ## حاجات اتقررت وممنوع ترجع من غير سبب
@@ -962,6 +1004,9 @@ npm --prefix site run build              # الموقع (بيتحقق من ال�
 cd site && npx tsc --noEmit              # أسرع من build وقت التعديل
 npm --prefix site run theme              # ولّد الألوان بعد تعديل palettes.json
 node tool/gen-theme.mjs --check          # اتأكد إن المولّد متطابق
+npm --prefix site run calc               # أعد ترجمة طبقة الحساب لـJS (محتاج Dart)
+node tool/gen-calc-js.mjs --check        # اتأكد إن الحزمة مطابقة للـDart (مش محتاج Dart)
+dart run tool/calc_js/verify.dart        # نفس الدوال على الـVM — للمقارنة
 npm --prefix site run icons              # ولّد أيقونات الـ PWA بعد تغيير اللوجو
 ```
 
