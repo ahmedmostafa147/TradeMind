@@ -40,6 +40,10 @@ dependencies:
   url_launcher: ^6.3.2
   flutter_bloc: ^9.1.1
   shared_preferences: ^2.5.5
+  # Company logos. TradingView serves them as SVG ONLY — measured: `.png` and
+  # `--big.png` both answer 403 — and Image.network cannot draw one, so this is
+  # what a logo on the stocks list costs. Dart-only, no platform channels.
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:

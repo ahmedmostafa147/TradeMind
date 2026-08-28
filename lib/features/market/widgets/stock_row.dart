@@ -4,6 +4,7 @@ import '../../../core/formatters.dart';
 import '../../../core/theme.dart';
 import '../models/egx_stock_info.dart';
 import '../services/egx_market_service.dart';
+import 'stock_logo.dart';
 import 'trading_view_chart_sheet.dart';
 
 /// One line of the stocks list.
@@ -51,6 +52,9 @@ class StockRowWidget extends StatelessWidget {
 
     return ListTile(
       onTap: onTap,
+      // Handed the id the board already carried — like the price, this row
+      // fetches nothing of its own.
+      leading: StockLogo(logoId: info?.logoId, name: name),
       title: NumericText(code, style: theme.textTheme.titleSmall),
       subtitle: Text(
         name,
