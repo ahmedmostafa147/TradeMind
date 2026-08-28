@@ -204,6 +204,38 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        /**
+         * The proxied company logos — a THIRD-PARTY DOCUMENT ON OUR ORIGIN.
+         *
+         * SVG is a document format that can carry `<script>`. Drawn through an
+         * `<img>` it never executes, but the file is served from radar's own
+         * origin, so anyone handed the URL directly opens it as a same-origin
+         * document — and the site policy above allows `script-src 'self'
+         * 'unsafe-inline'`, which is exactly what such a file would need.
+         *
+         * MEASURED, because the two plausible behaviours differ and only one is
+         * safe: for the SAME header key the later matching rule REPLACES the
+         * earlier one — this path answers with exactly one
+         * `Content-Security-Policy`, and it is this one. Keys the rules do not
+         * share still merge, so `nosniff`, `Referrer-Policy` and
+         * `Permissions-Policy` from the site rule are all still on the response.
+         * (That is narrower than the note on the first rule, which is about two
+         * policies reaching the browser and being intersected. Here only one
+         * arrives — checked on the wire, not assumed.)
+         *
+         * It lives here and not on the route because a `Content-Security-Policy`
+         * set on the response is the one that gets replaced — also measured, and
+         * silent: the code would read as though it were protected.
+         */
+        source: '/api/logo/:path*',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+          },
+        ],
+      },
+      {
         // The service worker must not be cached, or a fix to the caching policy
         // itself cannot reach the browsers running the broken one — the file
         // that decides what is stale would be the stale thing.

@@ -17,6 +17,13 @@ class EgxStockInfo {
 
   final String currency;
 
+  /// TradingView's slug for the company logo — `telecom-egypt`.
+  ///
+  /// Null for the ~3% of listings that have none, and for every quote that came
+  /// from Yahoo, which knows nothing about logos. The UI treats null as a normal
+  /// state and shows the ticker chip — see [StockLogo].
+  final String? logoId;
+
   /// When the app fetched this.
   final DateTime lastUpdated;
 
@@ -33,6 +40,7 @@ class EgxStockInfo {
     required this.changePercent,
     required this.high52,
     required this.low52,
+    this.logoId,
     this.currency = 'EGP',
     required this.lastUpdated,
     this.priceDate,

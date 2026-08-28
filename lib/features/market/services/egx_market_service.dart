@@ -24,6 +24,22 @@ class EgxMarketService {
     if (_originOverride != _fallbackOrigin) '$_fallbackOrigin/api/quote',
   ];
 
+  /// Where a logo lives, or null when there is none to ask for.
+  ///
+  /// OUR route, never `s3-symbol-logo.tradingview.com` directly — the same rule
+  /// the price paths keep, and for a stronger reason than symmetry: the browser
+  /// half of this product cannot reach the CDN without a CSP entry and a
+  /// privacy-policy clause naming a third party. One endpoint for both surfaces
+  /// keeps that list unchanged. See site/app/api/logo/route.ts.
+  static String? logoUrl(String? logoId) {
+    final slug = TradingViewService.slug(logoId);
+    if (slug == null) return null;
+    final origin = _originOverride.isNotEmpty ? _originOverride : _fallbackOrigin;
+    // Slashed: `trailingSlash: true` on the site answers 308 otherwise, and one
+    // redirect per row is a real cost on a 293-row list.
+    return '$origin/api/logo/?id=$slug';
+  }
+
   static List<String> get _boardEndpoints => [
     if (_originOverride.isNotEmpty) '$_originOverride/api/stocks',
     if (_originOverride != _fallbackOrigin) '$_fallbackOrigin/api/stocks',
@@ -155,6 +171,10 @@ class EgxMarketService {
             changePercent: changePct.isFinite ? changePct : 0.0,
             high52: price,
             low52: price,
+            // Validated by the route's own parser before it was serialised, and
+            // again by [TradingViewService.slug] here — the app must not trust
+            // a URL fragment because it arrived over its own endpoint.
+            logoId: TradingViewService.slug(row['logoId']),
             lastUpdated: now,
           ),
         );

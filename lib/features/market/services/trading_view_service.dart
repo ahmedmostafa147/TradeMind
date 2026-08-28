@@ -33,11 +33,26 @@ class TradingViewService {
       'close',
       'change',
       'volume',
-      'update_mode'
+      'update_mode',
+      // APPENDED, never inserted — both parsers read cells BY INDEX.
+      'logoid'
     ],
     'sort': {'sortBy': 'volume', 'sortOrder': 'desc'},
     'range': [0, 300],
   };
+
+  /// A logo slug, or null.
+  ///
+  /// MIRROR OF `LOGO_ID` in site/lib/tradingview.ts, and validated here for the
+  /// same reason: the value ends up in a URL path. Measured against every slug
+  /// the board returns — all 284 are `[a-z0-9-]`, longest 64 characters.
+  static final RegExp _logoIdPattern = RegExp(r'^[a-z0-9][a-z0-9-]{0,79}$');
+
+  static String? slug(Object? value) {
+    if (value is! String) return null;
+    final trimmed = value.trim().toLowerCase();
+    return _logoIdPattern.hasMatch(trimmed) ? trimmed : null;
+  }
 
   /// Fetches all listed EGX stocks with live prices from TradingView.
   static Future<List<EgxStockInfo>> fetchBoard() async {
@@ -70,6 +85,7 @@ class TradingViewService {
         final description = (cells[1] as String?)?.trim();
         final close = (cells[2] as num?)?.toDouble();
         final changePct = (cells[3] as num?)?.toDouble() ?? 0.0;
+        final logoId = cells.length > 6 ? slug(cells[6]) : null;
 
         if (close == null || !close.isFinite || close <= 0) continue;
 
@@ -86,6 +102,7 @@ class TradingViewService {
             changePercent: changePct.isFinite ? changePct : 0.0,
             high52: close,
             low52: close,
+            logoId: logoId,
             lastUpdated: now,
           ),
         );
