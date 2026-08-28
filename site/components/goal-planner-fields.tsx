@@ -32,11 +32,19 @@ export function ModeSwitcher({
   mode: PlannerMode;
   onChange: (mode: PlannerMode) => void;
 }) {
+  // المقاس اللي بيقرّر هو عرض **الكارت**، مش عرض الشاشة.
+  //
+  // المخطّط ده بيتحطّ في عمودين مختلفين: عرض اللاندينج بيديه الصفحة كلها،
+  // وتبويب «الهدف» في الداشبورد بيديه كارت جوّه مساحة محدودة. بـ`sm:` كان
+  // القرار بيتاخد من عرض الشاشة، فعند 640–768 الشاشة بتقول «فيه مكان لصف»
+  // والكارت مفيهوش — اتقاس: عند كارت 470px الزرار الأول بيطلع برّه بـ16px
+  // والنص بيتقصّ من الناحيتين.
   return (
+    <div className="@container">
     <div
       role="radiogroup"
       aria-label="اتجاه الحساب"
-      className="flex flex-col gap-1 rounded-xl border border-border-default bg-surface-high p-1 text-xs sm:flex-row sm:text-sm"
+      className="flex flex-col gap-1 rounded-xl border border-border-default bg-surface-high p-1 text-xs @xl:flex-row @xl:text-sm"
     >
       <ModeButton
         active={mode === 'targetToMonthly'}
@@ -50,6 +58,7 @@ export function ModeSwitcher({
         icon={<WalletIcon className="size-4 shrink-0" />}
         label="هحطّ مبلغ شهري — هوصل لكام؟"
       />
+    </div>
     </div>
   );
 }
@@ -78,7 +87,13 @@ function ModeButton({
       }`}
     >
       {icon}
-      <span className="flex-1 sm:flex-none">{label}</span>
+      {/* SHRINKABLE, not rigid. `flex-none` pinned the label at its max-content
+          width, so a button narrower than the sentence overflowed instead of
+          wrapping — and a flex item cannot push its sibling out of the way, so
+          the two labels ran into each other and got clipped at both ends. The
+          container query above decides WHEN to stack; this decides that a
+          longer sentence can never clip, whatever the width. */}
+      <span className="min-w-0 flex-1 @xl:flex-initial">{label}</span>
     </button>
   );
 }
