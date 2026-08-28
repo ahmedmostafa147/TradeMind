@@ -1,9 +1,10 @@
-import 'package:egx_trade_journal/features/market/market_providers.dart';
+import 'package:egx_trade_journal/features/market/cubit/market_cubit.dart';
 import 'package:egx_trade_journal/features/market/models/egx_stock_info.dart';
 import 'package:egx_trade_journal/features/market/screens/stocks_screen.dart';
 import 'package:egx_trade_journal/features/market/services/egx_market_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:egx_trade_journal/shell/shell_cubit.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// «الأسهم» lists THE BOARD.
@@ -30,9 +31,17 @@ void main() {
 
   Future<void> pump(WidgetTester tester, List<EgxStockInfo> board) async {
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          tradingViewBoardProvider.overrideWith((ref) async => board),
+      MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (_) => MarketCubit(
+              fetchQuote: (_) async => null,
+              fetchBoard: () async => board,
+            ),
+          ),
+          // The screen's own AppBar carries «الإعدادات», which switches the
+          // shell's destination.
+          BlocProvider(create: (_) => ShellCubit()),
         ],
         child: const MaterialApp(
           home: Directionality(

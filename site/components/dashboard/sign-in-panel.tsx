@@ -27,7 +27,8 @@ const MIN_PASSWORD = 6;
 type Mode = 'in' | 'up' | 'reset';
 
 export function SignInPanel({ title, subtitle }: { title: string; subtitle: string }) {
-  const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resetPassword, redirectError } =
+    useAuth();
 
   const [mode, setMode] = useState<Mode>('in');
   const [name, setName] = useState('');
@@ -188,13 +189,18 @@ export function SignInPanel({ title, subtitle }: { title: string; subtitle: stri
         )}
 
         {/* role=alert so a screen reader announces the failure instead of
-            leaving the user to wonder why nothing happened. */}
-        {error && (
+            leaving the user to wonder why nothing happened.
+            
+            `redirectError` is the same alert for a failure that happened on
+            another page load — the Google route sends the browser away, so a
+            rejection comes back here rather than to whoever pressed the
+            button. Without it the user returns to a form that looks untouched. */}
+        {(error ?? redirectError) != null && (
           <p
             role="alert"
             className="rounded-md border border-loss-border bg-loss-surface p-3 text-sm font-semibold text-loss"
           >
-            {error}
+            {error ?? authErrorMessage(redirectError)}
           </p>
         )}
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'home_shell.dart';
-import '../billing/billing_providers.dart';
+import '../billing/cubit/billing_cubit.dart';
 import '../billing/entitlements.dart';
 import '../billing/widgets/paywall.dart';
 import '../core/theme.dart';
@@ -15,12 +15,12 @@ import '../trades/widgets/export_csv_view.dart';
 import '../trades/widgets/quick_add_trade_sheet.dart';
 import '../watchlist/widgets/watchlist_view.dart';
 
-class TradesHubScreen extends ConsumerWidget {
+class TradesHubScreen extends StatelessWidget {
   const TradesHubScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final entitlement = ref.watch(entitlementProvider);
+  Widget build(BuildContext context) {
+    final entitlement = context.watch<BillingCubit>().state.entitlement;
     return DefaultTabController(
       length: 7,
       child: Scaffold(

@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/state/app_state.dart';
 
 import '../../core/formatters.dart';
 import '../../core/theme.dart';
 import '../../core/widgets/risk_warning.dart';
-import '../dashboard_providers.dart';
 
 /// «سيناريوهات المحفظة» — what the open book returns at both extremes, and
 /// whether any single winner is big enough to carry the rest.
 ///
 /// Hidden entirely when nothing is open: a scenario card over an empty book
 /// would be a row of dashes.
-class PortfolioScenariosCard extends ConsumerWidget {
+class PortfolioScenariosCard extends StatelessWidget {
   const PortfolioScenariosCard({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scenarios = ref.watch(portfolioScenariosProvider);
+  Widget build(BuildContext context) {
+    final scenarios = context.portfolioScenarios;
     if (scenarios.openCount == 0) return const SizedBox.shrink();
 
     final theme = Theme.of(context);

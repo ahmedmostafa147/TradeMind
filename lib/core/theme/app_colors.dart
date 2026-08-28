@@ -12,9 +12,10 @@ import 'palette.dart';
 /// `context.resultColors`, which are brightness-correct; these getters read the
 /// *platform* brightness and so are wrong inside a nested Theme.
 ///
-/// Holds NO theme state. Theme mode lives in Hive behind `themeModeProvider`,
-/// which is what MaterialApp reads — a second copy here would be a rival source
-/// of truth for the same setting and the two could drift apart.
+/// Holds NO theme state. The chosen mode lives on the device behind
+/// `DevicePrefsCubit`, which is what MaterialApp reads — a second copy here
+/// would be a rival source of truth for the same setting and the two could
+/// drift apart.
 class AppColors {
   const AppColors._();
 

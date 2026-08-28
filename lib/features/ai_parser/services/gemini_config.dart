@@ -2,9 +2,10 @@
 ///
 /// The key can come from either place, checked in this order:
 ///
-/// 1. **Settings screen** — pasted at runtime and stored in Hive. Nothing to
-///    rebuild, which is why this exists: a `--dart-define`-only key meant that
-///    simply running the app left the AI permanently reporting "not set up".
+/// 1. **Settings screen** — pasted at runtime and kept on the device, never in
+///    Firestore (see DevicePreferences). Nothing to rebuild, which is why this
+///    exists: a `--dart-define`-only key meant that simply running the app left
+///    the AI permanently reporting "not set up".
 /// 2. **`--dart-define=GEMINI_API_KEY=...`** — baked in at build time, useful
 ///    for a release build.
 ///

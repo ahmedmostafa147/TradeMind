@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../core/preferences/device_prefs_cubit.dart';
+import '../../core/state/app_state.dart';
+import '../cubit/settings_cubit.dart';
 
 import '../../core/formatters.dart';
 import '../../core/theme.dart';
-import '../../features/onboarding/providers/onboarding_providers.dart';
-import '../settings_providers.dart';
 
 /// The live max-loss readout card.
 class MaxLossCard extends StatelessWidget {
@@ -58,22 +60,22 @@ class MaxLossCard extends StatelessWidget {
 }
 
 /// Default trade percentages tiles for smart builder.
-class DefaultPercentTiles extends ConsumerStatefulWidget {
+class DefaultPercentTiles extends StatefulWidget {
   const DefaultPercentTiles({super.key});
 
   @override
-  ConsumerState<DefaultPercentTiles> createState() =>
+  State<DefaultPercentTiles> createState() =>
       _DefaultPercentTilesState();
 }
 
-class _DefaultPercentTilesState extends ConsumerState<DefaultPercentTiles> {
+class _DefaultPercentTilesState extends State<DefaultPercentTiles> {
   late final TextEditingController _takeProfitController;
   late final TextEditingController _stopLossController;
 
   @override
   void initState() {
     super.initState();
-    final settings = ref.read(settingsProvider);
+    final settings = context.read<SettingsCubit>().requireSettings;
     _takeProfitController = TextEditingController(
       text: (settings.defaultTakeProfitPercent * 100).toStringAsFixed(1),
     );
@@ -91,7 +93,7 @@ class _DefaultPercentTilesState extends ConsumerState<DefaultPercentTiles> {
 
   @override
   Widget build(BuildContext context) {
-    final notifier = ref.read(settingsProvider.notifier);
+    final notifier = context.read<SettingsCubit>();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,13 +161,13 @@ class _PercentField extends StatelessWidget {
   }
 }
 
-class BehaviourTiles extends ConsumerWidget {
+class BehaviourTiles extends StatelessWidget {
   const BehaviourTiles({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(settingsProvider);
-    final notifier = ref.read(settingsProvider.notifier);
+  Widget build(BuildContext context) {
+    final settings = context.settings;
+    final notifier = context.read<SettingsCubit>();
 
     return Column(
       children: [
@@ -240,12 +242,12 @@ class _WaitingThresholdFieldState extends State<_WaitingThresholdField> {
   }
 }
 
-class ThemeModeTile extends ConsumerWidget {
+class ThemeModeTile extends StatelessWidget {
   const ThemeModeTile({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final mode = ref.watch(themeModeProvider);
+  Widget build(BuildContext context) {
+    final mode = context.watch<DevicePrefsCubit>().state.themeMode;
     return ListTile(
       contentPadding: EdgeInsets.zero,
       title: const Text('المظهر'),
@@ -272,7 +274,7 @@ class ThemeModeTile extends ConsumerWidget {
         selected: {mode},
         showSelectedIcon: false,
         onSelectionChanged: (selection) =>
-            ref.read(themeModeProvider.notifier).set(selection.first),
+            context.read<DevicePrefsCubit>().setThemeMode(selection.first),
       ),
     );
   }
@@ -283,14 +285,14 @@ class ThemeModeTile extends ConsumerWidget {
 /// Exists because the key used to be compile-time only: without a
 /// `--dart-define` at build time the AI screen could do nothing but report that
 /// it was not configured, which is what it did on every normal `flutter run`.
-class GeminiKeyTile extends ConsumerStatefulWidget {
+class GeminiKeyTile extends StatefulWidget {
   const GeminiKeyTile({super.key});
 
   @override
-  ConsumerState<GeminiKeyTile> createState() => _GeminiKeyTileState();
+  State<GeminiKeyTile> createState() => _GeminiKeyTileState();
 }
 
-class _GeminiKeyTileState extends ConsumerState<GeminiKeyTile> {
+class _GeminiKeyTileState extends State<GeminiKeyTile> {
   final _controller = TextEditingController();
   bool _obscure = true;
   bool _seeded = false;
@@ -304,7 +306,7 @@ class _GeminiKeyTileState extends ConsumerState<GeminiKeyTile> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final stored = ref.watch(geminiKeyProvider);
+    final stored = context.watch<DevicePrefsCubit>().state.geminiKey;
 
     // Seeded once. Re-syncing on every build would fight the user's cursor.
     if (!_seeded) {
@@ -354,9 +356,9 @@ class _GeminiKeyTileState extends ConsumerState<GeminiKeyTile> {
             children: [
               FilledButton(
                 onPressed: () async {
-                  await ref
-                      .read(geminiKeyProvider.notifier)
-                      .set(_controller.text);
+                  await context.read<DevicePrefsCubit>().setGeminiKey(
+                    _controller.text,
+                  );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('تم حفظ المفتاح')),
@@ -370,7 +372,7 @@ class _GeminiKeyTileState extends ConsumerState<GeminiKeyTile> {
                 TextButton(
                   onPressed: () async {
                     _controller.clear();
-                    await ref.read(geminiKeyProvider.notifier).set('');
+                    await context.read<DevicePrefsCubit>().setGeminiKey('');
                   },
                   child: const Text('مسح'),
                 ),
@@ -406,11 +408,11 @@ class _GeminiKeyTileState extends ConsumerState<GeminiKeyTile> {
 /// they are code that executes exactly once per install and can never be seen
 /// again — which is how intro flows quietly rot into stating things the app no
 /// longer does, with nobody noticing because nobody can look.
-class ReplayIntroTile extends ConsumerWidget {
+class ReplayIntroTile extends StatelessWidget {
   const ReplayIntroTile({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.slideshow_outlined),
@@ -420,7 +422,7 @@ class ReplayIntroTile extends ConsumerWidget {
       onTap: () async {
         // The gate watches this flag, so flipping it swaps the whole subtree —
         // no navigation, and nothing left underneath to pop back to.
-        await ref.read(onboardingSeenProvider.notifier).reset();
+        await context.read<DevicePrefsCubit>().resetOnboarding();
       },
     );
   }

@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../settings/settings_providers.dart';
+import '../../settings/cubit/settings_cubit.dart';
+import '../../watchlist/cubit/watchlist_cubit.dart';
+
 import '../../watchlist/watchlist_item.dart';
-import '../../watchlist/watchlist_providers.dart';
 
 Future<void> deleteWatchlistItem(
   BuildContext context,
-  WidgetRef ref,
   WatchlistItem item,
 ) async {
-  final confirmed = !ref.read(settingsProvider).enableConfirmations ||
+  // Read before the dialog: `context` is not safe to use across an await.
+  final watchlist = context.read<WatchlistCubit>();
+  final confirmed =
+      !context.read<SettingsCubit>().requireSettings.enableConfirmations ||
       await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
@@ -30,6 +33,6 @@ Future<void> deleteWatchlistItem(
           ) ==
           true;
   if (confirmed) {
-    await ref.read(watchlistProvider.notifier).remove(item.id);
+    await watchlist.delete(item.id);
   }
 }

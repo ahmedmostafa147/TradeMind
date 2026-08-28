@@ -1,127 +1,54 @@
-import 'dart:io';
-
-import 'package:egx_trade_journal/app.dart';
-import 'package:egx_trade_journal/billing/billing_providers.dart';
-import 'package:egx_trade_journal/billing/entitlements.dart';
-import 'package:egx_trade_journal/core/hive_keys.dart';
+import 'package:egx_trade_journal/settings/settings.dart';
 import 'package:egx_trade_journal/shell/home_shell.dart';
-import 'package:egx_trade_journal/features/auth/providers/auth_providers.dart';
-import 'package:egx_trade_journal/features/auth/repositories/auth_repository.dart';
-import 'package:egx_trade_journal/features/market/market_providers.dart';
-import 'package:egx_trade_journal/settings/settings_providers.dart';
 import 'package:egx_trade_journal/trades/checklist.dart';
 import 'package:egx_trade_journal/trades/timeline_entry.dart';
-import 'package:egx_trade_journal/trades/timeline_entry_adapter.dart';
 import 'package:egx_trade_journal/trades/trade.dart';
-import 'package:egx_trade_journal/trades/trade_adapter.dart';
-import 'package:egx_trade_journal/trades/trades_providers.dart';
 import 'package:egx_trade_journal/trades/widgets/quick_add_trade_sheet.dart';
-import 'package:egx_trade_journal/watchlist/watchlist_item.dart';
-import 'package:egx_trade_journal/watchlist/watchlist_item_adapter.dart';
-import 'package:egx_trade_journal/watchlist/watchlist_providers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_ce/hive.dart';
+
+import 'support/app_harness.dart';
 
 /// Drives the section 9 acceptance criteria through the real widget tree, so
 /// the numbers are verified as the user actually sees them — after formatting,
 /// not just as raw doubles.
-/// Grants an active subscription for the widget tests. Named rather than a
-/// closure because AsyncNotifierProvider wants a constructor.
-class _ProTrial extends AsyncNotifier<Entitlement> implements BillingController {
-  @override
-  Future<Entitlement> build() async => const Entitlement(plan: Plan.pro);
-
-  @override
-  Future<void> refresh() async {}
-}
-
 void main() {
-  late Directory tempDir;
-  late Box settingsBox;
-  late Box<Trade> tradesBox;
-  late Box<WatchlistItem> watchlistBox;
-  late Box authBox;
+  late AppHarness app;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('egx_acceptance');
-    Hive.init(tempDir.path);
-    if (!Hive.isAdapterRegistered(kTimelineEntryTypeId)) {
-      Hive.registerAdapter(TimelineEntryAdapter());
-    }
-    if (!Hive.isAdapterRegistered(kTradeTypeId)) {
-      Hive.registerAdapter(TradeAdapter());
-    }
-    if (!Hive.isAdapterRegistered(kWatchlistItemTypeId)) {
-      Hive.registerAdapter(WatchlistItemAdapter());
-    }
-    settingsBox = await Hive.openBox(kSettingsBox);
-    // Past the intro. Every test in this file exercises the app a returning
-    // user sees, and OnboardingGate sits in front of AuthGate — without this
-    // flag `pumpApp` lands on slide one and every finder below misses.
-    await settingsBox.put(kOnboardingSeenKey, true);
-    tradesBox = await Hive.openBox<Trade>(kTradesBox);
-    watchlistBox = await Hive.openBox<WatchlistItem>(kWatchlistBox);
-    authBox = await Hive.openBox(kAuthBox);
-    // A signed-in session. The gate is mandatory now, so without one every
-    // test here would render the auth screen instead of the journal it is
-    // about. Sign-in itself is covered by auth_gate_test and
-    // auth_repository_test.
-    await authBox.put('current_user', {
-      'id': 'uid-test',
-      'name': 'أحمد',
-      'email': 'a@b.com',
-      'isLoggedIn': true,
-    });
+    // Past the intro, and signed in: the gate is mandatory, so without a
+    // session every test here would render the auth screen instead of the
+    // journal it is about. Sign-in itself is covered by auth_gate_test.
+    //
+    // The harness grants a live trial, and that is deliberate: these tests are
+    // about the journal, not billing. Without one, the real cubit resolves to
+    // free — correctly, with no Firebase app — and «الأداء» and «التحليلات»
+    // would render the paywall over the figures each test asserts on. Gating is
+    // covered by entitlements_test.dart and paywall_gate_test.dart.
+    app = await AppHarness.create();
   });
 
-  tearDown(() async {
-    // Just close, then drop the directory. Hive.deleteFromDisk() hangs here:
-    // the widget tree still holds these boxes when tearDown runs, and each test
-    // gets its own temp directory anyway, so there is nothing to clean up
-    // beyond removing it.
-    await Hive.close();
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-  });
+  tearDown(() => app.dispose());
 
-  /// Hive writes MUST go through runAsync inside testWidgets.
+  /// THE runAsync WRAPPER IS GONE.
   ///
-  /// A testWidgets body runs in a fake-async zone, where real file I/O never
-  /// completes — `await box.put(...)` simply hangs forever, and the only
-  /// symptom is the whole test timing out ten minutes later with no useful
-  /// message. runAsync escapes to the real clock for the duration.
-  Future<void> seed(WidgetTester tester, Future<void> Function() write) async {
-    await tester.runAsync(write);
-  }
+  /// Hive writes were real file I/O, which never completes inside a
+  /// testWidgets fake-async zone — `await box.put(...)` simply hung, and the
+  /// only symptom was the whole test timing out ten minutes later with no
+  /// useful message. The in-memory Firestore completes on a microtask. The
+  /// helper stays because the seeds still have to land BEFORE the app is
+  /// pumped.
+  Future<void> seed(WidgetTester tester, Future<void> Function() write) =>
+      write();
 
-  Future<void> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          settingsBoxProvider.overrideWithValue(settingsBox),
-          tradesBoxProvider.overrideWithValue(tradesBox),
-          watchlistBoxProvider.overrideWithValue(watchlistBox),
-          // Mirrors main(): both auth providers throw until overridden, and
-          // the settings screen watches them, so the whole app fails to build
-          // without this pair.
-          authBoxProvider.overrideWithValue(authBox),
-          authProvider.overrideWith(() => AuthRepository(authBox)),
-          // Keep the open-trade live-price lookup offline and instant, so no
-          // test hits the network or spins on the loading indicator.
-          livePriceProvider.overrideWith((ref, symbol) async => null),
-          // FULL ACCESS, because these tests are about the journal and not
-          // about billing. Without Firebase the controller resolves to `free`
-          // — correctly — and «الأداء» and «التحليلات» then render the paywall
-          // instead of the figures each test is asserting on. Gating is covered
-          // by entitlements_test.dart, which needs no widgets at all.
-          billingProvider.overrideWith(_ProTrial.new),
-        ],
-        child: const EgxJournalApp(),
-      ),
-    );
-    await tester.pumpAndSettle();
-  }
+  /// Signature matches the Hive box call this replaced. The key is ignored:
+  /// Firestore keys the document by the record's own id, which is what the box
+  /// key always was.
+  Future<void> putTrade(String _, Trade trade) => app.seedTrades([trade]);
+
+  Future<void> pumpApp(WidgetTester tester) => app.pumpApp(tester);
+
+  Future<bool> journalIsEmpty() async => (await app.storedTrades()).isEmpty;
 
   // The manual calculator was merged into the smart builder: the stop is now
   // entered as an absolute price by switching the builder to "سعر" mode. These
@@ -357,8 +284,9 @@ void main() {
     ) async {
       // capital 10,000 at 1% — the case that exposes both float bugs.
       await seed(tester, () async {
-        await settingsBox.put(kCapitalKey, 10000.0);
-        await settingsBox.put(kMaxRiskKey, 0.01);
+        await app.seedSettings(
+          const Settings(capital: 10000, maxRiskPercent: 0.01),
+        );
       });
       await pumpApp(tester);
       await openManualCalculator(tester);
@@ -406,7 +334,7 @@ void main() {
       int quantity = 680,
     }) async {
       await seed(tester, () async {
-        await tradesBox.put(
+        await putTrade(
           'fixture',
           Trade(
             id: 'fixture',
@@ -495,7 +423,7 @@ void main() {
   group('trade detail page', () {
     Future<void> seedRich(WidgetTester tester) async {
       await seed(tester, () async {
-        await tradesBox.put(
+        await putTrade(
           'rich',
           Trade(
             id: 'rich',
@@ -716,7 +644,7 @@ void main() {
       findsNothing,
       reason: 'validation runs before the checklist, so the save never starts',
     );
-    expect(tradesBox.isEmpty, isTrue, reason: 'nothing half-saved');
+    expect(await journalIsEmpty(), isTrue, reason: 'nothing half-saved');
   });
 
   testWidgets('the checklist sheet appears before saving when enabled', (
@@ -778,12 +706,13 @@ void main() {
       findsWidgets,
       reason: 'still on the form, nothing saved',
     );
-    expect(tradesBox.isEmpty, isTrue, reason: 'backing out saved nothing');
+    expect(await journalIsEmpty(), isTrue, reason: 'backing out saved nothing');
   });
 
   testWidgets('the checklist can be turned off in settings', (tester) async {
     await seed(tester, () async {
-      await settingsBox.put(kEnableChecklistKey, false);
+      // A device preference, not an account field — see DevicePreferences.
+      await app.device.setEnableChecklist(false);
     });
     await pumpApp(tester);
     await openTab(tester, 'الإعدادات');
@@ -815,7 +744,7 @@ void main() {
 
   testWidgets('all rendered numbers use Western digits', (tester) async {
     await seed(tester, () async {
-      await tradesBox.put(
+      await putTrade(
         'fixture',
         Trade(
           id: 'fixture',

@@ -17,13 +17,12 @@ import type { Trade } from '@/lib/trade';
  * Applied only to open trades carrying no usable target or stop of their own.
  *
  * These are the app's `Settings.fallbackTakeProfitPercent` and
- * `fallbackStopLossPercent`. THE APP LETS THE USER CHANGE THEM AND THE WEB DOES
- * NOT: `users/{uid}/settings/risk` carries capital, the risk ceiling and the
- * waiting threshold, and nothing else, so there is no synced value to read
- * here. Hardcoding the same defaults keeps the two surfaces agreeing for
- * everybody who never changed them, and is honestly wrong only for someone who
- * did — which is the smaller error, and the one that disappears the day those
- * two fields join the settings document.
+ * `fallbackStopLossPercent`, and they are now only the FALLBACK: the two
+ * percentages joined `users/{uid}/settings/risk` when the app moved online, so
+ * callers pass the account's own values and both surfaces score a trade the
+ * same way. They were hardcoded here for as long as the app kept them on the
+ * device — which was honestly wrong for anybody who changed a default, and gave
+ * the same trade two verdicts.
  */
 export const FALLBACK_TAKE_PROFIT_PERCENT = 0.05;
 export const FALLBACK_STOP_LOSS_PERCENT = 0.02;

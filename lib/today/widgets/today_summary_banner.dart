@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/state/app_state.dart';
 
 import '../../core/calc/trade_metrics.dart';
 import '../../core/formatters.dart';
 import '../../core/theme.dart';
-import '../../settings/settings_providers.dart';
-import '../../trades/trades_providers.dart';
 
 /// Monthly PnL & Win Rate summary banner for Today's decision view.
-class TodaySummaryBanner extends ConsumerWidget {
+class TodaySummaryBanner extends StatelessWidget {
   const TodaySummaryBanner({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.resultColors;
-    final trades = ref.watch(tradesProvider);
-    final settings = ref.watch(settingsProvider);
+    final trades = context.trades;
+    final settings = context.settings;
 
     final now = DateTime.now();
     final thisMonthTrades = trades.where((t) {

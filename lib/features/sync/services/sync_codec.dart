@@ -135,6 +135,12 @@ class SyncCodec {
     'capital': s.capital,
     'maxRiskPercent': s.maxRiskPercent,
     'waitingThresholdDays': s.waitingThresholdDays,
+    // Added with the move to a single store. CLAUDE.md §5 recorded the cost of
+    // leaving them out: the website hard-coded 5% and 2% because there was
+    // nothing synced to read, so the two surfaces gave the same trade two
+    // different verdicts for anybody who changed a default.
+    'defaultTakeProfitPercent': s.defaultTakeProfitPercent,
+    'defaultStopLossPercent': s.defaultStopLossPercent,
   };
 
   /// Applies a remote settings document onto [onto], field by field.
@@ -153,6 +159,8 @@ class SyncCodec {
     // A whole number can arrive as either `int` or `double` depending on which
     // SDK wrote it, so it is read as `num` and rounded rather than cast.
     final waiting = _toDouble(map['waitingThresholdDays']);
+    final takeProfit = _toDouble(map['defaultTakeProfitPercent']);
+    final stopLoss = _toDouble(map['defaultStopLossPercent']);
 
     return onto.copyWith(
       capital: (capital != null && capital.isFinite && capital > 0)
@@ -163,6 +171,14 @@ class SyncCodec {
           : null,
       waitingThresholdDays: (waiting != null && waiting.isFinite && waiting >= 1)
           ? waiting.round()
+          : null,
+      defaultTakeProfitPercent:
+          (takeProfit != null && takeProfit.isFinite && takeProfit > 0 && takeProfit <= 1)
+          ? takeProfit
+          : null,
+      defaultStopLossPercent:
+          (stopLoss != null && stopLoss.isFinite && stopLoss > 0 && stopLoss < 1)
+          ? stopLoss
           : null,
     );
   }

@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../trades/cubit/trades_cubit.dart';
+import '../cubit/settings_cubit.dart';
 
 import '../../core/utils/csv_export_helper.dart';
-import '../../settings/settings_providers.dart';
-import '../../trades/trades_providers.dart';
 
-class ExportCsvTile extends ConsumerWidget {
+class ExportCsvTile extends StatelessWidget {
   const ExportCsvTile({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return ListTile(
       leading: const Icon(Icons.download_rounded),
       title: const Text('تصدير الصفقات (CSV)'),
       subtitle: const Text('احتفظ بنسخة من جميع صفقاتك في ملف Excel/CSV'),
       onTap: () async {
-        final trades = ref.read(tradesProvider);
-        final settings = ref.read(settingsProvider);
+        final trades = context.read<TradesCubit>().trades;
+        final settings = context.read<SettingsCubit>().requireSettings;
         if (trades.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('لا توجد صفقات للتصدير.')),

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../providers/auth_providers.dart';
+import '../cubit/auth_cubit.dart';
 import '../services/auth_exception.dart';
 import '../services/firebase_auth_service.dart';
 
 /// The sign-in / sign-up form, shared by the full-screen gate and the settings
 /// sheet so the validation rules and error handling exist in exactly one place.
-class AuthForm extends ConsumerStatefulWidget {
+class AuthForm extends StatefulWidget {
   /// Called after a verified sign-in. The two hosts do different things —
-  /// the sheet pops itself, the gate lets its provider swap the screen.
+  /// the sheet pops itself, the gate lets the auth stream swap the screen.
   final VoidCallback? onSuccess;
 
   /// Rendered under the buttons. The gate puts "continue as guest" here.
@@ -18,10 +18,10 @@ class AuthForm extends ConsumerStatefulWidget {
   const AuthForm({super.key, this.onSuccess, this.footer});
 
   @override
-  ConsumerState<AuthForm> createState() => _AuthFormState();
+  State<AuthForm> createState() => _AuthFormState();
 }
 
-class _AuthFormState extends ConsumerState<AuthForm> {
+class _AuthFormState extends State<AuthForm> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -85,11 +85,11 @@ class _AuthFormState extends ConsumerState<AuthForm> {
     });
 
     try {
-      final notifier = ref.read(authProvider.notifier);
+      final auth = context.read<AuthCubit>();
       if (_isSignUp) {
-        await notifier.signUp(name: name, email: email, password: password);
+        await auth.signUp(name: name, email: email, password: password);
       } else {
-        await notifier.login(
+        await auth.login(
           email: email,
           password: password,
           nameFallback: name.isNotEmpty ? name : null,
@@ -136,7 +136,7 @@ class _AuthFormState extends ConsumerState<AuthForm> {
         'الوارد و«السبام» كمان.';
 
     try {
-      await ref.read(authProvider.notifier).sendPasswordResetEmail(email);
+      await context.read<AuthCubit>().sendPasswordResetEmail(email);
       if (mounted) setState(() => _notice = sent);
     } on AuthException catch (e) {
       if (!mounted) return;
@@ -165,7 +165,7 @@ class _AuthFormState extends ConsumerState<AuthForm> {
     });
 
     try {
-      await ref.read(authProvider.notifier).loginWithGoogle();
+      await context.read<AuthCubit>().loginWithGoogle();
       if (mounted) widget.onSuccess?.call();
     } on AuthException catch (e) {
       // Backing out of the Google sheet is a choice, not an error, so it leaves

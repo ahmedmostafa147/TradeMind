@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/formatters.dart';
-import '../billing_providers.dart';
+import '../cubit/billing_cubit.dart';
 import '../entitlements.dart';
 
 /// «باقتك» in الإعدادات — the app's counterpart of the web's `PlanCard`.
@@ -12,23 +12,22 @@ import '../entitlements.dart';
 /// So a user could not answer «أنا على أنهي باقة» or «التجربة بتخلص إمتى»
 /// without hitting a locked screen first, while the browser answered both in
 /// the settings tab.
-class PlanCard extends ConsumerWidget {
+class PlanCard extends StatelessWidget {
   const PlanCard({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final entitlement = ref.watch(entitlementProvider);
-    // `maybeWhen`, not a value getter: while the probe is in flight there is
-    // nothing to report, and flashing the failure card at every launch would
-    // train the owner to ignore it.
-    final readable = ref
-        .watch(billingReadableProvider)
-        .maybeWhen(data: (value) => value, orElse: () => null);
+    final billing = context.watch<BillingCubit>().state;
+    final entitlement = billing.entitlement;
+    // Null while the read is in flight — the base state answers that way on
+    // purpose, because flashing the failure card at every launch would train
+    // the owner to ignore it.
+    final readable = billing.readable;
 
     // The one state worth interrupting for: the document cannot be read, so
     // this account — and every other — is being treated as free by a fallback
-    // rather than by a decision. See billingReadableProvider.
+    // rather than by a decision. See BillingCubit.
     if (readable == false) {
       return _Card(
         color: theme.colorScheme.errorContainer,

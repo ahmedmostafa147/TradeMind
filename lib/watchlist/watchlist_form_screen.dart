@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/formatters.dart';
+import 'cubit/watchlist_cubit.dart';
 import 'watchlist_item.dart';
-import 'watchlist_providers.dart';
 
-class WatchlistFormScreen extends ConsumerStatefulWidget {
+class WatchlistFormScreen extends StatefulWidget {
   final WatchlistItem? existing;
 
   const WatchlistFormScreen({super.key, this.existing});
 
   @override
-  ConsumerState<WatchlistFormScreen> createState() =>
+  State<WatchlistFormScreen> createState() =>
       _WatchlistFormScreenState();
 }
 
-class _WatchlistFormScreenState extends ConsumerState<WatchlistFormScreen> {
+class _WatchlistFormScreenState extends State<WatchlistFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _tickerController;
@@ -175,12 +175,8 @@ class _WatchlistFormScreenState extends ConsumerState<WatchlistFormScreen> {
           : _sourceController.text.trim(),
     );
 
-    final notifier = ref.read(watchlistProvider.notifier);
-    if (_isEditing) {
-      await notifier.update(item);
-    } else {
-      await notifier.add(item);
-    }
+    // Keyed by `item.id`, so add and edit are the same write.
+    await context.read<WatchlistCubit>().save(item);
     if (mounted) Navigator.of(context).pop();
   }
 }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../providers/onboarding_providers.dart';
+import '../../../core/preferences/device_prefs_cubit.dart';
+
 
 /// One slide of the intro.
 ///
@@ -54,14 +55,14 @@ const _slides = <_Slide>[
   ),
 ];
 
-class OnboardingScreen extends ConsumerStatefulWidget {
+class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+class _OnboardingScreenState extends State<OnboardingScreen> {
   final _controller = PageController();
   int _index = 0;
   bool _finishing = false;
@@ -79,7 +80,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // otherwise fire two writes and two rebuilds.
     if (_finishing) return;
     setState(() => _finishing = true);
-    await ref.read(onboardingSeenProvider.notifier).markSeen();
+    await context.read<DevicePrefsCubit>().markOnboardingSeen();
   }
 
   void _next() {

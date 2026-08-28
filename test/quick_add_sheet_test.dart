@@ -1,18 +1,9 @@
-import 'dart:io';
-
-import 'package:egx_trade_journal/core/hive_keys.dart';
 import 'package:egx_trade_journal/core/widgets/risk_warning.dart';
-import 'package:egx_trade_journal/features/market/market_providers.dart';
-import 'package:egx_trade_journal/settings/settings_providers.dart';
-import 'package:egx_trade_journal/trades/timeline_entry_adapter.dart';
-import 'package:egx_trade_journal/trades/trade.dart';
-import 'package:egx_trade_journal/trades/trade_adapter.dart';
-import 'package:egx_trade_journal/trades/trades_providers.dart';
 import 'package:egx_trade_journal/trades/widgets/quick_add_trade_sheet.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_ce/hive.dart';
+
+import 'support/app_harness.dart';
 
 /// Covers the quick-add sheet's sizing inputs and its layout under a keyboard.
 ///
@@ -23,27 +14,13 @@ import 'package:hive_ce/hive.dart';
 /// backed it, with a readout that showed the settings-wide loss budget under
 /// the label "المخاطرة" — the same figure for every trade, regardless of size.
 void main() {
-  late Directory tempDir;
-  late Box settingsBox;
-  late Box<Trade> tradesBox;
+  late AppHarness app;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('egx_quick_add');
-    Hive.init(tempDir.path);
-    if (!Hive.isAdapterRegistered(kTimelineEntryTypeId)) {
-      Hive.registerAdapter(TimelineEntryAdapter());
-    }
-    if (!Hive.isAdapterRegistered(kTradeTypeId)) {
-      Hive.registerAdapter(TradeAdapter());
-    }
-    settingsBox = await Hive.openBox(kSettingsBox);
-    tradesBox = await Hive.openBox<Trade>(kTradesBox);
+    app = await AppHarness.create();
   });
 
-  tearDown(() async {
-    await Hive.close();
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-  });
+  tearDown(() => app.dispose());
 
   /// Pumps the sheet alone at [size], so the keyboard-constrained height that
   /// produced the overflow can be reproduced deliberately.
@@ -55,27 +32,15 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
     }
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          settingsBoxProvider.overrideWithValue(settingsBox),
-          tradesBoxProvider.overrideWithValue(tradesBox),
-          // No network, no spinner: the quote badge is not what is under test.
-          livePriceProvider.overrideWith((ref, symbol) async => null),
-        ],
-        child: const MaterialApp(
-          home: Directionality(
-            textDirection: TextDirection.rtl,
-            child: Scaffold(
-              // Mirrors showModalBottomSheet(isScrollControlled: true), which
-              // hands the sheet the whole height and lets it size itself.
-              body: SingleChildScrollView(child: QuickAddTradeSheet()),
-            ),
-          ),
-        ),
+    // Mirrors showModalBottomSheet(isScrollControlled: true), which hands the
+    // sheet the whole height and lets it size itself. The harness keeps the
+    // quote badge offline, so no test spins on a price that never arrives.
+    await app.pump(
+      tester,
+      const Scaffold(
+        body: SingleChildScrollView(child: QuickAddTradeSheet()),
       ),
     );
-    await tester.pumpAndSettle();
   }
 
   Finder fieldWithLabel(String label) =>
@@ -266,15 +231,10 @@ void main() {
       await tester.enterText(budgetField(), '2000');
       await tester.pumpAndSettle();
 
-      await tester.runAsync(() async {
-        await tester.tap(
-          find.widgetWithText(FilledButton, 'حفظ الصفقة السريعة'),
-        );
-        await tester.pump();
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-      });
+      await tester.tap(find.widgetWithText(FilledButton, 'حفظ الصفقة السريعة'));
+      await tester.pumpAndSettle();
 
-      expect(tradesBox.values.single.quantity, 200);
+      expect((await app.storedTrades()).single.quantity, 200);
     });
   });
 
@@ -287,17 +247,12 @@ void main() {
     await tester.enterText(fieldWithLabel('عدد الأسهم'), '120');
     await tester.pumpAndSettle();
 
-    // The save awaits a Hive write, and real file I/O never completes inside
-    // testWidgets' fake-async zone — runAsync escapes to the real clock, the
-    // same reason the acceptance suite seeds through it.
-    await tester.runAsync(() async {
-      await tester.tap(find.widgetWithText(FilledButton, 'حفظ الصفقة السريعة'));
-      await tester.pump();
-      await Future<void>.delayed(const Duration(milliseconds: 200));
-    });
+    await tester.tap(find.widgetWithText(FilledButton, 'حفظ الصفقة السريعة'));
+    await tester.pumpAndSettle();
 
-    expect(tradesBox.length, 1);
-    final saved = tradesBox.values.first;
+    final stored = await app.storedTrades();
+    expect(stored, hasLength(1));
+    final saved = stored.first;
     expect(saved.ticker, 'COMI');
     expect(saved.quantity, 120, reason: 'not the 680 the risk rule allows');
   });

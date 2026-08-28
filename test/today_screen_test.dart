@@ -1,99 +1,51 @@
-import 'dart:io';
-
-import 'package:egx_trade_journal/app.dart';
-import 'package:egx_trade_journal/core/hive_keys.dart';
+import 'package:egx_trade_journal/core/app_clock.dart';
+import 'package:egx_trade_journal/settings/settings.dart';
 import 'package:egx_trade_journal/shell/home_shell.dart';
-import 'package:egx_trade_journal/features/auth/providers/auth_providers.dart';
-import 'package:egx_trade_journal/features/auth/repositories/auth_repository.dart';
-import 'package:egx_trade_journal/features/market/market_providers.dart';
-import 'package:egx_trade_journal/settings/settings_providers.dart';
-import 'package:egx_trade_journal/trades/timeline_entry_adapter.dart';
 import 'package:egx_trade_journal/trades/trade.dart';
-import 'package:egx_trade_journal/trades/trade_adapter.dart';
 import 'package:egx_trade_journal/trades/trade_status.dart';
-import 'package:egx_trade_journal/trades/trades_providers.dart';
-import 'package:egx_trade_journal/today/today_providers.dart';
 import 'package:egx_trade_journal/watchlist/watchlist_item.dart';
-import 'package:egx_trade_journal/watchlist/watchlist_item_adapter.dart';
-import 'package:egx_trade_journal/watchlist/watchlist_providers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_ce/hive.dart';
+
+import 'support/app_harness.dart';
 
 /// "Today" is pinned so the day-threshold sections are deterministic.
 final fixedToday = DateTime(2026, 6, 1);
 
 void main() {
-  late Directory tempDir;
-  late Box settingsBox;
-  late Box<Trade> tradesBox;
-  late Box<WatchlistItem> watchlistBox;
-  late Box authBox;
+  late AppHarness app;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('egx_today');
-    Hive.init(tempDir.path);
-    if (!Hive.isAdapterRegistered(kTimelineEntryTypeId)) {
-      Hive.registerAdapter(TimelineEntryAdapter());
-    }
-    if (!Hive.isAdapterRegistered(kTradeTypeId)) {
-      Hive.registerAdapter(TradeAdapter());
-    }
-    if (!Hive.isAdapterRegistered(kWatchlistItemTypeId)) {
-      Hive.registerAdapter(WatchlistItemAdapter());
-    }
-    settingsBox = await Hive.openBox(kSettingsBox);
-    // Past the intro. Every test in this file exercises the app a returning
-    // user sees, and OnboardingGate sits in front of AuthGate — without this
-    // flag `pumpApp` lands on slide one and every finder below misses.
-    await settingsBox.put(kOnboardingSeenKey, true);
-    tradesBox = await Hive.openBox<Trade>(kTradesBox);
-    watchlistBox = await Hive.openBox<WatchlistItem>(kWatchlistBox);
-    authBox = await Hive.openBox(kAuthBox);
-    // See acceptance_test: start past the first-run auth screen as a guest.
-    // A signed-in session. The gate is mandatory now, so without one every
-    // test here would render the auth screen instead of the journal it is
-    // about. Sign-in itself is covered by auth_gate_test and
-    // auth_repository_test.
-    await authBox.put('current_user', {
-      'id': 'uid-test',
-      'name': 'أحمد',
-      'email': 'a@b.com',
-      'isLoggedIn': true,
-    });
+    // Past the intro: every test here exercises the app a returning user sees,
+    // and OnboardingGate sits in front of AuthGate.
+    app = await AppHarness.create();
+    AppClock.nowOverride = () => fixedToday;
   });
 
   tearDown(() async {
-    await Hive.close();
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    AppClock.nowOverride = null;
+    await app.dispose();
   });
 
-  /// Hive writes must escape the fake-async zone or they never complete.
+  /// THE runAsync WRAPPER IS GONE.
+  ///
+  /// Hive writes were real file I/O, which never completes inside a
+  /// testWidgets fake-async zone, so every seed had to escape to the real
+  /// clock. The in-memory Firestore completes on a microtask. The helper is
+  /// kept so the tests below read the same, and because the seeds still have to
+  /// land BEFORE the app is pumped.
   Future<void> seed(WidgetTester tester, Future<void> Function() write) =>
-      tester.runAsync(write);
+      write();
 
-  Future<void> pumpApp(WidgetTester tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          settingsBoxProvider.overrideWithValue(settingsBox),
-          tradesBoxProvider.overrideWithValue(tradesBox),
-          watchlistBoxProvider.overrideWithValue(watchlistBox),
-          todayProvider.overrideWithValue(fixedToday),
-          // See acceptance_test: both auth providers throw until overridden.
-          authBoxProvider.overrideWithValue(authBox),
-          authProvider.overrideWith(() => AuthRepository(authBox)),
-          // Open-trade cards now show a live P&L that would otherwise hit the
-          // network and spin forever under pumpAndSettle. Pin it to "no price"
-          // so the tests stay offline and deterministic.
-          livePriceProvider.overrideWith((ref, symbol) async => null),
-        ],
-        child: const EgxJournalApp(),
-      ),
-    );
-    await tester.pumpAndSettle();
-  }
+  /// Signatures match the Hive box calls these replaced, so the seeds below
+  /// read unchanged. The key is ignored: Firestore keys the document by the
+  /// record's own id, which is what the box key always was.
+  Future<void> putTrade(String _, Trade trade) => app.seedTrades([trade]);
+
+  Future<void> putWatch(String _, WatchlistItem item) =>
+      app.seedWatchlist([item]);
+
+  Future<void> pumpApp(WidgetTester tester) => app.pumpApp(tester);
 
   Trade makeTrade({
     required String id,
@@ -209,8 +161,8 @@ void main() {
     tester,
   ) async {
     await seed(tester, () async {
-      await tradesBox.put('safe', makeTrade(id: 'safe', ticker: 'HRHO'));
-      await tradesBox.put(
+      await putTrade('safe', makeTrade(id: 'safe', ticker: 'HRHO'));
+      await putTrade(
         'risky',
         makeTrade(id: 'risky', ticker: 'SWDY', qty: 900),
       );
@@ -228,7 +180,7 @@ void main() {
 
   testWidgets('sections with no items are not rendered at all', (tester) async {
     await seed(tester, () async {
-      await tradesBox.put('a', makeTrade(id: 'a'));
+      await putTrade('a', makeTrade(id: 'a'));
     });
     await pumpApp(tester);
 
@@ -241,7 +193,7 @@ void main() {
 
   testWidgets('a stale open trade asks for a note', (tester) async {
     await seed(tester, () async {
-      await tradesBox.put(
+      await putTrade(
         'stale',
         makeTrade(
           id: 'stale',
@@ -264,7 +216,7 @@ void main() {
     tester,
   ) async {
     await seed(tester, () async {
-      await tradesBox.put(
+      await putTrade(
         'old',
         makeTrade(
           id: 'old',
@@ -282,7 +234,7 @@ void main() {
     tester,
   ) async {
     await seed(tester, () async {
-      await tradesBox.put(
+      await putTrade(
         'p1',
         makeTrade(id: 'p1', status: TradeStatus.planned, qty: 0),
       );
@@ -299,7 +251,7 @@ void main() {
     tester,
   ) async {
     await seed(tester, () async {
-      await tradesBox.put(
+      await putTrade(
         'c',
         makeTrade(id: 'c', exit: 11.20, exitDate: fixedToday, notes: 'الدرس'),
       );
@@ -333,7 +285,7 @@ void main() {
 
   testWidgets('a closed trade with no lesson asks for one', (tester) async {
     await seed(tester, () async {
-      await tradesBox.put(
+      await putTrade(
         'c',
         makeTrade(id: 'c', exit: 11.20, exitDate: fixedToday),
       );
@@ -349,13 +301,13 @@ void main() {
 
   testWidgets('the summary card counts every bucket', (tester) async {
     await seed(tester, () async {
-      await tradesBox.put('o1', makeTrade(id: 'o1'));
-      await tradesBox.put('o2', makeTrade(id: 'o2', qty: 900));
-      await tradesBox.put(
+      await putTrade('o1', makeTrade(id: 'o1'));
+      await putTrade('o2', makeTrade(id: 'o2', qty: 900));
+      await putTrade(
         'p1',
         makeTrade(id: 'p1', status: TradeStatus.planned, qty: 0),
       );
-      await tradesBox.put(
+      await putTrade(
         'c1',
         makeTrade(id: 'c1', exit: 11.20, exitDate: fixedToday, notes: 'x'),
       );
@@ -371,7 +323,7 @@ void main() {
 
   testWidgets('watchlist items appear sorted by priority', (tester) async {
     await seed(tester, () async {
-      await watchlistBox.put(
+      await putWatch(
         'low',
         WatchlistItem(
           id: 'low',
@@ -383,7 +335,7 @@ void main() {
           dateAdded: fixedToday,
         ),
       );
-      await watchlistBox.put(
+      await putWatch(
         'high',
         WatchlistItem(
           id: 'high',
@@ -410,7 +362,7 @@ void main() {
     tester,
   ) async {
     await seed(tester, () async {
-      await watchlistBox.put(
+      await putWatch(
         'w',
         WatchlistItem(
           id: 'w',
@@ -431,7 +383,7 @@ void main() {
 
   testWidgets('cancelled ideas produce no tasks at all', (tester) async {
     await seed(tester, () async {
-      await tradesBox.put(
+      await putTrade(
         'x',
         makeTrade(id: 'x', status: TradeStatus.cancelled, qty: 0),
       );
@@ -443,8 +395,8 @@ void main() {
 
   testWidgets('the waiting threshold is read from settings', (tester) async {
     await seed(tester, () async {
-      await settingsBox.put(kWaitingThresholdKey, 5);
-      await tradesBox.put(
+      await app.seedSettings(const Settings(waitingThresholdDays: 5));
+      await putTrade(
         'a',
         makeTrade(
           id: 'a',
@@ -461,8 +413,8 @@ void main() {
 
   testWidgets('every number on the screen uses Western digits', (tester) async {
     await seed(tester, () async {
-      await tradesBox.put('o', makeTrade(id: 'o', qty: 900));
-      await tradesBox.put(
+      await putTrade('o', makeTrade(id: 'o', qty: 900));
+      await putTrade(
         'c',
         makeTrade(id: 'c', exit: 11.20, exitDate: fixedToday, notes: 'x'),
       );

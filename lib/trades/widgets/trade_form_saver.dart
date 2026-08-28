@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../settings/cubit/settings_cubit.dart';
+import '../cubit/trades_cubit.dart';
 
 import '../../core/formatters.dart';
-import '../../settings/settings_providers.dart';
 import '../screenshot_store.dart';
 import '../timeline_entry.dart';
 import '../trade.dart';
 import '../trade_status.dart';
-import '../trades_providers.dart';
 import 'checklist_sheet.dart';
 
 class TradeFormSaver {
   static Future<void> saveTrade({
     required BuildContext context,
-    required WidgetRef ref,
     required Trade? existing,
     required GlobalKey<FormState> formKey,
     required DateTime entryDate,
@@ -36,6 +36,10 @@ class TradeFormSaver {
     required List<String> unsavedScreenshots,
     required ScreenshotStore store,
   }) async {
+    // Read up front: the screenshot cleanup below awaits, and `context` is not
+    // safe to use once it has.
+    final trades = context.read<TradesCubit>();
+
     final isExecuted = status.isExecuted;
     final typedExitPrice = isExecuted ? parseNumber(exitPriceText ?? '') : null;
 
@@ -83,7 +87,7 @@ class TradeFormSaver {
         ? TradeStatus.closed
         : status;
 
-    final settings = ref.read(settingsProvider);
+    final settings = context.read<SettingsCubit>().requireSettings;
     var updatedChecklist = List<String>.from(checklist);
 
     if (settings.enableChecklist && status != TradeStatus.cancelled) {
@@ -123,12 +127,10 @@ class TradeFormSaver {
       if (!screenshots.contains(path)) await store.delete(path);
     }
 
-    final notifier = ref.read(tradesProvider.notifier);
-    if (existing != null) {
-      await notifier.update(trade);
-    } else {
-      await notifier.add(trade);
-    }
+    // One method for both, unlike the notifier's add/update pair: the write is
+    // keyed by `trade.id`, so creating and editing are the same call and the
+    // form no longer has to know which one it is doing.
+    await trades.save(trade);
 
     if (context.mounted) Navigator.of(context).pop();
   }

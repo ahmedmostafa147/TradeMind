@@ -428,8 +428,12 @@ function Journal() {
    * when nothing is open.
    */
   const scenarios: PortfolioScenarios = useMemo(
-    () => portfolioScenarios(trades ?? []),
-    [trades]
+    () =>
+      portfolioScenarios(trades ?? [], {
+        defaultTakeProfitPercent: settings.defaultTakeProfitPercent,
+        defaultStopLossPercent: settings.defaultStopLossPercent,
+      }),
+    [trades, settings.defaultTakeProfitPercent, settings.defaultStopLossPercent]
   );
 
   const avgDiscipline = useMemo(
@@ -698,6 +702,10 @@ function Journal() {
                       stats={stats}
                       avgDiscipline={avgDiscipline}
                       scenarios={scenarios}
+                      defaultTakeProfitPercent={
+                        settings.defaultTakeProfitPercent
+                      }
+                      defaultStopLossPercent={settings.defaultStopLossPercent}
                     />
                   ) : (
                     <EmptyJournal onAdd={() => setQuickAdd(true)} />
@@ -1345,10 +1353,14 @@ function Overview({
   stats,
   avgDiscipline,
   scenarios,
+  defaultTakeProfitPercent,
+  defaultStopLossPercent,
 }: {
   stats: Analytics;
   avgDiscipline: number | null;
   scenarios: PortfolioScenarios;
+  defaultTakeProfitPercent: number;
+  defaultStopLossPercent: number;
 }) {
   return (
     <div className="space-y-5">
@@ -1388,7 +1400,11 @@ function Overview({
       {/* Above the closed-trade charts, and for the same reason the app puts it
           near the top of «الأداء»: what is at stake right now outranks what
           already happened. */}
-      <ScenariosPanel scenarios={scenarios} />
+      <ScenariosPanel
+        scenarios={scenarios}
+        defaultTakeProfitPercent={defaultTakeProfitPercent}
+        defaultStopLossPercent={defaultStopLossPercent}
+      />
 
       <Panel title="الربح التراكمي" note="نقطة لكل صفقة مقفولة، مرتّبة بتاريخ الخروج">
         <EquityChart points={stats.equityCurve} />

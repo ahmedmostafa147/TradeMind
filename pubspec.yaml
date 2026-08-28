@@ -13,14 +13,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  # State management. Riverpod 3.x — Notifier/NotifierProvider (StateNotifier is gone).
-  # No codegen: providers are declared by hand.
-  flutter_riverpod: ^3.3.2
-
-  # Local persistence. Adapters are hand-written, so no hive_ce_generator/build_runner.
-  hive_ce: ^2.19.3
-  hive_ce_flutter: ^2.3.4
-
   # Equity curve only.
   fl_chart: ^1.2.0
 
@@ -46,12 +38,16 @@ dependencies:
   characters: ^1.4.0
   google_sign_in: ^7.2.0
   url_launcher: ^6.3.2
+  flutter_bloc: ^9.1.1
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
+  bloc_test: ^10.0.0
+  fake_cloud_firestore: ^4.2.0
 
 flutter_launcher_icons:
   android: true

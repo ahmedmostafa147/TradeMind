@@ -1,24 +1,9 @@
-import 'dart:io';
-
-import 'package:egx_trade_journal/app.dart';
 import 'package:egx_trade_journal/billing/entitlements.dart';
-import 'package:egx_trade_journal/core/hive_keys.dart';
-import 'package:egx_trade_journal/features/auth/providers/auth_providers.dart';
-import 'package:egx_trade_journal/features/auth/repositories/auth_repository.dart';
-import 'package:egx_trade_journal/features/market/market_providers.dart';
-import 'package:egx_trade_journal/settings/settings_providers.dart';
-import 'package:egx_trade_journal/trades/timeline_entry_adapter.dart';
-import 'package:egx_trade_journal/trades/trade.dart';
-import 'package:egx_trade_journal/trades/trade_adapter.dart';
-import 'package:egx_trade_journal/trades/trades_providers.dart';
 import 'package:egx_trade_journal/trades/widgets/quick_add_trade_sheet.dart';
-import 'package:egx_trade_journal/watchlist/watchlist_item.dart';
-import 'package:egx_trade_journal/watchlist/watchlist_item_adapter.dart';
-import 'package:egx_trade_journal/watchlist/watchlist_providers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_ce/hive.dart';
+
+import 'support/app_harness.dart';
 
 /// EVERY ROUTE TO A PAID SURFACE IS GATED, INCLUDING THE SECOND ONE.
 ///
@@ -51,62 +36,20 @@ void main() {
   // doc comment above rather than in the skip itself.
   const gatedOnly = kEverythingFree;
 
-  late Directory tempDir;
-  late Box settingsBox;
-  late Box<Trade> tradesBox;
-  late Box<WatchlistItem> watchlistBox;
-  late Box authBox;
+  late AppHarness app;
 
-  setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('egx_paywall');
-    Hive.init(tempDir.path);
-    if (!Hive.isAdapterRegistered(kTimelineEntryTypeId)) {
-      Hive.registerAdapter(TimelineEntryAdapter());
-    }
-    if (!Hive.isAdapterRegistered(kTradeTypeId)) {
-      Hive.registerAdapter(TradeAdapter());
-    }
-    if (!Hive.isAdapterRegistered(kWatchlistItemTypeId)) {
-      Hive.registerAdapter(WatchlistItemAdapter());
-    }
-    settingsBox = await Hive.openBox(kSettingsBox);
-    await settingsBox.put(kOnboardingSeenKey, true);
-    tradesBox = await Hive.openBox<Trade>(kTradesBox);
-    watchlistBox = await Hive.openBox<WatchlistItem>(kWatchlistBox);
-    authBox = await Hive.openBox(kAuthBox);
-    await authBox.put('current_user', {
-      'id': 'uid-free',
-      'name': 'أحمد',
-      'email': 'a@b.com',
-      'isLoggedIn': true,
-    });
-  });
-
-  tearDown(() async {
-    await Hive.close();
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-  });
+  tearDown(() => app.dispose());
 
   /// The shell as a FREE account sees it.
   ///
-  /// `billingProvider` is NOT overridden, and that omission is the whole point:
-  /// with no Firebase app the real controller resolves to [Entitlement.free],
-  /// which is exactly the state a lapsed user is in.
+  /// `entitlement: null` is the whole point of this file: it leaves the real
+  /// [BillingCubit] to answer, and with no Firebase app it resolves to
+  /// [Entitlement.free] — exactly the state a lapsed user is in. Every other
+  /// widget suite passes a live trial so its tests are about the journal.
   Future<void> pumpFreeApp(WidgetTester tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          settingsBoxProvider.overrideWithValue(settingsBox),
-          tradesBoxProvider.overrideWithValue(tradesBox),
-          watchlistBoxProvider.overrideWithValue(watchlistBox),
-          authBoxProvider.overrideWithValue(authBox),
-          authProvider.overrideWith(() => AuthRepository(authBox)),
-          livePriceProvider.overrideWith((ref, symbol) async => null),
-        ],
-        child: const EgxJournalApp(),
-      ),
-    );
-    await tester.pumpAndSettle();
+    app = await AppHarness.create(userId: 'uid-free', entitlement: null);
+    await app.billing.followAccount('uid-free');
+    await app.pumpApp(tester);
   }
 
   Future<void> openHubMenu(WidgetTester tester) async {

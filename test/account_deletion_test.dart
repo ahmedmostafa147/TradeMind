@@ -26,7 +26,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// the data permanently.
 void main() {
   final source = File(
-    'lib/features/auth/repositories/auth_repository.dart',
+    'lib/features/auth/cubit/auth_cubit.dart',
   ).readAsStringSync();
 
   /// The body of `deleteAccount`, from the brace that opens it to the one that

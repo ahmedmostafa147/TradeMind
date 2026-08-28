@@ -10,7 +10,7 @@
 // Regenerate:  npm --prefix site run calc     (needs the Dart SDK)
 // Verify:      node tool/gen-calc-js.mjs --check
 //
-// SOURCES_SHA256: 7473e4491c3a6e38521c742ce4beec553afea4efc3ec123974ec34be68d098cc
+// SOURCES_SHA256: 8d8396602f1252d126e2c25b503cf8a0d6d29003a76baaf853f8efcdd9300b2a
 /* eslint-disable */
 // @ts-nocheck
 (function dartProgram(){function copyProperties(a,b){var t=Object.keys(a)

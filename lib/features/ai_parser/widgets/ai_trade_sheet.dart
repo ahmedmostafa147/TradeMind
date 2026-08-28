@@ -1,19 +1,20 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../settings/cubit/settings_cubit.dart';
+import '../../../trades/cubit/trades_cubit.dart';
 
 import '../../../core/calc/sizing_result.dart';
 import '../../../core/formatters.dart';
 import '../../../core/theme.dart';
-import '../../../settings/settings_providers.dart';
 import '../../../trades/trade.dart';
 import '../../../trades/trade_draft.dart';
 import '../../../trades/trade_form_screen.dart';
 import '../../../trades/trade_status.dart';
-import '../../../trades/trades_providers.dart';
 import '../models/ai_trade_data.dart';
 import '../services/ai_trade_parser_service.dart';
 
@@ -23,14 +24,14 @@ import '../services/ai_trade_parser_service.dart';
 /// several recommendations, and traders receive them in batches, so the sheet
 /// takes many images at once and lets the trader tick which of the extracted
 /// trades to keep.
-class AiTradeSheet extends ConsumerStatefulWidget {
+class AiTradeSheet extends StatefulWidget {
   const AiTradeSheet({super.key});
 
   @override
-  ConsumerState<AiTradeSheet> createState() => _AiTradeSheetState();
+  State<AiTradeSheet> createState() => _AiTradeSheetState();
 }
 
-class _AiTradeSheetState extends ConsumerState<AiTradeSheet> {
+class _AiTradeSheetState extends State<AiTradeSheet> {
   List<File> _images = const [];
   bool _analyzing = false;
   List<AiTradeData> _extracted = const [];
@@ -112,8 +113,8 @@ class _AiTradeSheetState extends ConsumerState<AiTradeSheet> {
     if (_selected.isEmpty || _saving) return;
     setState(() => _saving = true);
 
-    final settings = ref.read(settingsProvider);
-    final notifier = ref.read(tradesProvider.notifier);
+    final settings = context.read<SettingsCubit>().requireSettings;
+    final trades = context.read<TradesCubit>();
     final chosen = (_selected.toList()..sort()).map((i) => _extracted[i]);
 
     var saved = 0;
@@ -127,7 +128,7 @@ class _AiTradeSheetState extends ConsumerState<AiTradeSheet> {
         stop: data.stopLoss,
       );
 
-      await notifier.add(
+      await trades.save(
         Trade(
           id: const Uuid().v4(),
           entryDate: DateTime.now(),

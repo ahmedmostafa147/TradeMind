@@ -36,7 +36,7 @@ class Trade {
   final bool isFavorite;
 
   /// Absolute paths to images copied into the app's documents directory.
-  /// Paths, never bytes — image blobs in Hive would bloat the box and wreck
+  /// Paths, never bytes — image blobs inline would bloat the record and wreck
   /// the large-journal performance target.
   final List<String> screenshotPaths;
 
@@ -87,7 +87,7 @@ class Trade {
 
   /// Note there is deliberately no assert on entryPrice > 0, stopPrice <
   /// entryPrice, or quantity > 0. Those are enforced by form validation on the
-  /// way in. Asserting them here would make a legacy or corrupt Hive record
+  /// way in. Asserting them here would make a legacy or corrupt record
   /// unloadable, and would contradict the calculation layer's guarantee that it
   /// is total — it returns null for nonsensical input rather than throwing.
   bool get isOpen => exitPrice == null;

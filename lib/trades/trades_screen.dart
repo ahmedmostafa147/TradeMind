@@ -1,12 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/state/app_state.dart';
 
 import '../core/calc/trade_metrics.dart';
-import '../settings/settings_providers.dart';
 import 'trade_detail_screen.dart';
 import 'trade_status.dart';
-import 'trades_providers.dart';
 import 'widgets/trade_tile.dart';
 
 enum TradesFilter {
@@ -21,18 +19,18 @@ enum TradesFilter {
   };
 }
 
-class TradesView extends ConsumerWidget {
+class TradesView extends StatelessWidget {
   final TradesFilter filter;
 
   const TradesView({super.key, this.filter = TradesFilter.real});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final trades = [
-      for (final trade in ref.watch(sortedTradesProvider))
+      for (final trade in context.trades)
         if (filter.matches(trade.status)) trade,
     ];
-    final settings = ref.watch(settingsProvider);
+    final settings = context.settings;
     final isDesktop = (kIsWeb || TargetPlatform.windows == defaultTargetPlatform) &&
         MediaQuery.of(context).size.width >= 900;
 

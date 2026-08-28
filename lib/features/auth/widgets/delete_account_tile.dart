@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/theme.dart';
-import '../../../trades/trades_providers.dart';
-import '../../../watchlist/watchlist_providers.dart';
-import '../providers/auth_providers.dart';
+import '../cubit/auth_cubit.dart';
 import '../services/auth_exception.dart';
 
 /// In-app account deletion.
@@ -13,43 +11,30 @@ import '../services/auth_exception.dart';
 /// deletion from inside the app **and** from a public web page, and to name
 /// both in the Data Safety form. This is the in-app half; the web half is a
 /// form on the published site.
-///
-/// Only rendered for a signed-in user — a guest has no account to delete, and
-/// showing the control anyway would suggest their local journal is at risk.
-class DeleteAccountTile extends ConsumerStatefulWidget {
+class DeleteAccountTile extends StatefulWidget {
   const DeleteAccountTile({super.key});
 
   @override
-  ConsumerState<DeleteAccountTile> createState() => _DeleteAccountTileState();
+  State<DeleteAccountTile> createState() => _DeleteAccountTileState();
 }
 
-class _DeleteAccountTileState extends ConsumerState<DeleteAccountTile> {
+class _DeleteAccountTileState extends State<DeleteAccountTile> {
   bool _working = false;
 
   Future<void> _confirmAndDelete() async {
-    final wipeLocal = await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => const _ConfirmDeleteDialog(),
     );
-    if (wipeLocal == null || !mounted) return;
+    if (confirmed != true || !mounted) return;
 
     setState(() => _working = true);
     try {
-      await ref
-          .read(authProvider.notifier)
-          .deleteAccount(
-            wipeLocalJournal: wipeLocal,
-            clearLocalJournal: () async {
-              await ref.read(tradesBoxProvider).clear();
-              await ref.read(watchlistBoxProvider).clear();
-              ref.invalidate(tradesProvider);
-              ref.invalidate(watchlistProvider);
-            },
-          );
+      await context.read<AuthCubit>().deleteAccount();
 
-      // No explicit navigation back to the auth screen: deleteAccount clears
-      // the session, and the gate now watches nothing but isLoggedIn, so the
-      // rebuild lands there on its own.
+      // No explicit navigation back to the auth screen: deleteAccount ends the
+      // session, the auth stream reports it, and the gate lands there on its
+      // own.
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('تم حذف الحساب وكل بياناته.')),
@@ -73,7 +58,9 @@ class _DeleteAccountTileState extends ConsumerState<DeleteAccountTile> {
 
   @override
   Widget build(BuildContext context) {
-    if (!ref.watch(authProvider).isLoggedIn) return const SizedBox.shrink();
+    if (context.watch<AuthCubit>().account == null) {
+      return const SizedBox.shrink();
+    }
 
     final colors = context.resultColors;
 
@@ -92,7 +79,7 @@ class _DeleteAccountTileState extends ConsumerState<DeleteAccountTile> {
           style: TextStyle(color: colors.loss, fontWeight: FontWeight.bold),
         ),
         subtitle: const Text(
-          'يمسح حسابك وكل النسخة السحابية من صفقاتك. مش ممكن الرجوع فيه.',
+          'يمسح حسابك وكل صفقاتك. مش ممكن الرجوع فيه.',
         ),
         onTap: _working ? null : _confirmAndDelete,
       ),
@@ -100,18 +87,18 @@ class _DeleteAccountTileState extends ConsumerState<DeleteAccountTile> {
   }
 }
 
-/// Returns whether to wipe the local journal too, or null if the user backed
-/// out. Deliberately not a plain yes/no: the destructive extra is a separate,
-/// opt-in decision from deleting the account itself.
-class _ConfirmDeleteDialog extends StatefulWidget {
+/// ── THE «امسح كمان من التليفون» CHECKBOX IS GONE ───────────────────────────
+///
+/// It used to be here, off by default, because the journal existed twice: once
+/// in the account and once in a Hive box that could predate it. Wiping the
+/// local copy was therefore a second, genuinely separate decision, and the
+/// dialog returned which way it went rather than a plain yes/no.
+///
+/// There is one copy now. Offering the choice would ask the user to decide
+/// about something that does not exist, and — worse — imply a copy survives the
+/// deletion when none does.
+class _ConfirmDeleteDialog extends StatelessWidget {
   const _ConfirmDeleteDialog();
-
-  @override
-  State<_ConfirmDeleteDialog> createState() => _ConfirmDeleteDialogState();
-}
-
-class _ConfirmDeleteDialogState extends State<_ConfirmDeleteDialog> {
-  bool _wipeLocal = false;
 
   @override
   Widget build(BuildContext context) {
@@ -119,28 +106,9 @@ class _ConfirmDeleteDialogState extends State<_ConfirmDeleteDialog> {
 
     return AlertDialog(
       title: const Text('حذف الحساب نهائيًا؟'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'هيتمسح حسابك والنسخة المحفوظة من صفقاتك على السيرفر. '
-            'العملية دي نهائية ومفيش رجوع فيها.',
-          ),
-          const SizedBox(height: 12),
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.leading,
-            value: _wipeLocal,
-            onChanged: (v) => setState(() => _wipeLocal = v ?? false),
-            title: const Text('امسح كمان الصفقات المحفوظة على التليفون'),
-            // Off by default: after the cloud copy goes, this is the only one
-            // left, and it may well predate the account entirely.
-            subtitle: const Text(
-              'من غيرها، دفترك هيفضل على الجهاز زي ما هو.',
-            ),
-          ),
-        ],
+      content: const Text(
+        'هيتمسح حسابك وكل صفقاتك وقائمة المراقبة وإعدادات المخاطرة. '
+        'العملية دي نهائية ومفيش رجوع فيها ولا نسخة تانية في أي مكان.',
       ),
       actions: [
         TextButton(
@@ -149,7 +117,7 @@ class _ConfirmDeleteDialogState extends State<_ConfirmDeleteDialog> {
         ),
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: colors.loss),
-          onPressed: () => Navigator.of(context).pop(_wipeLocal),
+          onPressed: () => Navigator.of(context).pop(true),
           child: const Text('احذف الحساب'),
         ),
       ],

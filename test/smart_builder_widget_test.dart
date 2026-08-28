@@ -1,67 +1,23 @@
-import 'dart:io';
-
 import 'package:egx_trade_journal/calculator/calculator_screen.dart';
 import 'package:egx_trade_journal/calculator/widgets/level_field.dart';
-import 'package:egx_trade_journal/core/hive_keys.dart';
-import 'package:egx_trade_journal/core/theme.dart';
-import 'package:egx_trade_journal/settings/settings_providers.dart';
-import 'package:egx_trade_journal/trades/timeline_entry_adapter.dart';
-import 'package:egx_trade_journal/trades/trade.dart';
-import 'package:egx_trade_journal/trades/trade_adapter.dart';
-import 'package:egx_trade_journal/trades/trades_providers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_ce/hive.dart';
+
+import 'support/app_harness.dart';
 
 /// Drives the spec's worked example through the real widget tree, so the
 /// numbers are checked as the trader sees them — after formatting.
 void main() {
-  late Directory tempDir;
-  late Box settingsBox;
-  late Box<Trade> tradesBox;
+  late AppHarness app;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('egx_smart');
-    Hive.init(tempDir.path);
-    if (!Hive.isAdapterRegistered(kTimelineEntryTypeId)) {
-      Hive.registerAdapter(TimelineEntryAdapter());
-    }
-    if (!Hive.isAdapterRegistered(kTradeTypeId)) {
-      Hive.registerAdapter(TradeAdapter());
-    }
-    settingsBox = await Hive.openBox(kSettingsBox);
-    tradesBox = await Hive.openBox<Trade>(kTradesBox);
+    app = await AppHarness.create();
   });
 
-  tearDown(() async {
-    await Hive.close();
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-  });
+  tearDown(() => app.dispose());
 
-  Future<void> pumpCalculator(WidgetTester tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          settingsBoxProvider.overrideWithValue(settingsBox),
-          tradesBoxProvider.overrideWithValue(tradesBox),
-        ],
-        child: MaterialApp(
-          theme: buildLightTheme(),
-          locale: const Locale('ar'),
-          supportedLocales: const [Locale('ar')],
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          home: const CalculatorScreen(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-  }
+  Future<void> pumpCalculator(WidgetTester tester) =>
+      app.pump(tester, const CalculatorScreen());
 
   /// The smart builder's entry field is the first on the screen.
   /// BY KEY, NOT `find.byType(TextField).first`.

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/state/app_state.dart';
 
 import '../core/formatters.dart';
 import '../core/theme.dart';
-import '../settings/settings_providers.dart';
-import 'dashboard_providers.dart';
 import 'widgets/equity_chart.dart';
 import 'widgets/portfolio_scenarios_card.dart';
 import 'widgets/stat_card.dart';
@@ -13,13 +11,13 @@ import 'widgets/stat_card.dart';
 ///
 /// A tab body under `TradesHubScreen`. The deeper breakdown is the
 /// «التحليلات» tab beside it, and both sit behind the same entitlement.
-class PerformanceView extends ConsumerWidget {
+class PerformanceView extends StatelessWidget {
   const PerformanceView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final stats = ref.watch(journalStatsProvider);
-    final settings = ref.watch(settingsProvider);
+  Widget build(BuildContext context) {
+    final stats = context.journalStats;
+    final settings = context.settings;
     final theme = Theme.of(context);
     final colors = context.resultColors;
 
