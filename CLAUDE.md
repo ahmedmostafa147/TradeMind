@@ -977,6 +977,38 @@ apksigner على APK    : CN=Android Debug
 وموقع https. اللي اتحقق: المسار بيرجّع 200 من غير أي تحويل، سكربتاته بترد 200،
 الـCSP مش بيتحط عليه، شكل روابط الموقع زي ما هو، والـSDK بيروح على هوستنا.
 
+**والخطوة اللي نسيتها ووقعت الإنتاج: العنوان لازم يتسجّل عند جوجل.**
+لما الـhandler بيبقى على دوميـنا، Firebase بيستخدم
+`https://<دوميـنا>/__/auth/handler` كـ`redirect_uri` عند جوجل — **مش** عنوان
+firebaseapp. اتدمج من غير ما يتسجّل، فجوجل ردّت `redirect_uri_mismatch`
+واترجع في نفس الساعة. بيتسجّل في **Google Cloud Console** (مش Firebase
+Console) → APIs & Services → Credentials → عميل OAuth
+`680175215-eaj9ea5…` → في الخانتين:
+
+- `Authorized JavaScript origins` ← `https://<دوميـنا>`
+- `Authorized redirect URIs` ← `https://<دوميـنا>/__/auth/handler`
+
+> **وده بند تالت في checklist يوم الدومين**، مع Authorized domains
+> و`NEXT_PUBLIC_SITE_URL`. نسيانه بيقفل الدخول بجوجل بالكامل — حتى للناس
+> اللي النافذة المنبثقة شغّالة عندهم، واللي كانوا بيدخلوا عادي قبل التغيير.
+
+**وطريقة فحصه من غير ما تلمس الإنتاج** — دي اللي كانت هتمنع العطل:
+
+```bash
+CID=680175215-eaj9ea5etm3h5du0il3r7ipmcol4ltc4.apps.googleusercontent.com
+curl -s -o /dev/null -w "%{redirect_url}
+"   "https://accounts.google.com/o/oauth2/v2/auth?client_id=$CID&response_type=code&scope=openid%20email&redirect_uri=https%3A%2F%2F<دوميـنا>%2F__%2Fauth%2Fhandler"
+```
+
+`/v3/signin/` يبقى اتقبل · `oauth/error` يبقى العنوان مش متسجّل. **وشغّله
+مرتين** — مرة بعنوان وهمي كمان، عشان تتأكد إن الفحص بيمسك الفشل أصلًا.
+
+**و`/__/firebase/init.json` بيرجّع 404 وده صح.** الـhandler بيدوّر عليه
+والبروكسي مش شايله عن قصد: النسخة اللي Firebase Hosting بيقدّمها جواها
+`"authDomain": "trademind-6222c.firebaseapp.com"` — يعني تمريره بيرجّع الأصل
+التاني اللي التغيير ده كله عشان يتخلص منه. اتقاس إن الفلو بيوصل لصفحة اختيار
+الحساب والملف ساقط.
+
 **وسياسة الخصوصية اتحدّثت في نفس الكوميت** (بند ٣): البروكسي بيخلّي سيرفرنا
 يشوف IP المستخدم وقت الدخول — نفس منطق §١٠.
 
