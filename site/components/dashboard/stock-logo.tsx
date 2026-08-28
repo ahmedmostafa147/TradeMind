@@ -56,19 +56,21 @@ export function StockLogo({
 
   return (
     <img
-      // SLASHED. `trailingSlash: true` answers 308 to the unslashed form, and
-      // `<img>` follows it — but that is one wasted round trip per logo on a
-      // 293-row board. Same reason use-board.ts calls `/api/stocks/`.
-      src={`/api/logo/?id=${encodeURIComponent(logoId)}`}
+      // OUR OWN FILE, downloaded once by tool/fetch-logos.mjs. It used to be a
+      // proxy route; the file is better on all three counts — nothing of ours
+      // relays somebody else's asset, nothing breaks when their CDN stops
+      // answering, and a static asset is the cheapest thing a server does.
+      src={`/logos/${encodeURIComponent(logoId)}.svg`}
       alt=""
       aria-hidden
       loading="lazy"
       decoding="async"
       onError={() => setFailed(true)}
-      // `bg-white` under a transparent logo on purpose: these are brand marks
-      // drawn for a light background, and several are dark-on-transparent — on
-      // the dark theme they would be a black shape on a near-black card.
-      className={`shrink-0 rounded-lg bg-white object-contain p-1 ${className}`}
+      // NO PADDING: the art is a square that already carries its own light
+      // background, so an inset just drew a white frame around a smaller logo.
+      // `bg-white` stays under it for the few marks that are transparent — on
+      // the dark theme those would be a black shape on a near-black card.
+      className={`shrink-0 rounded-lg bg-white object-contain ${className}`}
     />
   );
 }
