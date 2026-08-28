@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../providers/auth_providers.dart';
+import '../cubit/auth_cubit.dart';
+import '../models/user_account.dart';
 import 'login_sheet.dart';
 
 /// Account status card displayed in Settings and shell headers.
-class UserProfileTile extends ConsumerWidget {
+class UserProfileTile extends StatelessWidget {
   const UserProfileTile({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authProvider);
+  Widget build(BuildContext context) {
+    final user = context.watch<AuthCubit>().account ?? UserAccount.guest;
     final theme = Theme.of(context);
 
     return Card(
@@ -40,11 +41,9 @@ class UserProfileTile extends ConsumerWidget {
             ? IconButton(
                 icon: const Icon(Icons.logout),
                 tooltip: 'تسجيل الخروج',
-                onPressed: () async {
-                  // logout() clears the session; the gate watches isLoggedIn
-                  // and returns to the auth screen by itself.
-                  await ref.read(authProvider.notifier).logout();
-                },
+                // logout() ends the session; the auth stream reports it and
+                // the gate returns to the sign-in screen by itself.
+                onPressed: context.read<AuthCubit>().logout,
               )
             : FilledButton.tonal(
                 onPressed: () => showModalBottomSheet(

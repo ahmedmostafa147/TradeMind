@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../billing_providers.dart';
+import '../cubit/billing_cubit.dart';
 
 /// What an account without full access sees where a paid surface would be.
 ///
@@ -28,7 +28,7 @@ import '../billing_providers.dart';
 /// generic wall everywhere: "you cannot see this" is not information, and a user
 /// who forgot which of four things they were reaching for learns nothing from an
 /// unlabelled lock.
-class Paywall extends ConsumerWidget {
+class Paywall extends StatelessWidget {
   final String title;
 
   /// One line on what this particular surface does.
@@ -44,9 +44,9 @@ class Paywall extends ConsumerWidget {
   static const String lockedLabel = 'مش متاح في باقتك الحالية';
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final entitlement = ref.watch(entitlementProvider);
+    final entitlement = context.watch<BillingCubit>().state.entitlement;
 
     return Center(
       child: SingleChildScrollView(

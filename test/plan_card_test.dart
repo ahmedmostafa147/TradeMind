@@ -1,8 +1,8 @@
-import 'package:egx_trade_journal/billing/billing_providers.dart';
+import 'package:egx_trade_journal/billing/cubit/billing_cubit.dart';
 import 'package:egx_trade_journal/billing/entitlements.dart';
 import 'package:egx_trade_journal/billing/widgets/plan_card.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// «باقتك» in الإعدادات. The app had nothing here at all, so the only way to
@@ -28,11 +28,9 @@ void main() {
     bool? readable = true,
   }) async {
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          entitlementProvider.overrideWithValue(entitlement),
-          billingReadableProvider.overrideWith((ref) async => readable),
-        ],
+      BlocProvider(
+        create: (_) =>
+            BillingCubit(initial: BillingLoaded(entitlement, readable)),
         child: const MaterialApp(
           home: Directionality(
             textDirection: TextDirection.rtl,

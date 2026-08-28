@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/state/app_state.dart';
 
 import '../core/calc/goal_plan.dart';
 import '../core/calc/goal_projection.dart';
 import '../core/formatters.dart';
-import '../settings/settings_providers.dart';
-import '../trades/trades_providers.dart';
-import 'dashboard_providers.dart';
 import 'widgets/goal_planner_card.dart';
 import 'widgets/goal_projection_widgets.dart';
 
 /// «الهدف» — two questions about the same target, kept apart on purpose.
-class GoalView extends ConsumerStatefulWidget {
+class GoalView extends StatefulWidget {
   const GoalView({super.key});
 
   @override
-  ConsumerState<GoalView> createState() => _GoalViewState();
+  State<GoalView> createState() => _GoalViewState();
 }
 
-class _GoalViewState extends ConsumerState<GoalView> {
+class _GoalViewState extends State<GoalView> {
   final _controller = TextEditingController();
 
   @override
@@ -30,9 +27,9 @@ class _GoalViewState extends ConsumerState<GoalView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final settings = ref.watch(settingsProvider);
-    final analytics = ref.watch(journalAnalyticsProvider);
-    final trades = ref.watch(tradesProvider);
+    final settings = context.settings;
+    final analytics = context.journalAnalytics;
+    final trades = context.trades;
 
     final target = parseNumber(_controller.text);
     final projection = (target == null || target <= 0)

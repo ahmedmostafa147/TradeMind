@@ -1,6 +1,6 @@
 'use client';
 
-import { signedMoney } from '@/lib/format';
+import { percent, signedMoney } from '@/lib/format';
 import {
   coversTheRest,
   hasOneWinnerAnalysis,
@@ -22,8 +22,13 @@ import {
  */
 export function ScenariosPanel({
   scenarios,
+  defaultTakeProfitPercent,
+  defaultStopLossPercent,
 }: {
   scenarios: PortfolioScenarios;
+  /** The account's own levels, so the footnote quotes what was actually used. */
+  defaultTakeProfitPercent: number;
+  defaultStopLossPercent: number;
 }) {
   // Hidden entirely on an empty book, exactly like the app's card: a scenario
   // panel with nothing open is a row of dashes.
@@ -100,8 +105,10 @@ export function ScenariosPanel({
       <p className="mt-4 text-xs leading-relaxed text-fg-subtle">
         دي حسبة على الأرقام اللي انت مدخّلها، <strong>مش توقّع</strong> — مفيش
         حاجة هنا بتقول إيه احتمال إن ده يحصل. الصفقة اللي مالهاش هدف أو استوب
-        مكتوب بتتحسب على <span className="num">5%</span> و
-        <span className="num">2%</span> من سعر الدخول.
+        مكتوب بتتحسب على{' '}
+        <span className="num">{percent(defaultTakeProfitPercent)}</span> و
+        <span className="num">{percent(defaultStopLossPercent)}</span> من
+        سعر الدخول.
       </p>
     </section>
   );

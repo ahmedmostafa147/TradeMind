@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../settings/settings_providers.dart';
+import '../../settings/cubit/settings_cubit.dart';
+import '../../trades/cubit/trades_cubit.dart';
+
 import '../../trades/timeline_entry.dart';
 import '../../trades/trade.dart';
 import '../../trades/trade_detail_screen.dart';
 import '../../trades/trade_form_screen.dart';
 import '../../trades/trade_status.dart';
-import '../../trades/trades_providers.dart';
 
 class EditTradeButton extends StatelessWidget {
   final Trade trade;
@@ -25,7 +26,7 @@ class EditTradeButton extends StatelessWidget {
       );
 }
 
-class AddNoteButton extends ConsumerWidget {
+class AddNoteButton extends StatelessWidget {
   final Trade trade;
   final bool asLesson;
 
@@ -36,19 +37,19 @@ class AddNoteButton extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => FilledButton.tonal(
-        onPressed: () => _addNote(context, ref, trade, asLesson: asLesson),
+  Widget build(BuildContext context) => FilledButton.tonal(
+        onPressed: () => _addNote(context, trade, asLesson: asLesson),
         child: Text(asLesson ? 'أضف الدرس' : 'ملاحظة'),
       );
 }
 
-class CloseTradeButton extends ConsumerWidget {
+class CloseTradeButton extends StatelessWidget {
   final Trade trade;
 
   const CloseTradeButton({super.key, required this.trade});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => FilledButton(
+  Widget build(BuildContext context) => FilledButton(
         onPressed: () {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -65,13 +66,13 @@ class CloseTradeButton extends ConsumerWidget {
       );
 }
 
-class MarkOpenButton extends ConsumerWidget {
+class MarkOpenButton extends StatelessWidget {
   final Trade trade;
 
   const MarkOpenButton({super.key, required this.trade});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => FilledButton(
+  Widget build(BuildContext context) => FilledButton(
         onPressed: () async {
           if (trade.quantity <= 0) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -86,23 +87,26 @@ class MarkOpenButton extends ConsumerWidget {
             );
             return;
           }
-          await ref
-              .read(tradesProvider.notifier)
-              .update(trade.copyWith(status: TradeStatus.open));
+          await context.read<TradesCubit>().save(
+            trade.copyWith(status: TradeStatus.open),
+          );
         },
         child: const Text('افتحها'),
       );
 }
 
-class CancelTradeButton extends ConsumerWidget {
+class CancelTradeButton extends StatelessWidget {
   final Trade trade;
 
   const CancelTradeButton({super.key, required this.trade});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => OutlinedButton(
+  Widget build(BuildContext context) => OutlinedButton(
         onPressed: () async {
-          final settings = ref.read(settingsProvider);
+          final settings = context.read<SettingsCubit>().requireSettings;
+          // Read before the dialog: `context` is not safe to use once an await
+          // has passed, and this widget can be gone by the time it returns.
+          final trades = context.read<TradesCubit>();
           if (settings.enableConfirmations) {
             final confirmed = await showDialog<bool>(
               context: context,
@@ -123,9 +127,7 @@ class CancelTradeButton extends ConsumerWidget {
             );
             if (confirmed != true) return;
           }
-          await ref
-              .read(tradesProvider.notifier)
-              .update(trade.copyWith(status: TradeStatus.cancelled));
+          await trades.save(trade.copyWith(status: TradeStatus.cancelled));
         },
         child: const Text('إلغاء'),
       );
@@ -192,10 +194,10 @@ class _NoteDialogState extends State<_NoteDialog> {
 
 Future<void> _addNote(
   BuildContext context,
-  WidgetRef ref,
   Trade trade, {
   bool asLesson = false,
 }) async {
+  final trades = context.read<TradesCubit>();
   final text = await showDialog<String>(
     context: context,
     builder: (_) => _NoteDialog(asLesson: asLesson),
@@ -210,7 +212,7 @@ Future<void> _addNote(
   );
   final existingNotes = (trade.notes ?? '').trim();
 
-  await ref.read(tradesProvider.notifier).update(
+  await trades.save(
         trade.copyWith(
           timeline: [...trade.timeline, entry],
           notes: asLesson && existingNotes.isEmpty ? text : trade.notes,

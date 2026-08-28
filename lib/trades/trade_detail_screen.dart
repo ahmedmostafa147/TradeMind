@@ -1,31 +1,29 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/state/app_state.dart';
 
 import '../core/calc/risk_score.dart';
 import '../core/calc/trade_metrics.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
 import '../core/widgets/risk_warning.dart';
-import '../settings/settings_providers.dart';
 import 'checklist.dart';
 import 'timeline_entry.dart';
 import 'trade_form_screen.dart';
-import 'trades_providers.dart';
 import 'widgets/result_badge.dart';
 
 /// Read-only view of a single trade. Editing lives behind the pencil, so the
 /// page can be scrolled and read without any risk of changing the record.
-class TradeDetailScreen extends ConsumerWidget {
+class TradeDetailScreen extends StatelessWidget {
   final String tradeId;
 
   const TradeDetailScreen({super.key, required this.tradeId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final trades = ref.watch(tradesProvider);
-    final settings = ref.watch(settingsProvider);
+  Widget build(BuildContext context) {
+    final trades = context.trades;
+    final settings = context.settings;
     final theme = Theme.of(context);
     final colors = context.resultColors;
 

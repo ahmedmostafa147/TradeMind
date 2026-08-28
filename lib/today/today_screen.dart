@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/state/app_state.dart';
 
-import '../watchlist/watchlist_providers.dart';
-import 'today_providers.dart';
 import 'widgets/no_tasks_banner.dart';
 import 'widgets/summary_card.dart';
 import 'widgets/today_empty_state.dart';
@@ -10,13 +8,13 @@ import 'widgets/today_sections_list.dart';
 import 'widgets/today_summary_banner.dart';
 
 /// «اليوم» — the trades that need a decision right now.
-class TodayView extends ConsumerWidget {
+class TodayView extends StatelessWidget {
   const TodayView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final decisions = ref.watch(dailyDecisionsProvider);
-    final watchlist = ref.watch(sortedWatchlistProvider);
+  Widget build(BuildContext context) {
+    final decisions = context.dailyDecisions;
+    final watchlist = context.watchlist;
 
     final noActions = decisions.isEmpty && watchlist.isEmpty;
     final nothingAtAll = noActions && decisions.recentlyClosed.isEmpty;

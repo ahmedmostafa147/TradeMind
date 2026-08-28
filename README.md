@@ -83,9 +83,9 @@ average holding period, and per-tag performance.
 
 | Package | Version | Why this version |
 |---|---|---|
-| `flutter_riverpod` | `^3.3.2` | Riverpod 3 — `Notifier`/`NotifierProvider`. No codegen. |
-| `hive_ce` | `^2.19.3` | Local storage. |
-| `hive_ce_flutter` | `^2.3.4` | Provides `Hive.initFlutter()`. |
+| `flutter_bloc` | `^9.1.1` | Cubits. No codegen. |
+| `cloud_firestore` | sdk-pinned | The only store for user data. |
+| `shared_preferences` | `^2.5.5` | Device preferences only — theme, onboarding, the Gemini key. |
 | `fl_chart` | `^1.2.0` | Equity curve only. |
 | `intl` | `0.20.2` | **Pinned exactly.** `flutter_localizations` from the SDK pins intl to 0.20.2; anything higher (including the latest, 0.20.3) fails version solving. |
 | `uuid` | `^4.5.1` | Trade ids. |
@@ -93,7 +93,8 @@ average holding period, and per-tag performance.
 | `path_provider` | `^2.1.6` | App documents directory for stored images. |
 | `flutter_localizations` | sdk | Mandatory — see "Arabic and RTL" below. |
 
-No codegen, no `build_runner`. The single Hive `TypeAdapter` is written by hand.
+No codegen, no `build_runner`. `SyncCodec` maps records to and from Firestore by
+hand, and the website uses the same shape.
 
 ---
 
@@ -105,25 +106,31 @@ Feature-first, with a pure calculation core:
 lib/
   core/
     calc/          ← all business logic, pure Dart, zero Flutter imports
+    state/         ← AccountScopedCubit, context reads, loading/failure views
+    preferences/   ← SharedPreferences, for device-only values
     formatters.dart
     theme.dart
-    hive_keys.dart
   settings/  calculator/  trades/  dashboard/  shell/
+    <feature>/data/   ← one repository per collection, on Firestore
+    <feature>/cubit/  ← one cubit over it
 ```
 
-**`lib/core/calc/` imports no Flutter, no Hive, and no intl.** That is a hard
+**`lib/core/calc/` imports no Flutter, no storage, and no intl.** That is a hard
 constraint, and it is what makes every formula in the spec a plain unit test
-with no widget binding and no async. The calculation functions take `capital`
-and `maxRiskPercent` as explicit parameters rather than reading them from
-storage, which is also why editing capital in Settings recomputes every screen
-with no extra wiring — the Riverpod providers watch settings, so they all
-invalidate together.
+with no widget binding and no async. It is also what let the whole layer be
+compiled to JavaScript and shared with the website — see `tool/gen-calc-js.mjs`.
+The calculation functions take `capital` and `maxRiskPercent` as explicit
+parameters rather than reading them from storage, which is why editing capital
+in Settings recomputes every screen with no extra wiring.
 
-State: `Notifier`, not `AsyncNotifier`. The Hive boxes are opened in `main()`
-before `runApp`, so data is synchronously in memory by the time any widget
-builds; an `AsyncNotifier` would force an `AsyncValue` unwrap on every consumer
-for a loading state that can never be observed. A storage failure is handled in
-`main()` with a readable Arabic error screen instead.
+State: one `Cubit` per concern, wired in `main()` and pointed at the signed-in
+account by the Firebase auth stream. Data comes from Firestore streams, so every
+list has a REAL loading state and a real failure state — `TradesBuilder` and
+`WatchlistBuilder` unpack them in one place, because "you have no trades" and
+"we could not read your trades" must never look the same. `SettingsGate` is a
+gate rather than a builder: capital divides into every position size in the
+product, so the app waits once for the risk rule instead of letting the class
+defaults stand in for a frame and render a confident wrong number.
 
 ---
 

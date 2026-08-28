@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/state/app_state.dart';
 
 import '../core/calc/sizing_result.dart';
 import '../core/formatters.dart';
-import '../settings/settings_providers.dart';
 import 'screenshot_store.dart';
 import 'timeline_entry.dart';
 import 'trade.dart';
@@ -12,17 +11,17 @@ import 'trade_status.dart';
 import 'widgets/trade_form_body.dart';
 import 'widgets/trade_form_saver.dart';
 
-class TradeFormScreen extends ConsumerStatefulWidget {
+class TradeFormScreen extends StatefulWidget {
   final Trade? existing;
   final TradeDraft? draft;
 
   const TradeFormScreen({super.key, this.existing, this.draft});
 
   @override
-  ConsumerState<TradeFormScreen> createState() => _TradeFormScreenState();
+  State<TradeFormScreen> createState() => _TradeFormScreenState();
 }
 
-class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
+class _TradeFormScreenState extends State<TradeFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _tickerController;
@@ -125,7 +124,6 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
 
     await TradeFormSaver.saveTrade(
       context: context,
-      ref: ref,
       existing: widget.existing,
       formKey: _formKey,
       entryDate: _entryDate,
@@ -151,7 +149,7 @@ class _TradeFormScreenState extends ConsumerState<TradeFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(settingsProvider);
+    final settings = context.settings;
     final entry = parseNumber(_entryController.text);
     final stop = parseNumber(_stopController.text);
     final qty = parseInteger(_quantityController.text);

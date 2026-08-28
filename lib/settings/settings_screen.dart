@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import './cubit/settings_cubit.dart';
 
 import '../billing/widgets/plan_card.dart';
 import '../core/calc/risk_math.dart';
 import '../core/formatters.dart';
 import '../features/auth/widgets/delete_account_tile.dart';
 import '../features/auth/widgets/user_profile_tile.dart';
-import 'settings_providers.dart';
 import 'widgets/export_csv_tile.dart';
 import 'widgets/legal_tiles.dart';
 import 'widgets/settings_tiles.dart';
 
-class SettingsScreen extends ConsumerStatefulWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+  State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _capitalController;
   late final TextEditingController _riskController;
 
@@ -29,7 +30,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    final settings = ref.read(settingsProvider);
+    final settings = context.read<SettingsCubit>().requireSettings;
     _capitalController = TextEditingController(
       text: settings.capital.toStringAsFixed(2),
     );
@@ -51,7 +52,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final parsed = parseNumber(value);
     setState(() => _draftCapital = parsed);
     if (parsed != null && parsed > 0) {
-      ref.read(settingsProvider.notifier).setCapital(parsed);
+      context.read<SettingsCubit>().setCapital(parsed);
     }
   }
 
@@ -59,7 +60,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final parsed = parseNumber(value);
     setState(() => _draftRiskPercent = parsed);
     if (parsed != null && parsed > 0 && parsed <= 100) {
-      ref.read(settingsProvider.notifier).setMaxRiskPercent(parsed / 100);
+      context.read<SettingsCubit>().setMaxRiskPercent(parsed / 100);
     }
   }
 

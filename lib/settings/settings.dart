@@ -1,5 +1,9 @@
-/// User-configurable risk rule. Persisted as primitive keys, not as a blob —
-/// see lib/trades/hive_keys.dart.
+/// The user's risk rule.
+///
+/// Five of the seven fields live in the ACCOUNT (`users/{uid}/settings/risk` —
+/// see SettingsRepository); `enableChecklist` and `enableConfirmations` stay on
+/// the device, because they are habits and syncing a habit pushes one device's
+/// preference onto another.
 class Settings {
   static const double defaultCapital = 17000;
   static const double defaultMaxRiskPercent = 0.02;

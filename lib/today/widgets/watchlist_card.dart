@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/formatters.dart';
 import '../../core/theme.dart';
+import '../../watchlist/cubit/watchlist_cubit.dart';
 import '../../watchlist/watchlist_form_screen.dart';
 import '../../watchlist/watchlist_item.dart';
-import '../../watchlist/watchlist_providers.dart';
 import 'watchlist_actions.dart';
 
-class WatchlistCard extends ConsumerWidget {
+class WatchlistCard extends StatelessWidget {
   final WatchlistItem item;
 
   const WatchlistCard({super.key, required this.item});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = context.resultColors;
     final priorityColor = switch (item.priority) {
@@ -79,8 +79,8 @@ class WatchlistCard extends ConsumerWidget {
                   Expanded(
                     child: FilledButton(
                       onPressed: () async {
-                        await ref
-                            .read(watchlistProvider.notifier)
+                        await context
+                            .read<WatchlistCubit>()
                             .convertToPlannedTrade(item);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -108,7 +108,7 @@ class WatchlistCard extends ConsumerWidget {
                   IconButton(
                     icon: const Icon(Icons.delete_outline, size: 20),
                     tooltip: 'حذف',
-                    onPressed: () => deleteWatchlistItem(context, ref, item),
+                    onPressed: () => deleteWatchlistItem(context, item),
                   ),
                 ],
               ),

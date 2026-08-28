@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../../billing/cubit/billing_cubit.dart';
+import '../cubit/market_cubit.dart';
 
 import '../../../core/formatters.dart';
 import '../../../core/theme.dart';
-import '../../../billing/billing_providers.dart';
 import '../../../billing/entitlements.dart';
-import '../market_providers.dart';
 
 /// Unrealised profit/loss for an OPEN position, measured against the last
 /// session's CLOSE. Realised trades already show their final P&L, so this is
 /// only for positions still running.
 ///
-/// The price comes through `/api/quote` behind [livePriceProvider] — the same
+/// The price comes through `/api/quote` behind [MarketCubit] — the same
 /// route the website uses, so the two surfaces cannot quote one position
 /// differently. Every non-success path degrades to a quiet muted line rather
 /// than an error: a price that did not arrive must never look like a loss.
-class LivePnlView extends ConsumerWidget {
+class LivePnlView extends StatefulWidget {
   final String ticker;
   final double entryPrice;
   final int quantity;
@@ -28,7 +29,25 @@ class LivePnlView extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  State<LivePnlView> createState() => _LivePnlViewState();
+}
+
+class _LivePnlViewState extends State<LivePnlView> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Only asked for when the plan allows it — see the gate in build. Fetching
+    // a price nobody may see is the kind of waste that only shows up on a bill.
+    if (context.read<BillingCubit>().state.entitlement.can(Feature.livePrices)) {
+      context.read<MarketCubit>().ensureQuote(widget.ticker);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ticker = widget.ticker;
+    final entryPrice = widget.entryPrice;
+    final quantity = widget.quantity;
     final theme = Theme.of(context);
     final colors = context.resultColors;
     // GATED HERE RATHER THAN AT THE TWO CALL SITES, so a third one cannot
@@ -36,14 +55,12 @@ class LivePnlView extends ConsumerWidget {
     // row would turn the journal into an advert, and the paywall the user needs
     // to see is the one on «السوق», not six of them in a list.
     //
-    // The provider is not watched at all on the free plan, so no request is
-    // made — fetching a price nobody may see is the kind of waste that only
-    // shows up on a bill.
-    if (!ref.watch(entitlementProvider).can(Feature.livePrices)) {
+    // No request is made at all on the free plan — see didChangeDependencies.
+    if (!context.watch<BillingCubit>().state.entitlement.can(Feature.livePrices)) {
       return const SizedBox.shrink();
     }
 
-    final quote = ref.watch(livePriceProvider(ticker));
+    final quote = context.select((MarketCubit c) => c.quoteOf(ticker));
 
     Widget muted(String text) => Text(
       text,
@@ -52,8 +69,8 @@ class LivePnlView extends ConsumerWidget {
       ),
     );
 
-    return quote.when(
-      loading: () => Row(
+    if (quote.loading) {
+      return Row(
         children: [
           SizedBox(
             width: 12,
@@ -66,16 +83,20 @@ class LivePnlView extends ConsumerWidget {
           const SizedBox(width: 8),
           muted('جاري تحديث السعر...'),
         ],
-      ),
-      // «إغلاق», NEVER «لحظي», IN EITHER OF THESE.
-      //
-      // /api/quote returns the LAST DAILY CLOSE from an unofficial endpoint.
-      // Calling it a live price is a claim the product decided it may not make —
-      // it was scrubbed from five places for that reason, and these two survived
-      // the sweep while the card's own label three rows down already said «آخر
-      // إغلاق». Two names for one number on one card.
-      error: (_, _) => muted('تعذّر تحديث سعر الإغلاق'),
-      data: (info) {
+      );
+    }
+
+    // «إغلاق», NEVER «لحظي», IN EITHER OF THESE TWO LINES.
+    //
+    // /api/quote returns the LAST DAILY CLOSE from an unofficial endpoint.
+    // Calling it a live price is a claim the product decided it may not make —
+    // it was scrubbed from five places for that reason, and these two survived
+    // the sweep while the card's own label three rows down already said «آخر
+    // إغلاق». Two names for one number on one card.
+    if (quote.failed) return muted('تعذّر تحديث سعر الإغلاق');
+
+    {
+      final info = quote.info;
         // The service returns null for every failure and never a zero — a price
         // that did not arrive must not be arithmetic-ed into a 100% loss. The
         // `<= 0` is belt-and-braces against a future caller that forgets.
@@ -163,9 +184,8 @@ class LivePnlView extends ConsumerWidget {
               ),
             ],
           ),
-        );
-      },
-    );
+      );
+    }
   }
 
   static String _signedPct(double pct) {

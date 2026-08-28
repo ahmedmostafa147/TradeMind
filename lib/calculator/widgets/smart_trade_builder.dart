@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/state/app_state.dart';
 
 import '../../core/calc/smart_trade.dart';
 import '../../core/formatters.dart';
 import '../../core/theme.dart';
-import '../../settings/settings_providers.dart';
 import '../../trades/trade_draft.dart';
 import '../../trades/trade_form_screen.dart';
 import 'level_field.dart';
@@ -16,14 +15,14 @@ import 'trade_summary_card.dart';
 /// the stop and the target now share one mode type.
 typedef StopInputMode = LevelInputMode;
 
-class SmartTradeBuilder extends ConsumerStatefulWidget {
+class SmartTradeBuilder extends StatefulWidget {
   const SmartTradeBuilder({super.key});
 
   @override
-  ConsumerState<SmartTradeBuilder> createState() => _SmartTradeBuilderState();
+  State<SmartTradeBuilder> createState() => _SmartTradeBuilderState();
 }
 
-class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
+class _SmartTradeBuilderState extends State<SmartTradeBuilder> {
   static const List<double> _takeProfitPresets = [0.03, 0.05, 0.07, 0.10];
   static const List<double> _stopLossPresets = [0.01, 0.02, 0.03, 0.05];
 
@@ -75,7 +74,7 @@ class _SmartTradeBuilderState extends ConsumerState<SmartTradeBuilder> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(settingsProvider);
+    final settings = context.settings;
     final colors = context.resultColors;
 
     _takeProfitPercent ??= settings.defaultTakeProfitPercent;

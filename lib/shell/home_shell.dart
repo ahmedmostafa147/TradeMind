@@ -1,47 +1,36 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../billing/billing_providers.dart';
+import '../billing/cubit/billing_cubit.dart';
 import '../billing/entitlements.dart';
 import '../billing/widgets/paywall.dart';
 import '../calculator/calculator_screen.dart';
 import '../dashboard/goal_screen.dart';
-import '../features/auth/providers/auth_providers.dart';
+import '../features/auth/cubit/auth_cubit.dart';
+import '../features/auth/models/user_account.dart';
 import '../features/market/screens/market_screen.dart';
 import '../features/market/screens/stocks_screen.dart';
-import '../features/sync/providers/sync_provider.dart';
 import '../settings/settings_screen.dart';
+import 'shell_cubit.dart';
 import 'trades_hub_screen.dart';
 
-class ShellIndex extends Notifier<int> {
-  @override
-  int build() => 0;
-
-  void select(int value) => state = value;
-}
-
-final shellIndexProvider = NotifierProvider<ShellIndex, int>(ShellIndex.new);
-const int kSettingsIndex = 5;
-
-class HomeShell extends ConsumerStatefulWidget {
+/// The four-destination frame the whole journal lives in.
+///
+/// It used to `ref.watch(syncControllerProvider)` here — mounting the two-way
+/// Hive/Firestore sync by being built. There is one store now, so there is
+/// nothing to reconcile and nothing to mount: the cubits follow the account
+/// from `main`, and every screen below reads the same stream they do.
+class HomeShell extends StatelessWidget {
   const HomeShell({super.key});
 
   @override
-  ConsumerState<HomeShell> createState() => _HomeShellState();
-}
-
-class _HomeShellState extends ConsumerState<HomeShell> {
-  void _select(int value) =>
-      ref.read(shellIndexProvider.notifier).select(value);
-
-  @override
   Widget build(BuildContext context) {
-    ref.watch(syncControllerProvider);
+    void select(int value) => context.read<ShellCubit>().select(value);
 
-    final index = ref.watch(shellIndexProvider);
-    final entitlement = ref.watch(entitlementProvider);
-    final user = ref.watch(authProvider);
+    final index = context.watch<ShellCubit>().state;
+    final entitlement = context.watch<BillingCubit>().state.entitlement;
+    final user = context.watch<AuthCubit>().account ?? UserAccount.guest;
     final isDesktop = (kIsWeb || TargetPlatform.windows == defaultTargetPlatform) &&
         MediaQuery.of(context).size.width >= 900;
 
@@ -73,7 +62,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           children: [
             NavigationRail(
               selectedIndex: index > 4 ? 0 : index,
-              onDestinationSelected: _select,
+              onDestinationSelected: select,
               labelType: NavigationRailLabelType.all,
               leading: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -89,7 +78,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   child: IconButton(
                     icon: const Icon(Icons.logout_rounded),
                     tooltip: 'تسجيل الخروج',
-                    onPressed: () => ref.read(authProvider.notifier).logout(),
+                    onPressed: context.read<AuthCubit>().logout,
                   ),
                 ),
               ),
@@ -132,7 +121,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       body: body,
       bottomNavigationBar: NavigationBar(
         selectedIndex: index > 4 ? 0 : index,
-        onDestinationSelected: _select,
+        onDestinationSelected: select,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),
@@ -167,16 +156,16 @@ class _HomeShellState extends ConsumerState<HomeShell> {
 
 const Key settingsActionKey = ValueKey('settings-action');
 
-class SettingsAction extends ConsumerWidget {
+class SettingsAction extends StatelessWidget {
   const SettingsAction({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return IconButton(
       key: settingsActionKey,
       icon: const Icon(Icons.settings_outlined),
       tooltip: 'الإعدادات',
-      onPressed: () => ref.read(shellIndexProvider.notifier).select(kSettingsIndex),
+      onPressed: () => context.read<ShellCubit>().select(kSettingsIndex),
     );
   }
 }

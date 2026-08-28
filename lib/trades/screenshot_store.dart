@@ -10,7 +10,7 @@ import 'package:path_provider/path_provider.dart';
 /// files that no longer exist. Copying into the documents directory makes the
 /// attachment as durable as the trade record itself.
 ///
-/// Images are stored as files and referenced by path. Putting bytes in Hive
+/// Images are stored as files and referenced by path. Putting bytes in the record
 /// would bloat the box and undo the large-journal performance work.
 class ScreenshotStore {
   static const String _folder = 'screenshots';

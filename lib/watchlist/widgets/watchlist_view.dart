@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/state/app_state.dart';
 
 import '../../today/widgets/watchlist_card.dart';
 import '../watchlist_form_screen.dart';
-import '../watchlist_providers.dart';
 
 /// «قائمة المراقبة» — the stocks being waited on, before any money moves.
 ///
@@ -19,7 +18,7 @@ import '../watchlist_providers.dart';
 ///
 /// The site has carried a «قائمة المراقبة» tab with a «+ ضيف سهم» button all
 /// along. This is that tab, in the same slot in the same strip.
-class WatchlistView extends ConsumerWidget {
+class WatchlistView extends StatelessWidget {
   const WatchlistView({super.key});
 
   static const String addLabel = 'ضيف سهم للمراقبة';
@@ -31,9 +30,9 @@ class WatchlistView extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final items = ref.watch(sortedWatchlistProvider);
+    final items = context.watchlist;
 
     if (items.isEmpty) {
       return Center(

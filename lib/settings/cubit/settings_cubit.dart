@@ -84,6 +84,18 @@ class SettingsCubit extends AccountScopedCubit<SettingsState> {
   Settings? get settings =>
       state is SettingsLoaded ? (state as SettingsLoaded).settings : null;
 
+  /// The rule, for callers that are already below [SettingsGate] and so cannot
+  /// legitimately be looking at a null.
+  ///
+  /// A throw rather than a `!` so the failure names itself: a null here is a
+  /// widget reading settings from ABOVE the gate, not a user with no capital.
+  Settings get requireSettings =>
+      settings ??
+      (throw StateError(
+        'SettingsCubit has no settings yet. This is only reachable from above '
+        'SettingsGate — move the widget below it, or handle SettingsState.',
+      ));
+
   Future<void> _saveRemote(Settings next) async {
     final id = userId;
     if (id == null) return;

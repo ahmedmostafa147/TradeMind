@@ -67,6 +67,19 @@ abstract class AccountScopedCubit<S> extends Cubit<S> {
     _subscription = subscribe(userId);
   }
 
+  /// Subscribes again after a failure.
+  ///
+  /// [followAccount] on its own cannot do this: it ignores a repeat of the id
+  /// it is already following, which is exactly right for the token refreshes it
+  /// was written for and exactly wrong here. Without a way back, a single
+  /// refused read — an expired session, a rule deploy mid-use — leaves the
+  /// screen showing an error until the app is killed.
+  Future<void> retry() async {
+    final id = _userId;
+    _pointed = false;
+    await followAccount(id);
+  }
+
   @override
   Future<void> close() async {
     await _subscription?.cancel();

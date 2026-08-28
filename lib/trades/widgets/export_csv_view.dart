@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../core/state/app_state.dart';
+import '../../settings/cubit/settings_cubit.dart';
 
 import '../../core/utils/csv_export_helper.dart';
-import '../../settings/settings_providers.dart';
-import '../trades_providers.dart';
 
-class ExportCsvView extends ConsumerWidget {
+class ExportCsvView extends StatelessWidget {
   const ExportCsvView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final trades = ref.watch(tradesProvider);
+    final trades = context.trades;
 
     return Center(
       child: Padding(
@@ -42,7 +43,7 @@ class ExportCsvView extends ConsumerWidget {
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: () async {
-                final settings = ref.read(settingsProvider);
+                final settings = context.read<SettingsCubit>().requireSettings;
                 if (trades.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('لا توجد صفقات للتصدير.')),

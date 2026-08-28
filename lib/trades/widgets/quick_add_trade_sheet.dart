@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../core/state/app_state.dart';
+import '../cubit/trades_cubit.dart';
 
 import '../../core/calc/sizing_result.dart';
 import '../../core/formatters.dart';
@@ -9,12 +12,10 @@ import '../../core/theme.dart';
 import '../../core/widgets/risk_warning.dart';
 import '../../features/market/widgets/stock_quote_badge.dart';
 import '../../features/market/widgets/ticker_field.dart';
-import '../../settings/settings_providers.dart';
 import '../trade.dart';
 import '../trade_draft.dart';
 import '../trade_form_screen.dart';
 import '../trade_status.dart';
-import '../trades_providers.dart';
 
 /// The one name the add-a-trade action goes by, everywhere.
 ///
@@ -35,14 +36,14 @@ Future<void> openQuickAddSheet(BuildContext context) => showModalBottomSheet(
 );
 
 /// Fast quick-trade modal: ticker, entry, stop, target and share count.
-class QuickAddTradeSheet extends ConsumerStatefulWidget {
+class QuickAddTradeSheet extends StatefulWidget {
   const QuickAddTradeSheet({super.key});
 
   @override
-  ConsumerState<QuickAddTradeSheet> createState() => _QuickAddTradeSheetState();
+  State<QuickAddTradeSheet> createState() => _QuickAddTradeSheetState();
 }
 
-class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
+class _QuickAddTradeSheetState extends State<QuickAddTradeSheet> {
   final _tickerController = TextEditingController();
   final _entryController = TextEditingController();
   final _stopController = TextEditingController();
@@ -97,7 +98,7 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
       status: TradeStatus.planned,
     );
 
-    ref.read(tradesProvider.notifier).add(trade);
+    context.read<TradesCubit>().save(trade);
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('تمت إضافة صفقة $ticker بنجاح!')),
@@ -131,7 +132,7 @@ class _QuickAddTradeSheetState extends ConsumerState<QuickAddTradeSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(settingsProvider);
+    final settings = context.settings;
     final theme = Theme.of(context);
 
     final entry = parseNumber(_entryController.text);

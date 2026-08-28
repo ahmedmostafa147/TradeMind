@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../shell/home_shell.dart';
 import '../../../trades/trade_draft.dart';
 import '../../../trades/trade_form_screen.dart';
-import '../market_providers.dart';
+import '../cubit/market_cubit.dart';
 import '../models/egx_stock_info.dart';
 import '../services/egx_market_service.dart';
 import '../widgets/stock_row.dart';
@@ -23,11 +23,11 @@ import '../widgets/stock_row.dart';
 /// NAMES (TradingView's `description` is English for most listings), and it is
 /// still what the screen falls back to when the board cannot be reached, so the
 /// search box works offline instead of facing an empty list.
-class StocksScreen extends ConsumerStatefulWidget {
+class StocksScreen extends StatefulWidget {
   const StocksScreen({super.key});
 
   @override
-  ConsumerState<StocksScreen> createState() => _StocksScreenState();
+  State<StocksScreen> createState() => _StocksScreenState();
 }
 
 /// The same four the site's stocks panel offers, in the same order.
@@ -41,9 +41,15 @@ enum _Filter {
   final String label;
 }
 
-class _StocksScreenState extends ConsumerState<StocksScreen> {
+class _StocksScreenState extends State<StocksScreen> {
   final _search = TextEditingController();
   _Filter _filter = _Filter.all;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<MarketCubit>().ensureBoard();
+  }
 
   @override
   void dispose() {
@@ -113,8 +119,7 @@ class _StocksScreenState extends ConsumerState<StocksScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final boardAsync = ref.watch(tradingViewBoardProvider);
-    final board = boardAsync.asData?.value ?? const <EgxStockInfo>[];
+    final board = context.watch<MarketCubit>().state.board ?? const <EgxStockInfo>[];
     final rows = _visible(board);
 
     return Scaffold(

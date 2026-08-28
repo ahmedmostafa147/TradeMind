@@ -7,8 +7,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { firestore } from '@/lib/firebase';
 
 /**
- * Capital, the per-trade risk ceiling, and the waiting threshold — read from
- * and written to the ACCOUNT, with this browser's copy as a cache.
+ * The account's risk rule — five fields, read from and written to the ACCOUNT,
+ * with this browser's copy as a cache.
  *
  * WHAT THIS REPLACES
  * These three used to live in localStorage and nowhere else, because the app
@@ -36,6 +36,8 @@ const KEYS = {
   capital: 'radar-capital',
   maxRisk: 'radar-max-risk',
   waiting: 'radar-waiting-days',
+  takeProfit: 'radar-default-take-profit',
+  stopLoss: 'radar-default-stop-loss',
 } as const;
 
 /** The app's own defaults (lib/settings/settings.dart), so an untouched browser
@@ -44,12 +46,22 @@ export const DEFAULTS = {
   capital: 17000,
   maxRiskPercent: 0.02,
   waitingThresholdDays: 30,
+  defaultTakeProfitPercent: 0.05,
+  defaultStopLossPercent: 0.02,
 };
 
 export type LocalSettings = {
   capital: number;
   maxRiskPercent: number;
   waitingThresholdDays: number;
+  /**
+   * The levels an open trade with no target or stop of its own is scored
+   * against. They used to be device-only on the phone and hardcoded at 5% and
+   * 2% here, so the same trade got two verdicts for anyone who changed a
+   * default; they joined this document when the app moved online.
+   */
+  defaultTakeProfitPercent: number;
+  defaultStopLossPercent: number;
 };
 
 /**
@@ -76,6 +88,8 @@ function sanitise(raw: Record<string, unknown>, fallback: LocalSettings): LocalS
   const capital = num(raw.capital);
   const maxRisk = num(raw.maxRiskPercent);
   const waiting = num(raw.waitingThresholdDays);
+  const takeProfit = num(raw.defaultTakeProfitPercent);
+  const stopLoss = num(raw.defaultStopLossPercent);
 
   return {
     capital: capital !== null && capital > 0 ? capital : fallback.capital,
@@ -87,6 +101,14 @@ function sanitise(raw: Record<string, unknown>, fallback: LocalSettings): LocalS
       waiting !== null && waiting >= 1
         ? Math.round(waiting)
         : fallback.waitingThresholdDays,
+    defaultTakeProfitPercent:
+      takeProfit !== null && takeProfit > 0 && takeProfit <= 1
+        ? takeProfit
+        : fallback.defaultTakeProfitPercent,
+    defaultStopLossPercent:
+      stopLoss !== null && stopLoss > 0 && stopLoss < 1
+        ? stopLoss
+        : fallback.defaultStopLossPercent,
   };
 }
 
@@ -107,6 +129,11 @@ function writeCache(settings: LocalSettings): void {
     localStorage.setItem(KEYS.capital, String(settings.capital));
     localStorage.setItem(KEYS.maxRisk, String(settings.maxRiskPercent));
     localStorage.setItem(KEYS.waiting, String(settings.waitingThresholdDays));
+    localStorage.setItem(
+      KEYS.takeProfit,
+      String(settings.defaultTakeProfitPercent)
+    );
+    localStorage.setItem(KEYS.stopLoss, String(settings.defaultStopLossPercent));
   } catch {
     // The values still apply for this session.
   }
@@ -130,6 +157,14 @@ export function useAccountSettings(user: User | null) {
       waitingThresholdDays: readCache(
         KEYS.waiting,
         DEFAULTS.waitingThresholdDays
+      ),
+      defaultTakeProfitPercent: readCache(
+        KEYS.takeProfit,
+        DEFAULTS.defaultTakeProfitPercent
+      ),
+      defaultStopLossPercent: readCache(
+        KEYS.stopLoss,
+        DEFAULTS.defaultStopLossPercent
       ),
     };
     setSettings(cached);
@@ -176,8 +211,10 @@ export function useAccountSettings(user: User | null) {
       writeCache(merged);
       if (!uid) return;
 
-      // Whole document, no merge — the three values are one rule, and the app
-      // writes it the same way (FirestoreSyncService.pushRiskSettings).
+      // Whole document — the five values are one rule, and `merged` always
+      // carries all five. It has to: this is a REPLACE, so a partial object
+      // here would delete whichever fields the phone had written and this
+      // browser had never heard of.
       void setDoc(doc(firestore(), 'users', uid, ...SETTINGS_DOC), merged)
         .then(() => setSource('account'))
         .catch(() => setSource('local'));

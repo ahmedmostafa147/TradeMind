@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/state/app_state.dart';
 
 import '../../core/calc/daily_decisions.dart';
 import '../../core/formatters.dart';
 import '../../core/theme.dart';
-import '../../settings/settings_providers.dart';
 import '../../trades/trade.dart';
 import '../../trades/trade_detail_screen.dart';
 import '../../watchlist/watchlist_item.dart';
@@ -14,7 +13,7 @@ import 'trade_action_buttons.dart';
 import 'trade_action_card.dart';
 import 'watchlist_card.dart';
 
-class TodaySectionsList extends ConsumerWidget {
+class TodaySectionsList extends StatelessWidget {
   final DailyDecisions decisions;
   final List<WatchlistItem> watchlist;
 
@@ -25,8 +24,8 @@ class TodaySectionsList extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(settingsProvider);
+  Widget build(BuildContext context) {
+    final settings = context.settings;
     final colors = context.resultColors;
 
     return Column(

@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/state/app_state.dart';
 
 import '../core/calc/journal_analytics.dart';
 import '../core/formatters.dart';
 import '../core/theme.dart';
 import '../core/widgets/risk_warning.dart';
-import 'dashboard_providers.dart';
 import 'widgets/stat_card.dart';
 
 /// Section 16 — the deeper statistics, kept off the dashboard so the daily
 /// view stays scannable.
-class AnalyticsView extends ConsumerWidget {
+class AnalyticsView extends StatelessWidget {
   const AnalyticsView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final a = ref.watch(journalAnalyticsProvider);
+  Widget build(BuildContext context) {
+    final a = context.journalAnalytics;
     final colors = context.resultColors;
 
     Color? signColor(double? value) {

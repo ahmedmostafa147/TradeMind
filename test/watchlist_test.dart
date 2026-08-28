@@ -1,10 +1,7 @@
-import 'dart:io';
-
-import 'package:egx_trade_journal/core/hive_keys.dart';
+import 'package:egx_trade_journal/watchlist/data/watchlist_repository.dart';
 import 'package:egx_trade_journal/watchlist/watchlist_item.dart';
-import 'package:egx_trade_journal/watchlist/watchlist_item_adapter.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_ce/hive.dart';
 
 WatchlistItem makeItem({
   required String id,
@@ -21,8 +18,8 @@ WatchlistItem makeItem({
   dateAdded: dateAdded ?? DateTime(2026, 3, 1),
 );
 
-/// Mirrors sortedWatchlistProvider's comparator. Kept here so the ordering
-/// rule is unit-tested without spinning up a ProviderContainer.
+/// Mirrors the repository's comparator. Kept here so the ordering rule is
+/// unit-tested without spinning up a cubit.
 List<WatchlistItem> sorted(List<WatchlistItem> items) {
   final copy = [...items];
   copy.sort((a, b) {
@@ -86,31 +83,39 @@ void main() {
     });
   });
 
+  /// ── THIS GROUP USED TO OPEN A HIVE BOX ────────────────────────────────────
+  ///
+  /// It was asserting that a hand-written adapter round-tripped every field,
+  /// including the two that had bitten before: `priority` (stored by NAME, so
+  /// reordering the enum could not silently reassign everyone's priorities) and
+  /// `source` (added later, so older records lack it and must load as null
+  /// rather than not load at all).
+  ///
+  /// The adapter is gone. The same two hazards are, though, exactly as live in
+  /// the codec that replaced it — so the group is kept and pointed at the store
+  /// that actually holds the data now.
   group('persistence', () {
-    late Directory tempDir;
+    late FakeFirebaseFirestore db;
+    late WatchlistRepository repo;
+    const uid = 'user-1';
 
-    setUp(() async {
-      tempDir = await Directory.systemTemp.createTemp('egx_watchlist_test');
-      Hive.init(tempDir.path);
-      if (!Hive.isAdapterRegistered(kWatchlistItemTypeId)) {
-        Hive.registerAdapter(WatchlistItemAdapter());
+    setUp(() {
+      db = FakeFirebaseFirestore();
+      repo = WatchlistRepository(db);
+    });
+
+    Future<WatchlistItem?> roundTrip(WatchlistItem item) async {
+      await repo.save(uid, item);
+      final all = await repo.fetch(uid);
+      for (final stored in all) {
+        if (stored.id == item.id) return stored;
       }
-    });
-
-    tearDown(() async {
-      await Hive.close();
-      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-    });
+      return null;
+    }
 
     test('an item survives a round trip', () async {
       final item = makeItem(id: 'w1', priority: WatchPriority.high);
-      final box = await Hive.openBox<WatchlistItem>(kWatchlistBox);
-      await box.put(item.id, item);
-      await box.close();
-
-      final reopened = await Hive.openBox<WatchlistItem>(kWatchlistBox);
-      final result = reopened.get('w1')!;
-      await reopened.close();
+      final result = (await roundTrip(item))!;
 
       expect(result.id, item.id);
       expect(result.ticker, item.ticker);
@@ -122,55 +127,34 @@ void main() {
     });
 
     test('every priority round-trips by name', () async {
-      final box = await Hive.openBox<WatchlistItem>(kWatchlistBox);
       for (final priority in WatchPriority.values) {
-        final item = makeItem(id: priority.name, priority: priority);
-        await box.put(item.id, item);
+        final result = await roundTrip(
+          makeItem(id: priority.name, priority: priority),
+        );
+        expect(result!.priority, priority);
       }
-      await box.close();
-
-      final reopened = await Hive.openBox<WatchlistItem>(kWatchlistBox);
-      for (final priority in WatchPriority.values) {
-        expect(reopened.get(priority.name)!.priority, priority);
-      }
-      await reopened.close();
     });
 
     test('the source survives a round trip', () async {
       final item = makeItem(id: 'src').copyWith(source: 'قناة التحليل');
-      final box = await Hive.openBox<WatchlistItem>(kWatchlistBox);
-      await box.put(item.id, item);
-      await box.close();
-
-      final reopened = await Hive.openBox<WatchlistItem>(kWatchlistBox);
-      expect(reopened.get('src')!.source, 'قناة التحليل');
-      await reopened.close();
+      expect((await roundTrip(item))!.source, 'قناة التحليل');
     });
 
-    // Records written before the source field existed lack key 7, which reads
-    // back as null rather than making the whole record unloadable.
+    // Records written before the source field existed have no such key, which
+    // must read back as null rather than making the whole record unloadable.
     test('an item with no source loads as null', () async {
-      final box = await Hive.openBox<WatchlistItem>(kWatchlistBox);
-      await box.put('nosrc', makeItem(id: 'nosrc'));
-      await box.close();
-
-      final reopened = await Hive.openBox<WatchlistItem>(kWatchlistBox);
-      final result = reopened.get('nosrc')!;
+      final result = (await roundTrip(makeItem(id: 'nosrc')))!;
       expect(result.source, isNull);
       expect(result.ticker, 'COMI', reason: 'the rest still loads');
-      await reopened.close();
     });
 
     test('deleting removes only the targeted item', () async {
-      final box = await Hive.openBox<WatchlistItem>(kWatchlistBox);
-      await box.put('a', makeItem(id: 'a'));
-      await box.put('b', makeItem(id: 'b'));
-      await box.delete('a');
+      await repo.save(uid, makeItem(id: 'a'));
+      await repo.save(uid, makeItem(id: 'b'));
+      await repo.delete(uid, 'a');
 
-      expect(box.length, 1);
-      expect(box.get('a'), isNull);
-      expect(box.get('b'), isNotNull);
-      await box.close();
+      final remaining = await repo.fetch(uid);
+      expect(remaining.map((i) => i.id), ['b']);
     });
   });
 
