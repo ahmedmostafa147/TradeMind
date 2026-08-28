@@ -57,16 +57,16 @@ void main() {
   });
 
   group('EgxMarketService.logoUrl', () {
-    test('points at OUR route, never at the CDN', () {
+    test('points at OUR OWN FILE, never at the CDN', () {
       final url = EgxMarketService.logoUrl('telecom-egypt');
-      // The whole reason the proxy exists: the browser half of this product
+      // Three reasons in one assertion: the browser half of this product
       // cannot reach s3-symbol-logo.tradingview.com without a CSP entry and a
-      // privacy-policy clause naming a third party. One endpoint for both.
+      // privacy-policy clause naming a third party; relaying somebody else's
+      // assets is not ours to do indefinitely; and a source that stops
+      // answering would take every logo with it.
       expect(url, isNotNull);
-      expect(url, contains('/api/logo/?id=telecom-egypt'));
+      expect(url, endsWith('/logos/telecom-egypt.svg'));
       expect(url, isNot(contains('tradingview.com')));
-      // Slashed, so `trailingSlash: true` does not answer 308 once per row.
-      expect(url, contains('/api/logo/?'));
     });
 
     test('is null when there is nothing to ask for', () {

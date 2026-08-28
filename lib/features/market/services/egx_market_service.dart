@@ -26,18 +26,21 @@ class EgxMarketService {
 
   /// Where a logo lives, or null when there is none to ask for.
   ///
-  /// OUR route, never `s3-symbol-logo.tradingview.com` directly — the same rule
-  /// the price paths keep, and for a stronger reason than symmetry: the browser
-  /// half of this product cannot reach the CDN without a CSP entry and a
-  /// privacy-policy clause naming a third party. One endpoint for both surfaces
-  /// keeps that list unchanged. See site/app/api/logo/route.ts.
+  /// OUR OWN FILE, never `s3-symbol-logo.tradingview.com`. It began as a proxy
+  /// route for a privacy reason — the browser half of this product cannot reach
+  /// that CDN without a CSP entry and a privacy-policy clause naming a third
+  /// party — and became a downloaded asset for two more: relaying somebody
+  /// else's files is not a thing we are entitled to do indefinitely, and a
+  /// source that can stop answering would take every logo with it.
+  ///
+  /// The set is refreshed by `node tool/fetch-logos.mjs`. A slug with no file
+  /// 404s and the monogram shows, which is the same supported state as a
+  /// listing that never had a logo.
   static String? logoUrl(String? logoId) {
     final slug = TradingViewService.slug(logoId);
     if (slug == null) return null;
     final origin = _originOverride.isNotEmpty ? _originOverride : _fallbackOrigin;
-    // Slashed: `trailingSlash: true` on the site answers 308 otherwise, and one
-    // redirect per row is a real cost on a 293-row list.
-    return '$origin/api/logo/?id=$slug';
+    return '$origin/logos/$slug.svg';
   }
 
   static List<String> get _boardEndpoints => [

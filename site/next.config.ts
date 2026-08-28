@@ -205,13 +205,18 @@ const nextConfig: NextConfig = {
       },
       {
         /**
-         * The proxied company logos — a THIRD-PARTY DOCUMENT ON OUR ORIGIN.
+         * The company logos — SOMEONE ELSE'S DOCUMENTS ON OUR ORIGIN.
          *
          * SVG is a document format that can carry `<script>`. Drawn through an
          * `<img>` it never executes, but the file is served from radar's own
          * origin, so anyone handed the URL directly opens it as a same-origin
          * document — and the site policy above allows `script-src 'self'
          * 'unsafe-inline'`, which is exactly what such a file would need.
+         *
+         * `tool/fetch-logos.mjs` already REFUSES to write a file containing any
+         * of that, so this is the second lock on a door that is checked before
+         * anything is let through it. Both stay: the check runs when a human
+         * refreshes the set, and this runs on every request forever.
          *
          * MEASURED, because the two plausible behaviours differ and only one is
          * safe: for the SAME header key the later matching rule REPLACES the
@@ -227,7 +232,7 @@ const nextConfig: NextConfig = {
          * set on the response is the one that gets replaced — also measured, and
          * silent: the code would read as though it were protected.
          */
-        source: '/api/logo/:path*',
+        source: '/logos/:path*',
         headers: [
           {
             key: 'Content-Security-Policy',

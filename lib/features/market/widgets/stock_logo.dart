@@ -54,8 +54,10 @@ class StockLogo extends StatelessWidget {
         // White beneath a transparent logo ON PURPOSE: these are brand marks
         // drawn for a light background, and several are dark-on-transparent —
         // on the dark theme they would be a black shape on a near-black tile.
+        //
+        // NO PADDING: the art is a square that already carries its own light
+        // background, so an inset just drew a white frame around a smaller logo.
         color: Colors.white,
-        padding: EdgeInsets.all(size * 0.12),
         child: SvgPicture.network(
           url,
           fit: BoxFit.contain,
