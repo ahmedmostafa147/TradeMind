@@ -42,57 +42,6 @@ const nextConfig: NextConfig = {
   // shape of a URL is a redirect chain nobody asked for.
   trailingSlash: true,
 
-  // Turns off the AUTOMATIC redirect that `trailingSlash` above installs, and
-  // hands the job to site/middleware.ts — which does exactly the same thing for
-  // every path except the proxied sign-in helper below, where the redirect is
-  // fatal. The reasoning, and the measurement behind it, is in that file.
-  // `trailingSlash` itself stays on: it is what puts the slash on every
-  // generated link, canonical tag and sitemap entry.
-  skipTrailingSlashRedirect: true,
-
-  /**
-   * Serves Firebase's sign-in helper from OUR origin.
-   *
-   * ── THE BUG THIS FIXES ────────────────────────────────────────────────────
-   *
-   * Google sign-in looped: pick an account, come back to the site still signed
-   * out, pick again, forever. Nothing errored and nothing was logged.
-   *
-   * The cause is `authDomain` pointing at trademind-6222c.firebaseapp.com — a
-   * DIFFERENT ORIGIN from the one the user is on. `signInWithRedirect` parks
-   * the pending request in storage belonging to that origin and reads it back
-   * after Google returns. Chrome now partitions third-party storage, so the
-   * write and the read happen in two different buckets: the sign-in completes
-   * at Google, comes home, finds no pending request, and quietly does nothing.
-   * A loop is the only symptom it can produce.
-   *
-   * Proxying `/__/auth/*` makes the helper same-origin, so there is no
-   * third-party anything left to partition. This is the fix Firebase itself
-   * documents; the alternative — telling every user to re-enable third-party
-   * cookies — is asking them to weaken their browser to use ours.
-   *
-   * IT DOES NOT NEED A CUSTOM DOMAIN. It works on whatever host is serving the
-   * app, which is why `authDomain` is now read from `window.location` rather
-   * than hard-coded — see site/lib/firebase.ts. Buying a domain changes
-   * nothing here.
-   *
-   * `beforeFiles` because `/__/` is not a route this app has; leaving it until
-   * after the filesystem lookup would mean a 404 gets there first.
-   */
-  async rewrites() {
-    return {
-      beforeFiles: [
-        {
-          source: '/__/auth/:path*',
-          destination:
-            'https://trademind-6222c.firebaseapp.com/__/auth/:path*',
-        },
-      ],
-      afterFiles: [],
-      fallback: [],
-    };
-  },
-
   /**
    * Security headers.
    *
@@ -110,14 +59,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // NOT `/:path*`. The sign-in helper proxied above is Google's page, and
-        // two of the directives below are fatal to it — see the block at the
-        // bottom of this array. Next APPENDS the headers of every matching
-        // rule, and a browser handed two Content-Security-Policy headers
-        // enforces the INTERSECTION of them, so a second, looser policy cannot
-        // relax the first. The only way to exempt a path is to stop matching
-        // it, which is what the negative lookahead does.
-        source: '/:path((?!__/auth).*)',
+        source: '/:path*',
         headers: [
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
@@ -172,19 +114,10 @@ const nextConfig: NextConfig = {
               "img-src 'self' data:",
               "font-src 'self'",
               "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com",
-              // `'self'` is the sign-in iframe. signInWithPopup embeds
-              // `{authDomain}/__/auth/iframe` inside this page, and authDomain
-              // is now this origin, so what used to be a firebaseapp.com frame
-              // is a same-origin one. The firebaseapp.com entry stays: the
-              // OAuth round trip still passes through it.
-              "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com " +
+              'frame-src https://*.firebaseapp.com https://accounts.google.com ' +
                 'https://www.tradingview-widget.com https://s.tradingview.com',
               "base-uri 'self'",
-              // Was 'none'. The sign-in helper submits a form, and now that it
-              // is served from this origin that submission is same-origin and
-              // this page's policy governs it. 'self' permits exactly that and
-              // nothing else — no form on this site may post anywhere off it.
-              "form-action 'self'",
+              "form-action 'none'",
               "frame-ancestors 'none'",
               'upgrade-insecure-requests',
             ].join('; '),
@@ -198,42 +131,6 @@ const nextConfig: NextConfig = {
         source: '/sw.js',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
-        ],
-      },
-      {
-        /**
-         * The proxied sign-in helper, DELIBERATELY WITHOUT OUR CSP.
-         *
-         * Our policy is written for our pages. Applied to this one it breaks
-         * sign-in in two ways, neither of which reports itself as an auth
-         * problem:
-         *
-         *   `frame-ancestors 'none'` — signInWithPopup embeds
-         *   `/__/auth/iframe` inside our own page. That directive is read off
-         *   the IFRAME's response and forbids anyone from embedding it, us
-         *   included, so the frame comes back blank.
-         *
-         *   `form-action 'none'` — the helper reaches Google by submitting a
-         *   form. Blocked, the flow stops on a page that looks like it is
-         *   still working.
-         *
-         * MEASURED CAVEAT: under `next start` these headers are not applied at
-         * all — an externally-rewritten response comes back with the upstream's
-         * own headers and nothing of ours, CSP included. So on this host the
-         * exclusion above is already the whole fix and this block changes
-         * nothing. It stays because that is one runtime's behaviour, not a
-         * guarantee, and the cost of being wrong in the other direction is a
-         * sign-in that breaks on deploy for a reason nobody would look for
-         * twice.
-         */
-        source: '/__/auth/:path*',
-        headers: [
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload',
-          },
-          { key: 'Cache-Control', value: 'no-store' },
         ],
       },
     ];
