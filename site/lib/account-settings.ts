@@ -43,7 +43,15 @@ const KEYS = {
 /** The app's own defaults (lib/settings/settings.dart), so an untouched browser
  *  and an untouched install agree. */
 export const DEFAULTS = {
-  capital: 17000,
+  /**
+   * UNSET, not a number. It was 17,000 — a figure nobody chose, driving every
+   * position size, every over-risk verdict and the whole discipline score for
+   * anyone who never opened this panel. Every calculation here already answers
+   * null for a capital of 0 (`safeDiv` returns null, `maxLossPerTrade` returns
+   * 0), so the interface can say «لسه محددش» instead of a confident wrong
+   * number. Mirrors Settings.defaultCapital in lib/settings/settings.dart.
+   */
+  capital: 0,
   maxRiskPercent: 0.02,
   waitingThresholdDays: 30,
   defaultTakeProfitPercent: 0.05,
@@ -112,12 +120,18 @@ function sanitise(raw: Record<string, unknown>, fallback: LocalSettings): LocalS
   };
 }
 
-function readCache(key: string, fallback: number): number {
+/**
+ * `allowZero` exists for capital alone, where 0 is a real answer — «لسه
+ * محددش» — and not the absence of one. Everything else is a rate or a day
+ * count, where 0 is garbage and the default is the better answer.
+ */
+function readCache(key: string, fallback: number, allowZero = false): number {
   try {
     const raw = localStorage.getItem(key);
     if (raw === null) return fallback;
     const value = Number(raw);
-    return Number.isFinite(value) && value > 0 ? value : fallback;
+    if (!Number.isFinite(value)) return fallback;
+    return value > 0 || (allowZero && value === 0) ? value : fallback;
   } catch {
     // Private browsing denies access. Defaults are a fine answer.
     return fallback;
@@ -152,7 +166,7 @@ export function useAccountSettings(user: User | null) {
     let cancelled = false;
 
     const cached: LocalSettings = {
-      capital: readCache(KEYS.capital, DEFAULTS.capital),
+      capital: readCache(KEYS.capital, DEFAULTS.capital, true),
       maxRiskPercent: readCache(KEYS.maxRisk, DEFAULTS.maxRiskPercent),
       waitingThresholdDays: readCache(
         KEYS.waiting,
@@ -211,11 +225,22 @@ export function useAccountSettings(user: User | null) {
       writeCache(merged);
       if (!uid) return;
 
-      // Whole document — the five values are one rule, and `merged` always
-      // carries all five. It has to: this is a REPLACE, so a partial object
-      // here would delete whichever fields the phone had written and this
-      // browser had never heard of.
-      void setDoc(doc(firestore(), 'users', uid, ...SETTINGS_DOC), merged)
+      // `capital` is OMITTED while it is unset (0), never sent as a zero:
+      // firestore.rules requires `capital > 0`, so a zero would fail the write
+      // and take the other four fields down with it — silently, since the
+      // rejection lands in the catch below as a source change and nothing else.
+      //
+      // And `merge: true` BECAUSE of that omission. The four other values are
+      // still all present on every write, so this is the same document a full
+      // replace would have written whenever capital is set; the difference is
+      // the unset case, where a replace would delete a capital the phone had
+      // configured and this browser had simply failed to read.
+      const { capital, ...rest } = merged;
+      const payload = capital > 0 ? merged : rest;
+
+      void setDoc(doc(firestore(), 'users', uid, ...SETTINGS_DOC), payload, {
+        merge: true,
+      })
         .then(() => setSource('account'))
         .catch(() => setSource('local'));
     },

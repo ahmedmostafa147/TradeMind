@@ -26,8 +26,17 @@ export function useCalculatorState({
   initialRisk?: number;
   blankPrices?: boolean;
 }) {
+  // Three cases, not two. No prop at all is the landing page, which shows a
+  // worked example and needs a figure in the box. A prop of 0 is a signed-in
+  // user who has not set a capital yet — the box starts EMPTY there, because
+  // seeding it with a zero would size every position against nothing while
+  // looking like a value they chose.
   const [capital, setCapital] = useState(
-    initialCapital != null ? String(initialCapital) : '100000'
+    initialCapital == null
+      ? '100000'
+      : initialCapital > 0
+        ? String(initialCapital)
+        : ''
   );
   const [maxRisk, setMaxRisk] = useState(initialRisk ?? 0.02);
   const [entry, setEntry] = useState(blankPrices ? '' : '78.40');

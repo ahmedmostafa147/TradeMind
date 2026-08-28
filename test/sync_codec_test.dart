@@ -203,6 +203,20 @@ void main() {
       expect(back.defaultStopLossPercent, 0.03);
     });
 
+    test('omits an unset capital instead of writing a zero', () {
+      // firestore.rules requires `capital > 0`. Sending the default 0 would
+      // fail the whole write — silently, since nothing surfaces a rejected
+      // settings save — and take the other four fields with it.
+      expect(
+        SyncCodec.riskSettingsToMap(const Settings()).containsKey('capital'),
+        isFalse,
+      );
+      expect(
+        SyncCodec.riskSettingsToMap(const Settings(capital: 1))['capital'],
+        1,
+      );
+    });
+
     test('leaves the two habit toggles alone', () {
       // These stay on the device and the codec never carries them: they are
       // habits — whether to be shown a checklist, whether to be asked before a
@@ -219,6 +233,12 @@ void main() {
 
       expect(back.enableChecklist, isFalse);
       expect(back.enableConfirmations, isFalse);
+      // And the same is now true of an UNSET capital, for a different reason:
+      // the map leaves the key out entirely rather than sending a 0, so a
+      // device with no capital cannot wipe the one the account already has.
+      // firestore.rules would reject the 0 anyway and take the other four
+      // fields down with it.
+      expect(back.capital, 250000);
       expect(back.defaultTakeProfitPercent, Settings.fallbackTakeProfitPercent);
       expect(back.defaultStopLossPercent, Settings.fallbackStopLossPercent);
     });

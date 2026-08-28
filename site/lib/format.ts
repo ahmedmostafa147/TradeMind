@@ -36,6 +36,24 @@ export function money(value: number | null | undefined): string {
   return `${moneyFormat.format(value)} ${CURRENCY_SUFFIX}`;
 }
 
+/**
+ * What a capital of 0 is called on screen.
+ *
+ * 0 is DEFAULTS.capital and it means unset, so `money` would print
+ * «0.00 ج.م» — a figure the user never typed, sitting next to numbers derived
+ * from it. Mirror of `kUnsetCapital` in lib/core/formatters.dart; the two must
+ * say the same words, since the same account sees both surfaces.
+ */
+export const UNSET_CAPITAL = 'لسه محددش';
+
+/** "28,000.00 ج.م", or «لسه محددش» while there is no capital. */
+export function capitalLabel(capital: number | null | undefined): string {
+  if (capital == null || !Number.isFinite(capital) || capital <= 0) {
+    return UNSET_CAPITAL;
+  }
+  return money(capital);
+}
+
 /** "+816.00 ج.م" / "-272.00 ج.م" — for P&L, where the sign carries meaning. */
 export function signedMoney(value: number | null | undefined): string {
   if (value == null || !Number.isFinite(value)) return EMPTY_VALUE;

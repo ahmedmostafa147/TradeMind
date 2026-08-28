@@ -297,9 +297,12 @@ class _QuickAddTradeSheetState extends State<QuickAddTradeSheet> {
                   textAlign: TextAlign.right,
                   decoration: InputDecoration(
                     labelText: 'عدد الأسهم',
+                    // The suggestion needs a capital to divide by. Saying so
+                    // beats an empty helper: a missing number with no reason
+                    // next to it reads as a bug in the sheet.
                     helperText: sizing.suggestedQty != null
                         ? 'المقترح: ${quantity(sizing.suggestedQty)}'
-                        : null,
+                        : (settings.hasCapital ? null : 'حدّد رأس مالك في الإعدادات عشان يطلع مقترح'),
                   ),
                 ),
               ),

@@ -89,6 +89,15 @@ class AppHarness {
     String email = 'a@b.com',
     Entitlement? entitlement = const Entitlement(plan: Plan.trial),
     bool onboardingSeen = true,
+    /// The account's capital, seeded before anything reads it.
+    ///
+    /// The APP's default is 0 — unset — since a capital nobody chose drives
+    /// every position size and every over-risk verdict. Tests are the one
+    /// place that wants a number instead: nearly every fixture in this suite
+    /// is a figure computed against 17,000, and stating it here once keeps
+    /// those numbers meaning what they were written to mean. Pass 0 to get the
+    /// real unset state, and `settings_capital_test.dart` does.
+    double capital = 17000,
     Map<String, Object> preferences = const {},
     Future<EgxStockInfo?> Function(String symbol)? fetchQuote,
     Future<List<EgxStockInfo>> Function()? fetchBoard,
@@ -108,6 +117,10 @@ class AppHarness {
     final trades = TradesCubit(tradeRepository);
     final watchlist = WatchlistCubit(watchlistRepository, trades);
     final settings = SettingsCubit(settingsRepository, device);
+
+    if (capital > 0) {
+      await settingsRepository.save(userId, Settings(capital: capital));
+    }
 
     return AppHarness._(
       db: db,

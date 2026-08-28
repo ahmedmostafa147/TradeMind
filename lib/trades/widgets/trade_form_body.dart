@@ -141,9 +141,17 @@ class TradeFormBody extends StatelessWidget {
                 label: 'عدد الأسهم',
                 integerOnly: true,
                 onChanged: () {},
+                // Same as the quick sheet: with no capital there is nothing to
+                // size against, and an empty helper reads as a bug rather than
+                // as a missing setting.
                 helperText: liveResult.suggestedQty != null
                     ? 'المقترح: ${quantity(liveResult.suggestedQty)}'
-                    : null,
+                    // `maxLoss` is capital × risk%, and the risk% is validated
+                    // above zero everywhere it is set — so a zero budget here
+                    // means exactly one thing: no capital.
+                    : (liveResult.maxLoss > 0
+                          ? null
+                          : 'حدّد رأس مالك في الإعدادات عشان يطلع مقترح'),
               ),
             ),
             const SizedBox(width: 12),

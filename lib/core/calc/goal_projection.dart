@@ -36,7 +36,12 @@ const int kMinClosedTradesForProjection = 10;
 /// figure invites the reader to take it seriously.
 const int kMaxProjectionMonths = 600;
 
-enum ProjectionKind { reachable, alreadyThere, notEnoughHistory, noEdge }
+/// [ProjectionKind.noCapital] is the answer for a journal whose owner has not
+/// set a capital yet. It is a branch and not a fallback because the arithmetic
+/// below divides by capital twice: at 0 the monthly rate is Infinity and
+/// `ln(target / 0) / ln(1 + Infinity)` is NaN, which `ceil()` throws on. A
+/// named branch says «حدّد رأس مالك الأول» instead.
+enum ProjectionKind { reachable, alreadyThere, notEnoughHistory, noEdge, noCapital }
 
 class GoalProjection {
   final ProjectionKind kind;
@@ -104,6 +109,12 @@ GoalProjection projectGoal({
       if (trade.status == TradeStatus.closed && trade.exitDate != null)
         trade.exitDate!,
   ];
+
+  // BEFORE the `already there` test, which a zero capital would otherwise pass
+  // straight through on its way to the NaN below.
+  if (!capital.isFinite || capital <= 0) {
+    return const GoalProjection._(kind: ProjectionKind.noCapital);
+  }
 
   if (target <= capital) {
     return const GoalProjection._(kind: ProjectionKind.alreadyThere);

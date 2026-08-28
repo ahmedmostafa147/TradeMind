@@ -5,10 +5,24 @@
 /// the device, because they are habits and syncing a habit pushes one device's
 /// preference onto another.
 class Settings {
-  static const double defaultCapital = 17000;
+  /// UNSET, not a number. Zero is how «لسه ماحددش رأس ماله» is spelled, and
+  /// every screen that divides by capital already answers null for it — see
+  /// [safeDiv] and [maxLossPerTrade], which return null and 0 rather than
+  /// Infinity.
+  ///
+  /// It used to be 17,000: a number nobody chose, driving every position size,
+  /// every over-risk verdict and the whole discipline score for anyone who
+  /// never opened Settings. A missing answer the interface can name is honest;
+  /// a confident wrong one is not.
+  ///
+  /// It is never written to Firestore — firestore.rules requires
+  /// `capital > 0`, and [SyncCodec.riskSettingsToMap] leaves the field out
+  /// while it is unset rather than sending a value the rules would reject.
+  static const double defaultCapital = 0;
   static const double defaultMaxRiskPercent = 0.02;
 
-  /// Trading capital in EGP.
+  /// Trading capital in EGP. 0 means the user has not set one yet — ask
+  /// [hasCapital] rather than comparing against the default.
   final double capital;
 
   /// Maximum fraction of capital riskable on one trade. A FRACTION (0.02),
@@ -34,6 +48,10 @@ class Settings {
   static const int defaultWaitingThresholdDays = 30;
   static const double fallbackTakeProfitPercent = 0.05;
   static const double fallbackStopLossPercent = 0.02;
+
+  /// Whether there is a capital to compute against at all. Everything that
+  /// divides by capital is meaningless until this is true.
+  bool get hasCapital => capital.isFinite && capital > 0;
 
   const Settings({
     this.capital = defaultCapital,

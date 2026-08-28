@@ -58,7 +58,14 @@ import {
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { checklistCompletion } from '@/lib/checklist';
 import { firestore } from '@/lib/firebase';
-import { dateLabel, money, percent, rMultiple, signedMoney } from '@/lib/format';
+import {
+  capitalLabel,
+  dateLabel,
+  money,
+  percent,
+  rMultiple,
+  signedMoney,
+} from '@/lib/format';
 import { useAccountSettings, type SettingsSource } from '@/lib/account-settings';
 import {
   portfolioScenarios,
@@ -1079,7 +1086,15 @@ function SettingsSection({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-fg-muted">
           رأس المال{' '}
-          <span className="num font-bold text-fg">{money(settings.capital)}</span>
+          <span
+            className={
+              settings.capital > 0
+                ? 'num font-bold text-fg'
+                : 'font-bold text-loss'
+            }
+          >
+            {capitalLabel(settings.capital)}
+          </span>
           {' · '}أقصى مخاطرة{' '}
           <span className="num font-bold text-fg">
             {percent(settings.maxRiskPercent)}
@@ -1107,7 +1122,12 @@ function SettingsSection({
             رأس المال (ج.م)
             <input
               inputMode="decimal"
-              defaultValue={String(settings.capital)}
+              // EMPTY, not "0", while there is no capital. A zero in the box
+              // reads as a value the user chose and leaves the placeholder
+              // nothing to say; an empty box with a placeholder is a question,
+              // which is what this is.
+              defaultValue={settings.capital > 0 ? String(settings.capital) : ''}
+              placeholder="مثال: 50000"
               onBlur={(e) => {
                 const v = parseNumber(e.target.value);
                 if (v !== null && v > 0) onChange({ capital: v });
@@ -1131,6 +1151,12 @@ function SettingsSection({
           </label>
           <label className="text-sm font-semibold">
             حد الانتظار (يوم)
+            {/* The app's own subtitle for this field, which the web dropped —
+                and a day count with no sentence next to it is a number the
+                user has to guess the meaning of. */}
+            <span className="mt-1 block text-xs font-normal text-fg-subtle">
+              بعد كام يوم تظهر الصفقة المفتوحة في «منتظرة من زمان»
+            </span>
             <input
               inputMode="numeric"
               defaultValue={String(settings.waitingThresholdDays)}
@@ -1143,6 +1169,15 @@ function SettingsSection({
               className="mt-2 w-full rounded-md border border-border-default bg-surface px-3 py-2 outline-none focus:border-brand-ink"
             />
           </label>
+
+          {settings.capital <= 0 && (
+            <p className="rounded-md border border-loss-border bg-loss-surface p-3 text-xs leading-relaxed text-fg sm:col-span-3">
+              <strong>رأس مالك لسه مش متسجّل.</strong> حجم المركز وأقصى خسارة
+              ونسبة المخاطرة ودرجة الانضباط كلهم بيتقسموا عليه، فهيفضلوا «—» لحد
+              ما تكتبه. مش بنحط رقم من عندنا: رقم مخترع بيطلّع حسابات شكلها
+              واثق وملهاش علاقة بفلوسك.
+            </p>
+          )}
 
           <p className="text-xs leading-relaxed text-fg-subtle sm:col-span-3">
             {source === 'local' ? (

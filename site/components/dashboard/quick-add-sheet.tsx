@@ -36,6 +36,9 @@ export const ADD_TRADE_LABEL = 'أضف صفقة';
 /** What quick-save writes into `reason`, matching the app exactly. */
 export const QUICK_TRADE_REASON = 'صفقة سريعة';
 
+/** Why the sizing suggestion is missing, when the reason is a missing capital. */
+const NEEDS_CAPITAL_HINT = 'حدّد رأس مالك في الإعدادات عشان يطلع مقترح';
+
 export function QuickAddSheet({
   capital,
   maxRiskPercent,
@@ -238,7 +241,12 @@ export function QuickAddSheet({
                       {formatQuantity(sizing.suggestedQty)}
                     </span>
                   </>
-                ) : undefined
+                ) : sizing.maxLoss > 0 ? undefined : (
+                  // maxLoss is capital x risk%, and the risk% is validated above
+                  // zero wherever it is set — so a zero budget means one thing:
+                  // no capital. Saying so beats a hint that just vanishes.
+                  NEEDS_CAPITAL_HINT
+                )
               }
             >
               <PriceInput

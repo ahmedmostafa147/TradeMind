@@ -57,6 +57,41 @@ void main() {
       expect(p.beyondHorizon, isFalse);
     });
 
+    test('an unset capital is named, not divided by', () {
+      // 0 is Settings.defaultCapital and it means «لسه محددش». The
+      // arithmetic divides by capital twice: the monthly rate would be
+      // Infinity and `ln(target / 0) / ln(1 + Infinity)` is NaN — and
+      // `NaN.ceil()` THROWS, so this branch is what stands between an unset
+      // capital and a crashed «الهدف» tab.
+      final p = projectGoal(
+        trades: monthly,
+        capital: 0,
+        target: 200000,
+        expectancy: 5000,
+      );
+      expect(p.kind, ProjectionKind.noCapital);
+    });
+
+    test('an unset capital wins over every other branch', () {
+      // Including the ones that are cheaper to reach: `already-there` would
+      // fire for a target of 0, and `not-enough-history` for an empty journal.
+      // Neither is the useful thing to say to someone whose capital is blank.
+      expect(
+        projectGoal(trades: const [], capital: 0, target: 1, expectancy: null)
+            .kind,
+        ProjectionKind.noCapital,
+      );
+      expect(
+        projectGoal(
+          trades: monthly,
+          capital: double.nan,
+          target: 200000,
+          expectancy: 5000,
+        ).kind,
+        ProjectionKind.noCapital,
+      );
+    });
+
     test('a negative edge is never a big number of months', () {
       final p = projectGoal(
         trades: monthly,

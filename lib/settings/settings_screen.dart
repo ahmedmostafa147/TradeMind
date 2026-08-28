@@ -31,8 +31,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     final settings = context.read<SettingsCubit>().requireSettings;
+    // EMPTY, not "0.00", while there is no capital. A zero in the box reads as
+    // a value the user chose and leaves nothing for the hint to explain; an
+    // empty box with a hint is a question, which is what this is.
     _capitalController = TextEditingController(
-      text: settings.capital.toStringAsFixed(2),
+      text: settings.hasCapital ? settings.capital.toStringAsFixed(2) : '',
     );
     _riskController = TextEditingController(
       text: (settings.maxRiskPercent * 100).toStringAsFixed(1),
@@ -70,7 +73,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final riskPercent = _draftRiskPercent;
 
     final capitalError = capital == null || capital <= 0
-        ? 'أدخل رأس مال أكبر من صفر'
+        ? 'اكتب رأس مالك — من غيره مفيش حجم مركز ولا نسبة مخاطرة'
         : null;
     final riskError = riskPercent == null || riskPercent <= 0
         ? 'أدخل نسبة أكبر من صفر'
@@ -100,6 +103,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             textAlign: TextAlign.right,
             decoration: InputDecoration(
               labelText: 'رأس المال',
+              hintText: 'مثال: 50000',
               suffixText: kCurrencySuffix,
               errorText: capitalError,
             ),
