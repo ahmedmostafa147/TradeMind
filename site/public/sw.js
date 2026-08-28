@@ -25,7 +25,7 @@
 // Bumping this string is what retires every previous cache — see `activate`.
 // Change it whenever the caching RULES change; the content itself is handled by
 // the strategies below.
-const VERSION = 'radar-v1';
+const VERSION = 'radar-v2';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
@@ -35,6 +35,8 @@ const OFFLINE_URL = '/offline/';
 const IMMUTABLE = /^\/_next\/static\//;
 /** Stable URLs whose content does change — revalidated, not trusted forever. */
 const ASSETS = /^\/(icons|fonts)\/|\.(png|jpg|jpeg|svg|ico|woff2)$/;
+/** Firebase's sign-in helper, proxied onto this origin. Never touched. */
+const AUTH_HELPER = /^\/__\/auth\//;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -121,6 +123,15 @@ self.addEventListener('fetch', (event) => {
   // Returning without calling respondWith is what "leave alone" means — the
   // browser then does exactly what it would with no worker registered.
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+
+  // The sign-in helper, which next.config.ts proxies from Firebase onto this
+  // origin. It USED to be excluded by the line above for free, back when it
+  // lived on firebaseapp.com; moving it here to fix the redirect loop moved it
+  // inside the worker's reach at the same time, and it must not go there. Every
+  // response on this path is a one-time OAuth exchange bound to a single
+  // attempt: serving a stored copy of one replays a finished handshake, and the
+  // failure would look exactly like the loop this proxy exists to fix.
+  if (AUTH_HELPER.test(url.pathname)) return;
 
   if (IMMUTABLE.test(url.pathname)) {
     event.respondWith(cacheFirst(event, request, ASSET_CACHE));
