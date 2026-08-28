@@ -68,7 +68,13 @@ export type Projection =
    * valuable answer the feature gives, and it must never be softened into a
    * very large month count.
    */
-  | { kind: 'no-edge'; expectancy: number; monthlyProfit: number };
+  | { kind: 'no-edge'; expectancy: number; monthlyProfit: number }
+  /**
+   * No capital set yet. A branch and not a fallback: the arithmetic divides by
+   * capital twice, and at 0 the monthly rate is Infinity and the month count
+   * is NaN — a number that renders as «NaN شهر» rather than failing.
+   */
+  | { kind: 'no-capital' };
 
 /** A closed trade, reduced to the two fields this file needs. */
 export type ClosedPoint = { exitDate: Date; pnl: number };
@@ -108,6 +114,10 @@ export function project({
    */
   expectancy: number | null;
 }): Projection {
+  // BEFORE the `already-there` test, which an unset capital would otherwise
+  // pass straight through on its way to the NaN below.
+  if (!Number.isFinite(capital) || capital <= 0) return { kind: 'no-capital' };
+
   if (target <= capital) return { kind: 'already-there' };
 
   if (closed.length < MIN_CLOSED_TRADES) {

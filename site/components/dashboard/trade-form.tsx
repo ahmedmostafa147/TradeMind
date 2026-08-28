@@ -445,6 +445,15 @@ export function TradeForm({
           {/* SIZING ONLY WHEN THERE IS STILL A SIZE TO DECIDE. For an executed
               trade the quantity is history, and a suggestion next to it reads
               as a verdict on a position that cannot be changed. */}
+          {needsSizing(status) &&
+            sizing.suggestedQty === null &&
+            sizing.maxLoss <= 0 && (
+              // Same reasoning as the quick sheet: a suggestion that silently
+              // disappears reads as a bug, not as a missing setting.
+              <p className="mt-1.5 text-xs text-fg-subtle">
+                حدّد رأس مالك في الإعدادات عشان يطلع مقترح
+              </p>
+            )}
           {needsSizing(status) && sizing.suggestedQty !== null && (
             <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-fg-subtle">
               <span>

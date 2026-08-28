@@ -17,6 +17,14 @@ class GoalAnswerWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (projection.kind) {
+      // Listed first for the same reason the web panel puts it first: without a
+      // capital none of the other answers can be computed, and the fix is one
+      // field away, so the note names it.
+      ProjectionKind.noCapital => const GoalNoteWidget(
+          title: 'حدّد رأس مالك الأول',
+          body:
+              'التوقّع بيتحسب من ربح الشهر ÷ رأس المال، ورأس مالك لسه مش متسجّل. اكتبه في الإعدادات وارجع.',
+        ),
       ProjectionKind.alreadyThere => const GoalNoteWidget(
           title: 'انت وصلت خلاص',
           body: 'المبلغ ده أقل من أو يساوي رأس مالك الحالي. حط رقم أكبر لو عايز تشوف المدة.',

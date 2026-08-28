@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import { GoalPlannerBody } from '@/components/goal-planner-body';
-import { money, signedMoney } from '@/lib/format';
+import { capitalLabel, money, signedMoney } from '@/lib/format';
 import { annualReturnFromMonthlyRate } from '@/lib/goal-plan';
 import {
   MIN_CLOSED_TRADES,
@@ -84,7 +84,15 @@ export function GoalPanel({
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div>
             <p className="text-xs text-fg-muted">رأس مالك دلوقتي</p>
-            <p className="num mt-1 text-2xl font-bold">{money(capital)}</p>
+            <p
+              className={
+                capital > 0
+                  ? 'num mt-1 text-2xl font-bold'
+                  : 'mt-1 text-2xl font-bold text-fg-subtle'
+              }
+            >
+              {capitalLabel(capital)}
+            </p>
           </div>
 
           <label className="text-sm font-semibold">
@@ -128,6 +136,18 @@ function Answer({
   result: NonNullable<ReturnType<typeof project>>;
   capital: number;
 }) {
+  // Before every other branch, because without a capital none of them can be
+  // computed — and the fix is one field away, so the note names it.
+  if (result.kind === 'no-capital') {
+    return (
+      <Note title="حدّد رأس مالك الأول">
+        التوقّع بيتحسب من ربح الشهر ÷ رأس المال، ورأس مالك لسه
+        مش متسجّل. اكتبه في <strong>الإعدادات</strong> وارجع — مفيش رقم هنا هيبقى
+        له معنى قبل كده.
+      </Note>
+    );
+  }
+
   if (result.kind === 'already-there') {
     return (
       <Note title="انت وصلت خلاص">

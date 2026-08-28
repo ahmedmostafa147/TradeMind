@@ -122,10 +122,17 @@ class _SmartTradeBuilderState extends State<SmartTradeBuilder> {
           textDirection: TextDirection.ltr,
           textAlign: TextAlign.right,
           decoration: InputDecoration(
-            labelText: 'رأس المال (اختياري)',
-            hintText: money(settings.capital),
+            labelText: settings.hasCapital
+                ? 'رأس المال (اختياري)'
+                : 'رأس المال',
+            hintText: settings.hasCapital ? money(settings.capital) : 'مثال: 50000',
             suffixText: kCurrencySuffix,
-            helperText: 'افتراضي من الإعدادات: ${money(settings.capital)}',
+            // «اختياري» only while the Settings figure can stand in for it.
+            // With no capital set there is nothing to fall back to, so the
+            // helper stops promising a default and asks for the number.
+            helperText: settings.hasCapital
+                ? 'افتراضي من الإعدادات: ${money(settings.capital)}'
+                : 'مفيش رأس مال في الإعدادات — اكتبه هنا عشان يتحسب حجم المركز',
           ),
         ),
         const SizedBox(height: 16),

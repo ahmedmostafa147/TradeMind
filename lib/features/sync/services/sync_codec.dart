@@ -131,8 +131,14 @@ class SyncCodec {
   // delete — and syncing those would push one device's habits onto another.
   // ---------------------------------------------------------------------------
 
+  /// `capital` is OMITTED while it is unset (0), not sent as a zero.
+  /// firestore.rules requires `capital > 0`, so a zero would fail the whole
+  /// write and take the other four fields down with it. The repository saves
+  /// with `merge: true`, so leaving the key out keeps whatever the account
+  /// already has — which is the right answer for a device that has no capital
+  /// to offer.
   static Map<String, dynamic> riskSettingsToMap(Settings s) => {
-    'capital': s.capital,
+    if (s.hasCapital) 'capital': s.capital,
     'maxRiskPercent': s.maxRiskPercent,
     'waitingThresholdDays': s.waitingThresholdDays,
     // Added with the move to a single store. CLAUDE.md §5 recorded the cost of

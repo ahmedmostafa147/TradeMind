@@ -71,7 +71,7 @@ class _GoalViewState extends State<GoalView> {
                   ),
                 ),
                 NumericText(
-                  money(settings.capital),
+                  capitalLabel(settings.capital),
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),

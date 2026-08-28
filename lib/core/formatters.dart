@@ -28,6 +28,20 @@ final NumberFormat _integer = NumberFormat('#,##0', 'en');
 String money(double? value) =>
     value == null ? kEmptyValue : '${_money.format(value)} $kCurrencySuffix';
 
+/// What a capital of 0 is called on screen.
+///
+/// 0 is [Settings.defaultCapital] and it means UNSET, so [money] would print
+/// «0.00 ج.م» — a figure the user never typed, next to numbers derived from
+/// it. Mirrored in site/lib/format.ts as `UNSET_CAPITAL`; the two must say the
+/// same words, since the same account sees both.
+const String kUnsetCapital = 'لسه محددش';
+
+/// "28,000.00 ج.م", or «لسه محددش» while there is no capital.
+String capitalLabel(double? capital) =>
+    (capital == null || !capital.isFinite || capital <= 0)
+    ? kUnsetCapital
+    : money(capital);
+
 /// "+816.00 ج.م" / "-272.00 ج.م" — for P&L, where the sign carries meaning.
 String signedMoney(double? value) {
   if (value == null) return kEmptyValue;

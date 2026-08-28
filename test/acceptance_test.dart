@@ -215,7 +215,10 @@ void main() {
     }
   });
 
-  testWidgets('settings show max loss of 340.00 at the defaults', (
+  // NOT «at the defaults» any more: the app's default capital is 0 — unset —
+  // and 340.00 is what the harness's seeded 17,000 buys at the default 2%.
+  // The unset state has its own file, settings_capital_test.dart.
+  testWidgets('settings show max loss of 340.00 for 17,000 at 2%', (
     tester,
   ) async {
     await pumpApp(tester);
