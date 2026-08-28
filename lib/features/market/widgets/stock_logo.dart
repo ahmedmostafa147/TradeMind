@@ -16,10 +16,20 @@ import '../services/egx_market_service.dart';
 /// is the rule every price path here already keeps: «—» for a quote that did
 /// not arrive, never a 0.
 ///
-/// So the fallback is a MONOGRAM of the company name, at the same size the
+/// So the fallback is a MONOGRAM of the company name, in the same circle the
 /// logo occupies. Nothing shifts when one loads late and nothing looks wrong
 /// when one never loads — including under `flutter test`, where no image ever
 /// resolves.
+///
+/// ── AND IT IS A CIRCLE BECAUSE THE ART IS ─────────────────────────────────
+///
+/// MEASURED over all 280 files: 274 carry their own full 18×18 background
+/// rect, 241 of those the same pale `#F0F3FA`. These are not bare marks — they
+/// are self-contained avatars drawn with their own padding, which is why the
+/// source renders them as circles. In a rounded SQUARE the handful with a
+/// saturated background (COMI's blue, Fawry's yellow) read as loud colour
+/// blocks beside pale ones; the circle gives every row the same silhouette and
+/// clips nothing, since the corners it removes are background by construction.
 ///
 /// The first draft put the TICKER in that tile, and the widget tests caught it:
 /// the row's own title is the ticker, so the fallback repeated the word sitting
@@ -46,8 +56,7 @@ class StockLogo extends StatelessWidget {
     final url = EgxMarketService.logoUrl(logoId);
     if (url == null) return _Monogram(name: name, size: size);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
+    return ClipOval(
       child: Container(
         width: size,
         height: size,
@@ -86,7 +95,7 @@ class _Monogram extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
+        shape: BoxShape.circle,
       ),
       // `characters`, not `substring(0, 1)`: an Arabic name can open with a
       // combining mark and an emoji-bearing one with a surrogate pair, and
