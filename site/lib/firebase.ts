@@ -16,13 +16,64 @@ import { getFirestore, type Firestore } from 'firebase/firestore';
  * pointed at without a code change, with the production values as defaults so
  * a fresh clone builds and runs with no setup.
  */
+/**
+ * The origin that serves the sign-in helper.
+ *
+ * ── WHY THIS IS NOT `trademind-6222c.firebaseapp.com` ANY MORE ──────────────
+ *
+ * It was, and Google sign-in looped because of it: choose an account, land back
+ * signed out, choose again. `signInWithRedirect` stores the pending request
+ * under the authDomain's origin and reads it back when Google returns, and
+ * Chrome partitions storage belonging to another origin — so the write and the
+ * read landed in different buckets and the returning user looked, to the SDK,
+ * like someone who had never pressed anything. Silent by construction: nothing
+ * failed, a record was simply not found.
+ *
+ * Whatever host is serving this page also serves `/__/auth/*`, proxied in
+ * next.config.ts. Reading the host here rather than naming one keeps the two
+ * in step everywhere the app runs — localhost, a Vercel preview, production,
+ * and the custom domain later — with nothing to remember to change.
+ *
+ * THE HOST MUST STILL BE IN Firebase → Authentication → Authorized domains.
+ * The proxy decides where the helper is served from; that list decides whether
+ * Firebase will talk to the page at all.
+ *
+ * The build-time fallback is never used at runtime — every caller below runs in
+ * the browser — but prerendering evaluates this module in Node, where there is
+ * no `window`.
+ */
+const FIREBASE_AUTH_DOMAIN = 'trademind-6222c.firebaseapp.com';
+
+function authDomain(): string {
+  const configured = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+  if (configured) return configured;
+
+  // Prerendering. Never reached at runtime — every caller below runs in the
+  // browser — but the module is evaluated in Node during the build.
+  if (typeof window === 'undefined') return FIREBASE_AUTH_DOMAIN;
+
+  // ── PLAIN HTTP CANNOT USE THE PROXY, SO IT DOES NOT TRY ───────────────────
+  //
+  // The SDK builds the helper URL as `https://{authDomain}/__/auth/handler` —
+  // the scheme is fixed, not copied from the page. Handing it `localhost:3000`
+  // while `next start` is serving http therefore points it at an https origin
+  // that does not exist, and the sign-in dies on a browser connection error
+  // before any of our code runs. Measured in exactly that setup.
+  //
+  // So local development keeps the original cross-origin helper. That is not a
+  // hole: the popup route works there regardless, and the storage partitioning
+  // this whole change exists to defeat only bites the redirect route on a real
+  // https site. Anywhere it matters, this returns our own host.
+  if (window.location.protocol !== 'https:') return FIREBASE_AUTH_DOMAIN;
+
+  return window.location.host;
+}
+
 const firebaseConfig = {
   apiKey:
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY ??
     'AIzaSyA4vBu8r2qD-nVs3Nd1l2-SMoSI7frtB9M',
-  authDomain:
-    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ??
-    'trademind-6222c.firebaseapp.com',
+  authDomain: authDomain(),
   projectId:
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? 'trademind-6222c',
   storageBucket:

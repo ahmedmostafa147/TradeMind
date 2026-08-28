@@ -163,6 +163,31 @@ export default function PrivacyPage() {
         الهوية والتخزين السحابي بيتم عن طريق Firebase من Google. النقل كله مشفّر
         بـ HTTPS.
       </p>
+      {/* ADDED WITH THE SIGN-IN PROXY, IN THE SAME COMMIT AS THE CODE.
+
+          The Google sign-in helper used to be served by
+          trademind-6222c.firebaseapp.com and never touched us. next.config.ts
+          now proxies /__/auth/* through our own origin — the only way modern
+          browsers will complete a redirect sign-in at all, since they partition
+          storage belonging to another origin. That change puts our server in
+          the path of the reader's IP during sign-in, and «whose server sees the
+          IP» is exactly the kind of flow CLAUDE.md §10 already treats as
+          disclosable rather than internal.
+
+          It deliberately does NOT claim tokens never pass through us: the
+          handshake is completed by Firebase's own code and the credential is
+          handed to the app through same-origin browser storage, but that is
+          Firebase's implementation and not something this document should
+          promise on its behalf. What is certain, and worth the reader knowing,
+          is that the password is typed on Google's page. */}
+      <p>
+        على <strong>الموقع</strong>، صفحة الدخول بحساب Google بتتقدّم من نطاقنا
+        إحنا بدل نطاق Firebase — من غير كده المتصفحات الحديثة مش بتعرف تكمّل
+        الدخول أصلًا. يعني سيرفرنا بيشوف عنوان الـ IP بتاعك أثناء الدخول، زي أي
+        طلب صفحة عادي. <strong>مش بنسجّله ومش بنربطه بحسابك.</strong> كلمة السر
+        بتاعت جوجل بتتكتب على صفحة Google نفسها وعمرها ما بتعدّي علينا. على{' '}
+        <strong>التطبيق</strong> الدخول بيتم من غير أي وسيط مننا.
+      </p>
 
       <h2>٤. بيانات السوق</h2>
       <p>
