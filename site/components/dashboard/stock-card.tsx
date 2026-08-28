@@ -27,15 +27,20 @@ export function StockCard({
 
   return (
     <div className="flex flex-col justify-between gap-3 rounded-2xl border border-border-default bg-surface p-4 shadow-xs transition-all hover:border-border-strong hover:shadow-sm">
+      {/* THE NAME GETS ITS OWN LINE, under everything else.
+          It used to sit beside the ticker inside the left group, which was fine
+          until the logo took 36px and a gap out of that group's width — and
+          TradingView's descriptions are long («O B Financial Holding»,
+          «Arabia for Investment and Development»), so the column truncated them
+          to «…lding» and «…ment». A name cut to its last four letters is not a
+          shorter name, it is no name. Full width still truncates the longest of
+          them, but at the end of a readable phrase rather than at the start. */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
           <StockLogo logoId={logoId} name={name} />
-          <div className="min-w-0">
-            <span className="num inline-block rounded-md bg-surface-high px-2 py-0.5 text-xs font-extrabold text-fg">
-              {symbol}
-            </span>
-            <p className="mt-1 truncate text-xs font-semibold text-fg-muted">{name}</p>
-          </div>
+          <span className="num inline-block rounded-md bg-surface-high px-2 py-0.5 text-xs font-extrabold text-fg">
+            {symbol}
+          </span>
         </div>
 
         <div className="text-end">
@@ -49,6 +54,16 @@ export function StockCard({
           </span>
         </div>
       </div>
+
+      {/* `dir="auto"` because these names arrive in TWO directions: the curated
+          Arabic ones and TradingView's English descriptions. An LTR name inside
+          the page's RTL block truncates at its VISUAL start — «…estment and
+          Development» — which hides the words that identify the company and
+          keeps the ones that do not. Per-string direction puts the ellipsis at
+          the end of the phrase in both languages. */}
+      <p dir="auto" className="-mt-1 truncate text-xs font-semibold text-fg-muted">
+        {name}
+      </p>
 
       <div className="flex items-center gap-2 pt-1 border-t border-border-default/60">
         <button

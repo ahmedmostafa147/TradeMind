@@ -13,10 +13,20 @@ import { useState } from 'react';
  * image, which is the same rule the price paths keep: «—» for a quote that did
  * not arrive, never a 0.
  *
- * So the fallback is a MONOGRAM of the company name, at the same size the logo
- * occupies, which means the layout is identical whether or not the image
+ * So the fallback is a MONOGRAM of the company name, in the same circle the
+ * logo occupies, which means the layout is identical whether or not the image
  * resolves. Nothing shifts when one loads late, and nothing looks wrong when
  * one never loads.
+ *
+ * ── AND IT IS A CIRCLE BECAUSE THE ART IS ─────────────────────────────────
+ *
+ * MEASURED over all 280 files: 274 carry their own full 18×18 background rect,
+ * 241 of those the same pale `#F0F3FA`. These are not bare marks — they are
+ * self-contained avatars, drawn with their own padding, which is why the
+ * source renders them as circles. In a rounded SQUARE the handful with a
+ * saturated background (COMI's blue, Fawry's yellow) read as loud colour
+ * blocks beside pale ones; the circle gives every row the same silhouette and
+ * clips nothing, since the corners it removes are background by construction.
  *
  * NOT the ticker: the card shows that in the chip immediately beside this tile,
  * and the app's widget tests caught the first draft doing exactly that — two
@@ -47,7 +57,7 @@ export function StockLogo({
     return (
       <span
         aria-hidden
-        className={`flex shrink-0 items-center justify-center rounded-lg bg-surface-high text-sm font-extrabold text-fg-muted ${className}`}
+        className={`flex shrink-0 items-center justify-center rounded-full bg-surface-high text-sm font-extrabold text-fg-muted ${className}`}
       >
         {first}
       </span>
@@ -66,11 +76,11 @@ export function StockLogo({
       loading="lazy"
       decoding="async"
       onError={() => setFailed(true)}
-      // NO PADDING: the art is a square that already carries its own light
-      // background, so an inset just drew a white frame around a smaller logo.
-      // `bg-white` stays under it for the few marks that are transparent — on
-      // the dark theme those would be a black shape on a near-black card.
-      className={`shrink-0 rounded-lg bg-white object-contain ${className}`}
+      // NO PADDING: the art already carries its own background and inset, so a
+      // second one just drew a frame around a smaller logo. `bg-white` stays
+      // under it for the six files that are transparent — on the dark theme
+      // those would be a black shape on a near-black card.
+      className={`shrink-0 rounded-full bg-white object-contain ${className}`}
     />
   );
 }
