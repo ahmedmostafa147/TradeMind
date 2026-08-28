@@ -83,6 +83,18 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [
         {
+          // ONLY `/__/auth/*`. `/__/firebase/init.json` is requested by the
+          // helper and 404s here, and that 404 IS THE CORRECT ANSWER — do not
+          // "fix" it by widening this rule. Firebase Hosting serves that file,
+          // and the copy it serves carries
+          // `"authDomain": "trademind-6222c.firebaseapp.com"`. Proxying it
+          // would hand the helper the very cross-origin authDomain this whole
+          // change exists to get rid of, and the redirect loop would come
+          // back — from a change that looks like it is only removing a 404.
+          //
+          // Measured: with the file 404ing, the flow reaches Google's account
+          // chooser with no error. The SDK passes its config in the query
+          // string; the file is a Hosting convenience it does not need.
           source: '/__/auth/:path*',
           destination:
             'https://trademind-6222c.firebaseapp.com/__/auth/:path*',
