@@ -43,6 +43,17 @@ export type BoardRow = {
   volume: number | null;
   /** Seconds of delay the response declared, or null when it did not. */
   delaySeconds: number | null;
+  /**
+   * TradingView's slug for the company's logo — `commercial-international-bank-egypt`.
+   *
+   * Null for the ~3% of listings that have none, and the UI must treat that as
+   * a normal state rather than a broken image: see `StockLogo`, which falls
+   * back to the ticker chip that was there before logos existed.
+   *
+   * It rides along in the board response that was already being fetched, so
+   * showing a logo costs no extra request to learn WHICH logo.
+   */
+  logoId: string | null;
 };
 
 /** The columns requested, in order. The parser reads by index, so these match. */
@@ -53,6 +64,9 @@ export const SCANNER_COLUMNS = [
   'change',
   'volume',
   'update_mode',
+  // APPENDED, never inserted: the parser below reads cells BY INDEX, so a new
+  // column in the middle would silently shift every field after it.
+  'logoid',
 ] as const;
 
 export const SCANNER_BODY = {
@@ -78,6 +92,28 @@ function num(value: unknown): number | null {
 }
 
 /**
+ * A logo slug, or null.
+ *
+ * The pattern is the whole security story for /api/logo: the value is
+ * interpolated into an upstream URL path, so anything that could carry a
+ * scheme, a host, a traversal or a query is not a slug. Kept next to the
+ * parser so the check travels with the field rather than being remembered at
+ * each call site.
+ */
+// MEASURED, not guessed: all 284 slugs the board returned use `[a-z0-9-]` and
+// nothing else, and the longest is 64 characters
+// (`paints-and-chemical-industries-company-sae-gdr-repr-1-3-shr-144a`). No dot
+// is allowed on purpose — it is the only character in the observed set's
+// neighbourhood that could start to look like traversal or an extension swap.
+export const LOGO_ID = /^[a-z0-9][a-z0-9-]{0,79}$/;
+
+function slug(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim().toLowerCase();
+  return LOGO_ID.test(trimmed) ? trimmed : null;
+}
+
+/**
  * One scanner response into rows, dropping anything unusable.
  *
  * A ROW WITH NO PRICE IS DROPPED, NOT ZEROED. The project's rule wherever a
@@ -96,7 +132,7 @@ export function parseBoard(body: unknown): BoardRow[] {
     const cells = (entry as { d?: unknown }).d;
     if (!Array.isArray(cells)) continue;
 
-    const [name, description, close, change, volume, mode] = cells;
+    const [name, description, close, change, volume, mode, logoId] = cells;
 
     const rawTicker =
       typeof (entry as { s?: string }).s === 'string'
@@ -124,6 +160,10 @@ export function parseBoard(body: unknown): BoardRow[] {
       changePercent: num(change),
       volume: num(volume),
       delaySeconds: delayOf(mode),
+      // Validated HERE and not at the point of use, because this string ends up
+      // in a URL path. The same shape /api/logo enforces, so a value that got
+      // through here cannot be one the route rejects.
+      logoId: slug(logoId),
     });
   }
 
