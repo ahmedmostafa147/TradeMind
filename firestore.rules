@@ -374,6 +374,66 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ONE INTEGER, PUBLISHED TO THE LANDING PAGE.
+    //
+    // `publicStats/counts` holds how many accounts have been created since
+    // Radar launched, and the date it counts from. That is the whole document.
+    //
+    // ── WHY THIS IS THE ONLY PUBLICLY READABLE PATH IN THIS FILE ────────────
+    //
+    // Every other read here needs at least a session, and `marketFlows` says
+    // why: an open read would let anyone scrape the accumulated history without
+    // signing up. There is nothing here to scrape. It is an aggregate — no
+    // user is identifiable in it, no row can be enumerated from it, and the
+    // number is being printed on a public marketing page anyway. Requiring a
+    // session would mean the one figure meant for people who do NOT have an
+    // account is visible only to people who do.
+    //
+    // ── WHY A PUBLISHED SNAPSHOT AND NOT A COUNTER ─────────────────────────
+    //
+    // The alternative shapes both cost infrastructure this project has
+    // deliberately not taken on: a Cloud Function incrementing on account
+    // creation needs the Blaze plan, and a server route counting on demand
+    // needs firebase-admin and a service account — the same debt the comment
+    // above `marketFlows` records as owed rather than assumed done.
+    //
+    // This needs neither, for the same reason the flows do: THE ADMIN WRITES IT
+    // FROM THEIR OWN BROWSER, with their own credentials. /admin already counts
+    // the rows it just loaded; publishing that count is one extra write.
+    //
+    // The cost is that the figure is as fresh as the last time an admin opened
+    // the dashboard. It CANNOT drift the way an incrementing counter can — it
+    // is a snapshot of a number computed from the source each time, so a missed
+    // write leaves it stale, never wrong-and-diverging. `updatedAt` below is
+    // what lets a reader tell the difference.
+    match /publicStats/{docId} {
+      allow read: if true;
+
+      allow create, update: if isAdmin()
+        && docId == 'counts'
+        && request.resource.data.keys().hasOnly([
+             'userCount', 'since', 'updatedAt'
+           ])
+        // `is number`, NOT `is int` — deliberately, and for the reason spelled
+        // out on `waitingThresholdDays` above: the two SDKs disagree about
+        // whether a whole number serialises as an integer or a double, and
+        // `is int` turns that disagreement into a silent permission denial on
+        // save. The readers coerce.
+        && request.resource.data.userCount is number
+        && request.resource.data.userCount >= 0
+        && request.resource.data.userCount <= 1000000000
+        && request.resource.data.since is string
+        && request.resource.data.since.size() <= 10
+        // THE SERVER'S CLOCK, for the same reason `trialStartedAt` is: a
+        // freshness stamp taken from the writing machine can be wrong by
+        // however much that machine's clock is wrong, and this one exists
+        // precisely so a reader can decide whether to trust the number next
+        // to it. A stamp that cannot be trusted is worse than no stamp.
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete: if isAdmin();
+    }
+
     // Anything not matched above is denied, including any path a future
     // version adds before its rule does.
     match /{document=**} {
