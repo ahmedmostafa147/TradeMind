@@ -66,11 +66,13 @@ export async function StatsStrip() {
 
         {/* Appears only once the figure exists — see readPublicStats.
 
-            THE DATE IS PART OF THE CLAIM, NOT DECORATION. «100 متداول» alone is
-            a number with no denominator: it reads the same whether it took a
-            day or three years, and the honest version of a small figure is the
-            one that says how long it took. It is also what stops the line from
-            quietly becoming a lifetime total later.
+            IT IS EVERY ACCOUNT, WITH NO DATE ATTACHED. This carried «من 30
+            أغسطس 2026» and counted only accounts created on or after it, to
+            keep pre-launch development accounts out of a public figure. The
+            owner's call is that the number is simply how many people are on
+            Radar — and the filter turned out to be hiding real traders rather
+            than hiding us, because people had signed up the day before the
+            recorded launch date.
 
             `.num` is on the numeral ALONE and not on the paragraph. It carries
             `direction: ltr`, and putting it on Arabic prose throws the trailing
@@ -81,8 +83,7 @@ export async function StatsStrip() {
             <span className="num font-bold text-fg">
               {published.userCount.toLocaleString('en-US')}
             </span>{' '}
-            متداول بيسجّلوا صفقاتهم على رادار، من{' '}
-            <span className="whitespace-nowrap">{site.statsSince}</span>
+            متداول بيسجّلوا صفقاتهم على رادار
           </p>
         )}
       </div>

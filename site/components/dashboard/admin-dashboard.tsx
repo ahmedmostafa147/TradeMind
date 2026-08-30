@@ -460,18 +460,6 @@ function UsersPanel() {
   const activeThisWeek = rows.filter((r) => since(r.lastSeenAt, WEEK)).length;
   const withTrades = rows.filter((r) => (r.tradeCount ?? 0) > 0).length;
 
-  // WHAT THE LANDING PAGE PUBLISHES, and deliberately not `rows.length`.
-  //
-  // Accounts made before Radar launched are development and test accounts —
-  // ours. Counting them as traders on a public page is the small, easy lie
-  // that a hand-typed figure used to make possible, and the whole reason the
-  // number stopped being hand-typed. A row with no `createdAt` at all is
-  // likewise not evidence of a trader arriving after launch, so it is out.
-  const launch = new Date(`${site.launchedAt}T00:00:00Z`).getTime();
-  const sinceLaunch = rows.filter(
-    (r) => r.createdAt !== null && r.createdAt.getTime() >= launch
-  ).length;
-
   return (
     <>
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -489,7 +477,14 @@ function UsersPanel() {
         />
       </dl>
 
-      <PublishedCount value={sinceLaunch} />
+      {/* EVERY ACCOUNT, not a window on one.
+          It was filtered to accounts created on or after a launch date, to keep
+          pre-launch development accounts out of a public figure. The owner's
+          call is that the published number is simply how many people are on
+          Radar — and the filter was worse than useless in practice, because
+          real users had signed up the day BEFORE the recorded launch date, so
+          it was hiding traders rather than hiding us. */}
+      <PublishedCount value={rows.length} />
 
       {/* Profiles only. The rules do not grant an admin read on anybody's
           trades — the count below is a counter the app maintains, not a
@@ -525,12 +520,21 @@ function UsersPanel() {
               {rows.map((row) => (
                 <tr key={row.uid} className="border-t border-border-default">
                   <Td className="font-semibold">{row.displayName}</Td>
-                  <Td className="num" dir="ltr">
-                    {row.email}
+                  {/* `.num` GOES ON A SPAN, NEVER ON THE CELL — see the note on
+                      Td below. It used to be on all four of these and it took
+                      the table apart. */}
+                  <Td>
+                    <span className="num">{row.email}</span>
                   </Td>
-                  <Td className="num text-fg-muted">{fmtDate(row.createdAt)}</Td>
-                  <Td className="num text-fg-muted">{fmtDate(row.lastSeenAt)}</Td>
-                  <Td className="num">{row.tradeCount ?? '—'}</Td>
+                  <Td className="text-fg-muted">
+                    <span className="num">{fmtDate(row.createdAt)}</span>
+                  </Td>
+                  <Td className="text-fg-muted">
+                    <span className="num">{fmtDate(row.lastSeenAt)}</span>
+                  </Td>
+                  <Td>
+                    <span className="num">{row.tradeCount ?? '—'}</span>
+                  </Td>
                   <Td>
                     <PlanBadge subscription={row.subscription} />
                   </Td>
@@ -730,7 +734,7 @@ function PlanBadge({ subscription }: { subscription: Subscription | null }) {
 
   if (e.plan === 'pro') {
     return (
-      <span className="rounded-full bg-brand px-2 py-0.5 text-[11px] font-bold text-on-brand">
+      <span className="inline-block whitespace-nowrap rounded-full bg-brand px-2 py-0.5 text-[11px] font-bold text-on-brand">
         Pro
         {subscription?.proUntil && (
           <span className="num ps-1 font-normal opacity-80">
@@ -742,8 +746,16 @@ function PlanBadge({ subscription }: { subscription: Subscription | null }) {
   }
   if (e.plan === 'trial') {
     return (
-      <span className="rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-semibold">
-        تجربة · <span className="num">{e.trialDaysLeft}</span>ي
+      /* WHITESPACE-NOWRAP IS WHAT KEEPS THIS A PILL. The `.num` span inside is
+         its own bidi-isolated box, so the text after it is a separate wrap
+         opportunity — and in a narrow column the line broke there, leaving the
+         last character alone on a second line with the rounded border drawn
+         around the wreckage.
+
+         And it said «ي», not «يوم». One letter is not an abbreviation of
+         anything a reader can recover; «تجربة · 14 ي» reads as a typo. */
+      <span className="inline-block whitespace-nowrap rounded-full border border-border-strong px-2 py-0.5 text-[11px] font-semibold">
+        تجربة · <span className="num">{e.trialDaysLeft}</span> يوم
       </span>
     );
   }
@@ -772,6 +784,30 @@ function Th({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * A table cell.
+ *
+ * ── NEVER PASS `num` IN `className`. ────────────────────────────────────────
+ *
+ * `.num` in globals.css sets `display: inline-block` along with the LTR
+ * direction, and that lands HERE, on the `<td>` — which stops the cell being a
+ * `table-cell` and takes it out of the table's column layout entirely.
+ *
+ * MEASURED, because the symptom does not look like a display bug. With `.num`
+ * on four of the seven cells, `getComputedStyle` reported
+ * `table-cell, inline-block, inline-block, inline-block, inline-block,
+ * table-cell, table-cell`, the header cells' right edges were
+ * [1184, 1030, 507, 392, 303, …] while the first row's were
+ * [1184, 1030, 877, 767, 657, …], and — the giveaway — THE SAME COLUMN LANDED
+ * AT A DIFFERENT X ON EVERY ROW (877, 819, 830), because each escaped cell was
+ * sized by its own content instead of by the column. It reads as "the table is
+ * a bit off" rather than "these cells are not cells".
+ *
+ * CLAUDE.md §7 already said to put `.num` on the number alone inside a
+ * `<span>`. It was said in prose, and it was broken here, in the tag stats
+ * table on the customer dashboard, and in the market flows table — three
+ * places. `test/site_copy_guard_test.dart` enforces it now.
+ */
 function Td({
   children,
   className = '',
@@ -848,11 +884,16 @@ function PublishedCount({ value }: { value: number }) {
       try {
         await setDoc(doc(firestore(), 'publicStats', 'counts'), {
           userCount: value,
-          since: site.launchedAt,
           // The server's clock. firestore.rules REQUIRES this to equal
           // request.time, so a client-supplied date is refused outright —
           // deliberately, because this stamp is the only thing telling a reader
           // whether the number beside it is current.
+          //
+          // `since` is no longer written. The rule still PERMITS the key —
+          // `hasOnly` is a whitelist, not a requirement — and it is left
+          // permitted rather than tightened in the same breath, because
+          // narrowing the rule before this code is live would make the
+          // production build's publish fail instead.
           updatedAt: serverTimestamp(),
         });
         if (!cancelled) setState('done');
@@ -874,8 +915,7 @@ function PublishedCount({ value }: { value: number }) {
       ) : (
         <>
           منشور على الصفحة الرئيسية:{' '}
-          <span className="num font-bold text-fg">{value}</span> متداول من{' '}
-          {site.statsSince}
+          <span className="num font-bold text-fg">{value}</span> متداول
           {state === 'saving' ? ' — بيتحدّث…' : ' — اتحدّث دلوقتي'}
         </>
       )}
