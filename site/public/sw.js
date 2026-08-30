@@ -20,12 +20,17 @@
  * response is far worse than an offline error. They are not passed to
  * `respondWith` at all, so the browser handles them exactly as it would with no
  * service worker installed.
+ *
+ * TWO SAME-ORIGIN PATHS ARE EXCLUDED BY HAND, because the origin check cannot
+ * reach them: `/__/auth/` (a one-time OAuth exchange) and `/_vercel/` (the
+ * analytics script and its beacon). Both are annotated at the point they are
+ * skipped in `fetch` below.
  */
 
 // Bumping this string is what retires every previous cache — see `activate`.
 // Change it whenever the caching RULES change; the content itself is handled by
 // the strategies below.
-const VERSION = 'radar-v2';
+const VERSION = 'radar-v3';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
@@ -37,6 +42,8 @@ const IMMUTABLE = /^\/_next\/static\//;
 const ASSETS = /^\/(icons|fonts)\/|\.(png|jpg|jpeg|svg|ico|woff2)$/;
 /** Firebase's sign-in helper, proxied onto this origin. Never touched. */
 const AUTH_HELPER = /^\/__\/auth\//;
+/** Vercel's own endpoints — the analytics script and its beacon. Never touched. */
+const PLATFORM = /^\/_vercel\//;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -132,6 +139,17 @@ self.addEventListener('fetch', (event) => {
   // attempt: serving a stored copy of one replays a finished handshake, and the
   // failure would look exactly like the loop this proxy exists to fix.
   if (AUTH_HELPER.test(url.pathname)) return;
+
+  // Vercel's analytics script and its beacon. Same-origin, so — unlike the
+  // Firebase and Google endpoints in the comment at the top — they are NOT
+  // excluded for free by the origin check above. The script matches neither
+  // IMMUTABLE (it is not under /_next/static/) nor ASSETS, so it would land in
+  // the network-first branch and be written into the SHELL cache: the store
+  // that exists to keep /privacy and /terms readable offline would be holding
+  // a telemetry script, and an offline load would serve a stale copy of it.
+  // Nothing here is worth storing — a measurement that arrives late is not a
+  // measurement, and one replayed from a cache is worse than none.
+  if (PLATFORM.test(url.pathname)) return;
 
   if (IMMUTABLE.test(url.pathname)) {
     event.respondWith(cacheFirst(event, request, ASSET_CACHE));

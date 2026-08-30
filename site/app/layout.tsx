@@ -1,3 +1,4 @@
+import { Analytics } from '@vercel/analytics/next';
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 
@@ -235,6 +236,42 @@ export default function RootLayout({
       <body className="font-sans antialiased" suppressHydrationWarning>
         {children}
         <ServiceWorkerRegistrar />
+        {/* AGGREGATE PAGE VIEWS. The one number nothing else in this product
+            can produce.
+
+            Firestore already knows how many accounts exist and what they do
+            with them; what it cannot know is how many people arrived and left
+            without signing up. «500 visits, 2 sign-ups» and «20 visits, 8
+            sign-ups» are opposite problems — a landing page that does not
+            convince, versus nobody arriving at all — and they are
+            indistinguishable from inside the database. That gap is the whole
+            reason this is here.
+
+            WHY VERCEL'S AND NOT A THIRD-PARTY SCRIPT
+            It is served from OUR origin — /_vercel/insights/script.js — so
+            `script-src 'self'` already covers it and the beacon it POSTs to
+            /_vercel/insights/view is covered by `connect-src 'self'`. Nothing
+            in next.config.ts changes. A hosted alternative (Plausible, Umami,
+            GA) is a new external host, which by the rule in CLAUDE.md §22 costs
+            a CSP entry AND a privacy clause naming a new third party — for a
+            number that is identical. Vercel already serves every request on
+            this site; they are not a new party to the reader's traffic.
+
+            IT IS A NO-OP UNTIL SOMEBODY ENABLES IT. Web Analytics has to be
+            switched on in the Vercel project (Analytics → Enable). Until then
+            this component mounts, requests a script that 404s, and reports
+            nothing — with no error anywhere. If the dashboard is empty, check
+            that switch BEFORE looking at this file.
+
+            TWO THINGS ARE COUPLED TO IT, AND BOTH ARE EASY TO MISS:
+              · public/sw.js excludes /_vercel/ explicitly. Same-origin GETs
+                fall into the worker's network-first branch by default, which
+                would park a telemetry script in the shell cache.
+              · The privacy policy said «مفيش أدوات تتبّع» in three places. It
+                now describes this instead. Removing this component means
+                putting those three sentences back — the document must keep
+                describing the product that exists. */}
+        <Analytics />
       </body>
     </html>
   );
