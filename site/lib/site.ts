@@ -51,17 +51,37 @@ export const site = {
   playStoreUrl: null as string | null,
 
   /**
-   * Registered users, once there are any.
+   * The day Radar went live, and the day the published user count counts from.
    *
-   * Null until the number is real, and the social-proof line is hidden
-   * entirely while it is. A launch-day page claiming subscribers it does not
-   * have is a fabricated statistic on a public site — and it is the one claim
-   * a visitor can check against the Play listing's own install count.
+   * ── IT IS A CUTOFF, NOT A CAPTION ──────────────────────────────────────────
    *
-   * Set it to the real figure after launch and the line appears by itself.
+   * `publicStats/counts` reports accounts created ON OR AFTER this date, so the
+   * development and test accounts that existed before launch are not counted as
+   * traders. That is the difference between a figure a visitor can check and a
+   * number inflated by the people who built the thing.
+   *
+   * ISO because it is compared as a date, not printed as one — `statsSince`
+   * below is what a reader sees.
    */
-  userCount: null as number | null,
+  launchedAt: '2026-08-30',
 
+  /** `launchedAt`, in the form the landing page prints it. */
+  statsSince: '30 أغسطس 2026',
+
+  /**
+   * ── THE USER COUNT USED TO BE A NUMBER TYPED HERE. IT IS LIVE NOW. ─────────
+   *
+   * It was `userCount: null as number | null`, with a note saying to set it to
+   * the real figure after launch. The flaw in that is not the typing, it is
+   * that a hand-set figure is only correct on the day it is set: it goes stale
+   * silently, in the direction that flatters, on a public page. A marketing
+   * number nobody is forced to revisit becomes a claim nobody is checking.
+   *
+   * It now comes from `publicStats/counts` — see lib/public-stats.ts for how it
+   * is read and firestore.rules for who may write it. The line stays hidden
+   * when that document is missing or unreadable, which is exactly what `null`
+   * used to buy.
+   */
 
   contactEmail: 'ahmed14mostafa17@gmail.com',
 

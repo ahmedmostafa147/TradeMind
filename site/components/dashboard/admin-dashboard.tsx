@@ -19,6 +19,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { firestore } from '@/lib/firebase';
 import { fetchFlowsFromApi, saveFlows } from '@/lib/market-flows-store';
+import { site } from '@/lib/site';
 import { entitlementOf } from '@/lib/subscription';
 import type { Subscription } from '@/lib/use-subscription';
 
@@ -459,6 +460,18 @@ function UsersPanel() {
   const activeThisWeek = rows.filter((r) => since(r.lastSeenAt, WEEK)).length;
   const withTrades = rows.filter((r) => (r.tradeCount ?? 0) > 0).length;
 
+  // WHAT THE LANDING PAGE PUBLISHES, and deliberately not `rows.length`.
+  //
+  // Accounts made before Radar launched are development and test accounts —
+  // ours. Counting them as traders on a public page is the small, easy lie
+  // that a hand-typed figure used to make possible, and the whole reason the
+  // number stopped being hand-typed. A row with no `createdAt` at all is
+  // likewise not evidence of a trader arriving after launch, so it is out.
+  const launch = new Date(`${site.launchedAt}T00:00:00Z`).getTime();
+  const sinceLaunch = rows.filter(
+    (r) => r.createdAt !== null && r.createdAt.getTime() >= launch
+  ).length;
+
   return (
     <>
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -475,6 +488,8 @@ function UsersPanel() {
           }
         />
       </dl>
+
+      <PublishedCount value={sinceLaunch} />
 
       {/* Profiles only. The rules do not grant an admin read on anybody's
           trades — the count below is a counter the app maintains, not a
@@ -788,6 +803,85 @@ function Metric({
       <dd className="num mt-1.5 text-2xl font-bold">{value}</dd>
       {note && <p className="mt-1.5 text-xs text-fg-subtle">{note}</p>}
     </div>
+  );
+}
+
+/**
+ * Publishes the since-launch account count to the landing page.
+ *
+ * ── WHY THIS WRITES BY ITSELF INSTEAD OF BEHIND A BUTTON ────────────────────
+ *
+ * The figure used to be a constant in site.ts with a comment asking somebody to
+ * come back and update it after launch. Nobody was ever going to, and that is
+ * not a discipline problem — a number that needs a human to remember it is a
+ * number that is wrong most of the time, in whichever direction happens to
+ * flatter. A button would have exactly the same defect with an extra click.
+ *
+ * So opening this page republishes. The write is one document, it costs one
+ * operation per admin visit, and the count it publishes was already computed
+ * from rows the page had loaded anyway.
+ *
+ * ── WHAT IT COSTS, STATED RATHER THAN HIDDEN ────────────────────────────────
+ *
+ * The landing page is therefore as fresh as the last time an admin looked at
+ * this screen. That is a real limitation and the line below says so out loud,
+ * with the published number and its date, so a stale figure is visible HERE —
+ * on the one screen whose visitor can fix it — rather than only on the public
+ * page where nobody would notice.
+ *
+ * The alternatives were a Cloud Function (needs the Blaze plan) or a server
+ * route with firebase-admin and a service account (a dependency this project
+ * has deliberately not taken on — firestore.rules says so in as many words).
+ * Neither is worth taking on for a marketing line.
+ *
+ * A FAILED WRITE IS SHOWN, NOT SWALLOWED. It is not worth an alert and it
+ * blocks nothing, but a publish that silently stops working would leave the
+ * public number frozen at whatever it was — which is the failure mode this
+ * whole mechanism exists to end.
+ */
+function PublishedCount({ value }: { value: number }) {
+  const [state, setState] = useState<'saving' | 'done' | 'failed'>('saving');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        await setDoc(doc(firestore(), 'publicStats', 'counts'), {
+          userCount: value,
+          since: site.launchedAt,
+          // The server's clock. firestore.rules REQUIRES this to equal
+          // request.time, so a client-supplied date is refused outright —
+          // deliberately, because this stamp is the only thing telling a reader
+          // whether the number beside it is current.
+          updatedAt: serverTimestamp(),
+        });
+        if (!cancelled) setState('done');
+      } catch {
+        if (!cancelled) setState('failed');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [value]);
+
+  return (
+    <p className="mt-3 text-xs text-fg-subtle">
+      {state === 'failed' ? (
+        <span className="text-loss">
+          مقدرش ينشر العدد على الصفحة الرئيسية. الرقم القديم لسه معروض هناك.
+        </span>
+      ) : (
+        <>
+          منشور على الصفحة الرئيسية:{' '}
+          <span className="num font-bold text-fg">{value}</span> متداول من{' '}
+          {site.statsSince}
+          {state === 'saving' ? ' — بيتحدّث…' : ' — اتحدّث دلوقتي'}
+        </>
+      )}
+      {'. '}
+      بيتحدّث كل مرة تفتح الصفحة دي.
+    </p>
   );
 }
 

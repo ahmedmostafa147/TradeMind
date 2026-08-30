@@ -1,3 +1,4 @@
+import { readPublicStats } from '@/lib/public-stats';
 import { site } from '@/lib/site';
 
 /**
@@ -5,10 +6,13 @@ import { site } from '@/lib/site';
  *
  * Every one is checkable against the source: the metric count comes from
  * JournalAnalytics plus JournalStats, the twelve tools from the list in
- * tools.tsx, the six items from ChecklistItem, and the zero from the privacy
- * policy's own "no ads, no trackers" clause. Nothing here is a growth figure,
- * because there are no users yet — see `site.userCount`, which stays hidden
- * until the number is real.
+ * tools.tsx, and the six items from ChecklistItem.
+ *
+ * THE ONE UNDERNEATH IS THE ONLY GROWTH FIGURE ON THE SITE, and it is the only
+ * one not counted from the code — it is read live from `publicStats/counts`,
+ * because a growth number is the one kind that cannot be checked by reading a
+ * file. See lib/public-stats.ts. The line is absent, not zeroed, whenever that
+ * read comes back empty.
  *
  * DELIBERATELY UNFRAMED. This used to be a charcoal block with four bordered
  * cells and an icon in each. Sitting directly beneath the hero's framed chart
@@ -36,7 +40,13 @@ const stats = [
   },
 ];
 
-export function StatsStrip() {
+export async function StatsStrip() {
+  // Awaited on the server, during prerender and each revalidation — so the
+  // number ships inside the HTML. Fetching it in the browser instead would
+  // trade a clean marketing page for a line that pops in after hydration and
+  // shoves everything below it down.
+  const published = await readPublicStats();
+
   return (
     <section className="border-b border-border-default">
       <div className="mx-auto max-w-5xl px-5 py-12 lg:py-16">
@@ -54,13 +64,25 @@ export function StatsStrip() {
           ))}
         </dl>
 
-        {/* Appears only once the figure exists. */}
-        {site.userCount != null && (
+        {/* Appears only once the figure exists — see readPublicStats.
+
+            THE DATE IS PART OF THE CLAIM, NOT DECORATION. «100 متداول» alone is
+            a number with no denominator: it reads the same whether it took a
+            day or three years, and the honest version of a small figure is the
+            one that says how long it took. It is also what stops the line from
+            quietly becoming a lifetime total later.
+
+            `.num` is on the numeral ALONE and not on the paragraph. It carries
+            `direction: ltr`, and putting it on Arabic prose throws the trailing
+            token to the wrong end of the line — the trap in CLAUDE.md §7, which
+            has already produced «‎%دخول 78.40 ج.م» once. */}
+        {published !== null && (
           <p className="mt-12 text-center text-sm text-fg-muted">
             <span className="num font-bold text-fg">
-              {site.userCount.toLocaleString('en-US')}
+              {published.userCount.toLocaleString('en-US')}
             </span>{' '}
-            متداول بيسجّلوا صفقاتهم على رادار
+            متداول بيسجّلوا صفقاتهم على رادار، من{' '}
+            <span className="whitespace-nowrap">{site.statsSince}</span>
           </p>
         )}
       </div>
