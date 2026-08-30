@@ -50,7 +50,16 @@ const int kTrialDays = 14;
 ///     stops nobody.
 ///   - There is no payment mechanism — activation is an admin typing into a
 ///     dialog after a bank transfer.
-///   - There are zero users. The scarce thing is people, not revenue.
+///   - ~~There are zero users. The scarce thing is people, not revenue.~~
+///     NO LONGER TRUE — Radar launched 30 أغسطس 2026 and has real users
+///     (`publicStats/counts` publishes how many; /admin computes it). This
+///     reason is spent, and it is struck through rather than deleted because a
+///     decision's reasons are also its expiry conditions: seeing which ones
+///     lapsed is how you know whether the decision still holds.
+///
+///     THE OTHER THREE STAND UNCHANGED, and they are the ones that were ever
+///     load-bearing. A paywall over three surfaces that cannot be enforced
+///     still stops nobody, and there is still no way to take money.
 ///   - And on Android, no paid tier means no Play Billing question at all.
 ///
 /// `EVERYTHING_FREE` in site/lib/subscription.ts is the mirror of this and MUST
