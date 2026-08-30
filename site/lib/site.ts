@@ -112,8 +112,20 @@ export const site = {
    *
    *  The stored-data table also now admits that a manual activation writes the
    *  amount, method and transfer reference into the billing document.
-   *  Widened, never narrowed. */
-  legalUpdatedAt: '26 أغسطس 2026',
+   *  Widened, never narrowed.
+   *
+   *  31 أغسطس is the first time this document has had to REMOVE a promise
+   *  rather than widen one. It said «مفيش أدوات تتبّع» in the callout, «مفيش
+   *  أدوات تتبّع تحليلية» in §1 and «مفيش حاجة بتتسجّل عنك وانت بتتفرّج» in §4
+   *  — three wordings of one claim, and the site now counts aggregate page
+   *  views (see app/layout.tsx). All three were rewritten in the same commit
+   *  that added the counter, because the alternative is a published policy
+   *  describing a product that no longer exists.
+   *
+   *  The narrowing is bounded and the document says where: web only, no
+   *  cookies, no profile, never joined to an account or a journal, and the
+   *  Android app collects nothing at all. */
+  legalUpdatedAt: '31 أغسطس 2026',
 } as const;
 
 /**

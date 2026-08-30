@@ -38,7 +38,9 @@ export default function PrivacyPage() {
       <div className="callout">
         <strong>الأساس:</strong> رادار بيشتغل بحساب. صفقاتك بتتخزّن على حسابك
         انت، وقواعد الأمان على السيرفر بتمنع أي مستخدم تاني من الوصول ليها.
-        مفيش إعلانات، مفيش أدوات تتبّع، ومبنبيعش بياناتك.
+        مفيش إعلانات، ومبنبيعش بياناتك. بنعدّ زيارات صفحات الموقع بشكل مجمّع
+        عشان نعرف الموقع بيوصل لكام حد — من غير كوكيز، ومن غير ربط بحسابك أو
+        بصفقاتك.
       </div>
 
       <h2>١. البيانات اللي بنجمعها</h2>
@@ -84,14 +86,45 @@ export default function PrivacyPage() {
               <td>وقت استخدام الميزة دي بس</td>
               <td>لاستخراج أسعار التوصية من الصورة</td>
             </tr>
+            <tr>
+              <td>
+                زيارة صفحة على الموقع: الصفحة اللي اتفتحت، والبلد، ونوع الجهاز
+                والمتصفح — <strong>مجمّعة، ومش مربوطة بحسابك</strong>
+              </td>
+              <td>
+                مع كل صفحة بتتفتح على الموقع. <strong>على التطبيق: أبدًا</strong>
+              </td>
+              <td>
+                عشان نعرف كام حد بيوصل للموقع وكام حد بيسجّل بعدها. من غير الرقم
+                ده مش هنعرف الموقع بيشتغل ولا لأ
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
 
       <p>
-        رادار <strong>مش</strong> بيجمع: موقعك، جهات اتصالك، رقم تليفونك،
-        معرّفات إعلانية، ولا بيتتبّع استخدامك. مفيش إعلانات ومفيش أدوات تتبّع
-        تحليلية.
+        رادار <strong>مش</strong> بيجمع: موقعك، جهات اتصالك، رقم تليفونك، ولا
+        معرّفات إعلانية. مفيش إعلانات، ومفيش أي حاجة بتتباع.
+      </p>
+      {/* THE SENTENCE THIS REPLACED SAID «مفيش أدوات تتبّع تحليلية» OUTRIGHT,
+          and the callout at the top of the page and §4 below said the same
+          thing in two other wordings — three promises, one of which the app
+          links a reader to from its own settings screen.
+
+          Adding page-view counting without rewriting all three would have left
+          a published legal document describing a product that no longer exists,
+          which is the failure CLAUDE.md §3 exists to prevent and which has
+          happened here before (§6 of the Terms sold a tier that had been off
+          for months). The counting is real, so the document says so. What it
+          must NOT do is overstate the narrowing: the line below still says
+          plainly that nothing here identifies the reader, because that is also
+          true. Widened, never narrowed. */}
+      <p>
+        العدّاد ده <strong>على الموقع بس</strong> — تطبيق التليفون مفيهوش أي
+        قياس من أي نوع. ومبيستخدمش كوكيز ولا بيعمل ملف تعريف ليك: إحنا بنشوف إن
+        الصفحة الفلانية اتفتحت كذا مرة النهاردة، مش مين اللي فتحها. الأرقام دي
+        عمرها ما بتتلاقى مع دفترك ولا مع حسابك، وحتى لو انت مسجّل دخول.
       </p>
 
       <h2>٢. الصور وميزة القراءة الآلية</h2>
@@ -221,8 +254,10 @@ export default function PrivacyPage() {
         فوق. وبيانات تداولات المستثمرين اللي فيه بتيجي من{' '}
         <strong>البورصة المصرية</strong> وبتتخزّن عندنا مرة واحدة لكل جلسة —
         <strong>مش لكل مستخدم</strong>. هي نفسها لكل الناس، ومالهاش أي علاقة
-        ببياناتك: مفيش أي حاجة تخصّك بتتبعت وقت جلبها، ومفيش حاجة بتتسجّل عنك
-        وانت بتتفرّج عليها.
+        ببياناتك: مفيش أي حاجة تخصّك بتتبعت وقت جلبها. وانت بتتفرّج عليها،
+        مبنسجّلش أي سهم بصّيت عليه ولا أي حاجة عملتها جوّه التبويب — الحاجة
+        الوحيدة اللي بتتعدّ هي فتحة الصفحة المجمّعة اللي مشروحة في{' '}
+        <strong>بند ١</strong>، زيها زي أي صفحة تانية على الموقع.
       </p>
 
       <h2>٥. مشاركة البيانات</h2>
@@ -237,6 +272,17 @@ export default function PrivacyPage() {
         <li>
           <strong>Google (Gemini API)</strong> — للصور، وقت استخدام ميزة القراءة
           بس.
+        </li>
+        {/* Vercel was ALREADY seeing every request on this site — they host it,
+            and §3/§4 both already say our server sees the reader's IP. What is
+            new is a PURPOSE, not a party: the same company now also counts page
+            views for us. Listing them anyway, because this list says it is
+            «كل الأطراف», and a reader cannot be expected to infer the host from
+            a URL. Naming the role is the honest form of that. */}
+        <li>
+          <strong>Vercel</strong> — الشركة اللي الموقع شغّال على سيرفراتها،
+          وبتعدّ لنا زيارات الصفحات المجمّعة (بند ١). مبيوصلهاش اسمك ولا بريدك
+          ولا أي حاجة من دفترك — دفترك أصلًا مش عندهم، هو عند Firebase.
         </li>
         {/* The chart is an EMBED, not a relay: the widget script and its iframe
             come from TradingView into the reader's own browser, so their IP and
