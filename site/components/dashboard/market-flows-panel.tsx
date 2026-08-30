@@ -264,9 +264,14 @@ function History({
               const t = s[investorClass];
               return (
                 <tr key={s.date}>
-                  <td className="num py-2 font-semibold text-fg">{s.date}</td>
+                  {/* `.num` on the SPAN, not the cell — on a `<td>` it brings
+                      `display: inline-block` from globals.css and the cell stops
+                      being a table-cell. Measured in admin-dashboard.tsx. */}
+                  <td className="py-2 font-semibold text-fg">
+                    <span className="num">{s.date}</span>
+                  </td>
                   <td
-                    className={`num py-2 font-bold ${
+                    className={`py-2 font-bold ${
                       t.egyptian.net > 0
                         ? 'text-win'
                         : t.egyptian.net < 0
@@ -274,10 +279,10 @@ function History({
                         : 'text-fg-muted'
                     }`}
                   >
-                    {signedMoney(t.egyptian.net)}
+                    <span className="num">{signedMoney(t.egyptian.net)}</span>
                   </td>
                   <td
-                    className={`num py-2 font-bold ${
+                    className={`py-2 font-bold ${
                       t.arab.net > 0
                         ? 'text-win'
                         : t.arab.net < 0
@@ -285,10 +290,10 @@ function History({
                         : 'text-fg-muted'
                     }`}
                   >
-                    {signedMoney(t.arab.net)}
+                    <span className="num">{signedMoney(t.arab.net)}</span>
                   </td>
                   <td
-                    className={`num py-2 font-bold ${
+                    className={`py-2 font-bold ${
                       t.foreign.net > 0
                         ? 'text-win'
                         : t.foreign.net < 0
@@ -296,7 +301,7 @@ function History({
                         : 'text-fg-muted'
                     }`}
                   >
-                    {signedMoney(t.foreign.net)}
+                    <span className="num">{signedMoney(t.foreign.net)}</span>
                   </td>
                 </tr>
               );

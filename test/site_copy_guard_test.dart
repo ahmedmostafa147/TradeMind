@@ -146,7 +146,67 @@ void main() {
       );
     });
   });
+
+  group('.num never lands on a table cell', () {
+    test('no <td>, <th>, <Td> or <Th> carries the num class', () {
+      final offenders = <String>[];
+
+      for (final file in _siteSources()) {
+        final source = _withoutComments(file.readAsStringSync());
+        // MATCHED OVER THE WHOLE SOURCE, NOT LINE BY LINE — an opening tag
+        // wraps as soon as its className is a template literal, which is
+        // exactly the form the market flows table used:
+        //
+        //     <td
+        //       className={`num py-2 font-bold ${
+        //
+        // The first version of this guard scanned one line at a time, and the
+        // injection test caught it missing precisely that case. A guard that
+        // cannot see the shape that actually shipped is decoration.
+        for (final m in _numOnCell.allMatches(source)) {
+          final line = '\n'.allMatches(source.substring(0, m.start)).length + 1;
+          offenders.add(
+            '${file.path}:$line  ${m.group(0)!.replaceAll('\n', ' ⏎ ').trim()}',
+          );
+        }
+      }
+
+      expect(
+        offenders,
+        isEmpty,
+        reason:
+            '`.num` in globals.css sets `display: inline-block` along with the '
+            'LTR direction. On a <td> that stops the cell being a table-cell '
+            'and drops it out of the column layout entirely — the header no '
+            'longer sits over its data, and the same column lands at a '
+            'different x on every row, because each escaped cell is sized by '
+            'its own content instead of by the column.\n\n'
+            'MEASURED on the admin users table: computed display came back '
+            '`table-cell, inline-block, inline-block, inline-block, '
+            'inline-block, table-cell, table-cell`, header right edges were '
+            '[1184, 1030, 507, 392, 303, ...] against a first row of '
+            '[1184, 1030, 877, 767, 657, ...], and rows 1-3 put one column at '
+            '877, 819 and 830.\n\n'
+            'Put it on a <span> around the number. CLAUDE.md §7 has said so '
+            'in prose the whole time, and it was broken in three tables at '
+            'once — the admin user list, the tag stats on the customer '
+            'dashboard, and the market flows sessions table. Prose does not '
+            'enforce; this does.'
+            '\n\n${offenders.join('\n')}',
+      );
+    });
+  });
 }
+
+/// A `td`/`th`/`Td`/`Th` opening tag whose className contains `num` as a whole
+/// word.
+///
+/// Deliberately matches the OPENING TAG ONLY, so a `<span className="num">`
+/// nested inside a cell — the correct form, and the fix — does not trip it.
+/// `\b` around `num` keeps `num` from matching `numbers` or `tabular-nums`.
+final RegExp _numOnCell = RegExp(
+  r'''<(td|th|Td|Th)\b[^>]*className=(?:"[^"]*\bnum\b|\{`[^`]*\bnum\b)''',
+);
 
 /// `EVERYTHING_FREE` as the web declares it.
 bool _everythingFreeOnWeb() {

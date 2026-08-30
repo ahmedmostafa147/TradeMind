@@ -1587,16 +1587,25 @@ function Breakdown({
               {stats.map((s) => (
                 <tr key={s.tag} className="border-b border-border-default last:border-0">
                   <Td className="font-semibold">{s.tag}</Td>
-                  <Td className="num text-fg-muted">{s.tradeCount}</Td>
-                  <Td className="num text-fg-muted">
-                    {percent(s.tradeCount === 0 ? null : s.winCount / s.tradeCount)}
+                  {/* `.num` on the SPAN, not the cell. On the cell it carries
+                      `display: inline-block` from globals.css, which stops the
+                      `<td>` being a table-cell and drops it out of the column
+                      layout — see the note on Td in admin-dashboard.tsx, where
+                      the same mistake was measured. */}
+                  <Td className="text-fg-muted">
+                    <span className="num">{s.tradeCount}</span>
+                  </Td>
+                  <Td className="text-fg-muted">
+                    <span className="num">
+                      {percent(s.tradeCount === 0 ? null : s.winCount / s.tradeCount)}
+                    </span>
                   </Td>
                   <Td
-                    className={`num font-bold ${
+                    className={`font-bold ${
                       s.totalPnl > 0 ? 'text-win' : s.totalPnl < 0 ? 'text-loss' : ''
                     }`}
                   >
-                    {signedMoney(s.totalPnl)}
+                    <span className="num">{signedMoney(s.totalPnl)}</span>
                   </Td>
                 </tr>
               ))}

@@ -51,36 +51,25 @@ export const site = {
   playStoreUrl: null as string | null,
 
   /**
-   * The day Radar went live, and the day the published user count counts from.
-   *
-   * ── IT IS A CUTOFF, NOT A CAPTION ──────────────────────────────────────────
-   *
-   * `publicStats/counts` reports accounts created ON OR AFTER this date, so the
-   * development and test accounts that existed before launch are not counted as
-   * traders. That is the difference between a figure a visitor can check and a
-   * number inflated by the people who built the thing.
-   *
-   * ISO because it is compared as a date, not printed as one — `statsSince`
-   * below is what a reader sees.
-   */
-  launchedAt: '2026-08-30',
-
-  /** `launchedAt`, in the form the landing page prints it. */
-  statsSince: '30 أغسطس 2026',
-
-  /**
    * ── THE USER COUNT USED TO BE A NUMBER TYPED HERE. IT IS LIVE NOW. ─────────
    *
    * It was `userCount: null as number | null`, with a note saying to set it to
    * the real figure after launch. The flaw in that is not the typing, it is
    * that a hand-set figure is only correct on the day it is set: it goes stale
-   * silently, in the direction that flatters, on a public page. A marketing
-   * number nobody is forced to revisit becomes a claim nobody is checking.
+   * silently, in the direction that flatters, on a public page.
    *
    * It now comes from `publicStats/counts` — see lib/public-stats.ts for how it
    * is read and firestore.rules for who may write it. The line stays hidden
    * when that document is missing or unreadable, which is exactly what `null`
    * used to buy.
+   *
+   * `launchedAt` and `statsSince` lived here too, and the published figure was
+   * filtered to accounts created on or after that date so pre-launch test
+   * accounts stayed out of it. Both are gone: the owner's call is that the
+   * number is simply how many people are on Radar, and the filter was in
+   * practice hiding REAL traders — people had signed up the day before the
+   * recorded launch date. The launch date itself is still recorded, in
+   * CLAUDE.md, where a fact with no code reading it belongs.
    */
 
   contactEmail: 'ahmed14mostafa17@gmail.com',

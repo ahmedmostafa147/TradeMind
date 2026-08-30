@@ -1,10 +1,10 @@
 /**
  * The one figure the landing page publishes about itself.
  *
- * `publicStats/counts` in Firestore holds how many accounts have been created
- * since `site.launchedAt`, plus a server-stamped `updatedAt`. An admin writes
- * it from /admin; firestore.rules lets anybody read it and only an admin write
- * it, and the reasoning for both halves is in that file.
+ * `publicStats/counts` in Firestore holds how many accounts exist, plus a
+ * server-stamped `updatedAt`. An admin writes it from /admin; firestore.rules
+ * lets anybody read it and only an admin write it, and the reasoning for both
+ * halves is in that file.
  *
  * ── WHY THE REST API AND NOT THE FIREBASE SDK ───────────────────────────────
  *
@@ -28,8 +28,6 @@
  * the bill grows with users multiplied by traffic, for a number that changes a
  * few times a day. One document, cached, is the whole point.
  */
-
-import { site } from '@/lib/site';
 
 /**
  * Mirrors the fallbacks in lib/firebase.ts.
@@ -59,10 +57,12 @@ const ENDPOINT =
 const REVALIDATE_SECONDS = 3600;
 
 export type PublicStats = {
-  /** Accounts created on or after `site.launchedAt`. */
+  /**
+   * How many accounts exist. EVERY account — this was once filtered to a launch
+   * date, and the filter was removed because it was hiding real traders who had
+   * signed up before the date we had written down.
+   */
   userCount: number;
-  /** The cutoff the count was taken from, as stored. YYYY-MM-DD. */
-  since: string;
   /** When an admin last published it. Server clock — see firestore.rules. */
   updatedAt: Date | null;
 };
@@ -91,12 +91,6 @@ function readNumber(field: unknown): number | null {
   if (typeof f.integerValue === 'number') return f.integerValue;
   if (typeof f.doubleValue === 'number') return f.doubleValue;
   return null;
-}
-
-function readString(field: unknown): string | null {
-  if (!field || typeof field !== 'object') return null;
-  const f = field as Record<string, unknown>;
-  return typeof f.stringValue === 'string' ? f.stringValue : null;
 }
 
 function readTimestamp(field: unknown): Date | null {
@@ -148,7 +142,6 @@ export async function readPublicStats(): Promise<PublicStats | null> {
 
     return {
       userCount: Math.floor(userCount),
-      since: readString(f.since) ?? site.launchedAt,
       updatedAt: readTimestamp(f.updatedAt),
     };
   } catch {
