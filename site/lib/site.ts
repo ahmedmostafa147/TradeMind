@@ -133,8 +133,20 @@ export const site = {
    *
    *  The narrowing is bounded and the document says where: web only, no
    *  cookies, no profile, never joined to an account or a journal, and the
-   *  Android app collects nothing at all. */
-  legalUpdatedAt: '31 أغسطس 2026',
+   *  Android app collects nothing at all.
+   *
+   *  1 سبتمبر is the change a reader has to see BEFORE they act rather than
+   *  after: turning notifications on lets a server of OURS read that reader's
+   *  watchlist and open positions, once a day. Everywhere else in this product
+   *  that data is owner-only and firestore.rules enforces it — the alerts job
+   *  runs as a service account, which those rules do not apply to at all.
+   *
+   *  So it is a callout inside §1, not a row in the table, and it states the
+   *  three limits that hold it down: subscribers only, field projections rather
+   *  than whole documents, and nothing retained but the alert names and dates.
+   *  Those limits are real and enforced in worker/radar_alerts/collect.py. If
+   *  any of them moves, this document moves in the same commit. */
+  legalUpdatedAt: '1 سبتمبر 2026',
 } as const;
 
 /**
