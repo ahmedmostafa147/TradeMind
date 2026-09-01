@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { money, signedMoney } from '@/lib/format';
+import { flowsHistory, type FlowRun } from '@/lib/calc';
+import { money, sessionsPhrase, signedMoney } from '@/lib/format';
 import type { FlowTable, InvestorClass, Nationality } from '@/lib/market-flows';
 import { loadRecentFlows, type StoredFlows } from '@/lib/market-flows-store';
 import { useBoard } from '@/lib/use-board';
@@ -235,6 +236,61 @@ function FlowBar({ table }: { table: FlowTable }) {
   );
 }
 
+/**
+ * One nationality's streak and running total.
+ *
+ * THE DENOMINATOR IS PRINTED WITH THE TOTAL, always. This data has real holes —
+ * the exchange sits behind bot defence and a collection run can fail — so «+210
+ * مليون» on its own is a figure nobody can check, while «على 27 جلسة» is.
+ *
+ * NO COLOUR ON THE STREAK LINE, only on the money. Green and red mean profit
+ * and loss everywhere else in this product (CLAUDE.md §1), and a green «5
+ * جلسات» would read as five good sessions rather than five buying ones — a
+ * claim about the reader's money that nobody made.
+ */
+function RunCard({
+  nationality,
+  run,
+}: {
+  nationality: Nationality;
+  run: FlowRun | null;
+}) {
+  return (
+    <div className="rounded-xl border border-border-default bg-surface-high p-3">
+      <p className="text-xs font-bold text-fg">{NATIONALITY_LABELS[nationality]}</p>
+
+      {run === null ? (
+        // Absent, not zeroed: «0» here would state that nothing moved, which is
+        // a different claim from "we have no sessions to read".
+        <p className="mt-1.5 text-xs text-fg-subtle">مفيش جلسات مقروءة</p>
+      ) : (
+        <>
+          <p
+            className={`mt-1.5 text-sm font-extrabold ${
+              run.total > 0 ? 'text-win' : run.total < 0 ? 'text-loss' : 'text-fg-muted'
+            }`}
+          >
+            <span className="num">{signedMoney(run.total)}</span>
+          </p>
+          {/* NOT wrapped in `.num`. sessionsPhrase returns the numeral and the
+              Arabic word together, and `.num` is `direction: ltr` — it would
+              throw the word to the wrong end. See the note on the formatter. */}
+          <p className="mt-0.5 text-[11px] text-fg-subtle">
+            على {sessionsPhrase(run.sessions)}
+          </p>
+          <p className="mt-1.5 text-[11px] text-fg-muted">
+            {run.hasRun
+              ? `${sessionsPhrase(run.runLength)} ${
+                  run.runBuying ? 'شراء' : 'بيع'
+                } على التوالي`
+              : 'مفيش سلسلة متصلة'}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function History({
   sessions,
   investorClass,
@@ -242,12 +298,37 @@ function History({
   sessions: StoredFlows[];
   investorClass: InvestorClass;
 }) {
+  // THE READING, ABOVE THE ROWS. The table under this was the whole feature and
+  // it is a spreadsheet: thirty rows of signed millions that nobody derives a
+  // streak from by eye. `flowsHistory` runs the app's own Dart — see
+  // lib/core/calc/flows_history.dart — so the sentence printed here and the one
+  // the phone prints come from one source rather than two.
+  const runs = useMemo(() => {
+    const out = {} as Record<Nationality, FlowRun | null>;
+    for (const nationality of ['egyptian', 'arab', 'foreign'] as Nationality[]) {
+      out[nationality] = flowsHistory(
+        sessions.map((s) => s[investorClass][nationality]?.net ?? null)
+      );
+    }
+    return out;
+  }, [sessions, investorClass]);
+
   return (
     <section className="rounded-2xl border border-border-default bg-surface p-4 sm:p-5 shadow-xs">
       <h3 className="text-sm font-extrabold text-fg">الجلسات السابقة</h3>
       <p className="mt-0.5 text-xs text-fg-muted">
         صافي التعامل — {CLASS_LABELS[investorClass]}
       </p>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        {(['egyptian', 'arab', 'foreign'] as Nationality[]).map((nationality) => (
+          <RunCard
+            key={nationality}
+            nationality={nationality}
+            run={runs[nationality]}
+          />
+        ))}
+      </div>
 
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-start text-xs">

@@ -51,3 +51,32 @@ function call<T>(name: keyof NonNullable<typeof radarCalc>, args: unknown): T {
 }
 
 export { call as callCalc };
+
+/**
+ * One nationality's window of sessions, read rather than listed.
+ *
+ * MIRRORS NOTHING — this calls `flowRun` in lib/core/calc/flows_history.dart,
+ * the same source the Android app runs, so the streak the browser prints and
+ * the streak the phone prints cannot disagree. That is the whole point of the
+ * bridge; see the note at the top of this file.
+ *
+ * `nets` is newest-first, and a null is a session nobody could read. Returns
+ * null when the window holds nothing readable at all — which the caller must
+ * treat as "no data", never as zero.
+ */
+export type FlowRun = {
+  /** Consecutive sessions on the same side, counting back from the newest. */
+  runLength: number;
+  /** The side of that run. Null exactly when runLength is 0. */
+  runBuying: boolean | null;
+  /** Net across every readable session in the window, gaps skipped. */
+  total: number;
+  /** How many sessions `total` is made of — the denominator, published. */
+  sessions: number;
+  /** True when the run is at least two sessions, so worth calling a streak. */
+  hasRun: boolean;
+};
+
+export function flowsHistory(nets: (number | null)[]): FlowRun | null {
+  return call<FlowRun | null>('flowsHistory', nets);
+}

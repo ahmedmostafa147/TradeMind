@@ -28,6 +28,7 @@ void main() {
   bind('entitlement', entitlement);
   bind('riskMath', riskMath);
   bind('checklist', checklist);
+  bind('flowsHistory', flowsHistory);
 
   globalContext.setProperty('radarCalc'.toJS, api);
 }

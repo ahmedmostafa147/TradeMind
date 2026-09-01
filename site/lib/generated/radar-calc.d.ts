@@ -29,6 +29,7 @@ export declare const radarCalc:
       entitlement: CalcFn;
       riskMath: CalcFn;
       checklist: CalcFn;
+      flowsHistory: CalcFn;
     }
   // Typed as possibly-undefined on purpose: the value is read off globalThis
   // after the bundle's own main() runs, and a caller that does not handle its

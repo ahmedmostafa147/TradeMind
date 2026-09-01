@@ -60,6 +60,33 @@ String rMultiple(double? r) =>
 String quantity(int? value) =>
     value == null ? kEmptyValue : _integer.format(value);
 
+/// A count of sessions, in the Arabic the number actually takes.
+///
+/// ── ARABIC COUNTS ARE NOT «رقم + جمع» ────────────────────────────────────
+///
+/// The first version printed «على 5 جلسة» and «2 جلسات», and both are wrong the way
+/// a native reader notices immediately. The rule the language uses:
+///
+///   1        جلسة واحدة      — no numeral; the word carries it
+///   2        جلستين          — the dual, and again no numeral
+///   3–10     N جلسات        — plural
+///   11+      N جلسة         — back to the singular
+///
+/// This product is Arabic-only by an explicit owner decision, so "close enough"
+/// grammar is not a rounding error here — it is the whole surface.
+///
+/// RETURNS THE WHOLE PHRASE, NUMERAL INCLUDED, and callers must NOT wrap it in
+/// `.num`: that class sets `direction: ltr` and would throw the Arabic word to
+/// the wrong end of the line. A bare numeral followed by an Arabic word is the
+/// safe direction for bidi and needs no help — CLAUDE.md §7 is about a numeral
+/// followed by «%» or «ج.م», which is the opposite case.
+String sessionsPhrase(int count) => switch (count) {
+  1 => 'جلسة واحدة',
+  2 => 'جلستين',
+  >= 3 && <= 10 => '$count جلسات',
+  _ => '$count جلسة',
+};
+
 /// "2026/03/05"
 ///
 /// Built by hand rather than with DateFormat on purpose. DateFormat with an
