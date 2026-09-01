@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/calc/flows_history.dart';
 import '../../../core/formatters.dart';
 import '../../../core/theme.dart';
 import '../models/market_flows.dart';
@@ -238,6 +239,22 @@ class _History extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
+
+            // THE READING, ABOVE THE ROWS — and the same reading the website
+            // prints, because `flowRun` lives in lib/core/calc/ and the site
+            // runs it compiled rather than reimplemented (CLAUDE.md §24). The
+            // table below is still there; what it could never do is say how
+            // long the current run is without the reader counting rows.
+            for (final nationality in Nationality.values) ...[
+              _RunLine(
+                nationality: nationality,
+                run: flowRun([
+                  for (final s in sessions) s.table(investorClass)[nationality]?.net,
+                ]),
+              ),
+              const SizedBox(height: 8),
+            ],
+            const SizedBox(height: 4),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
@@ -291,6 +308,80 @@ class _SourceNote extends StatelessWidget {
       style: theme.textTheme.bodySmall?.copyWith(
         color: theme.colorScheme.onSurfaceVariant,
       ),
+    );
+  }
+}
+
+/// One nationality's streak and running total, above the table of rows.
+///
+/// THE DENOMINATOR IS PRINTED WITH THE TOTAL. The sessions are entered by hand
+/// and a day can simply be missing, so a sum with no count behind it is a
+/// figure the reader cannot check.
+///
+/// COLOUR ONLY ON THE MONEY. Green and red mean profit and loss everywhere in
+/// this product; colouring «5 جلسات» green would turn a count of buying
+/// sessions into a claim that they were good ones.
+class _RunLine extends StatelessWidget {
+  final Nationality nationality;
+  final FlowRun? run;
+
+  const _RunLine({required this.nationality, required this.run});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.resultColors;
+    final muted = theme.colorScheme.onSurfaceVariant;
+
+    if (run == null) {
+      return Row(
+        children: [
+          Expanded(
+            child: Text(nationality.label, style: theme.textTheme.labelLarge),
+          ),
+          Text(
+            'مفيش جلسات مقروءة',
+            style: theme.textTheme.bodySmall?.copyWith(color: muted),
+          ),
+        ],
+      );
+    }
+
+    final total = run!.total;
+    final color = total > 0
+        ? colors.win
+        : total < 0
+        ? colors.loss
+        : muted;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(nationality.label, style: theme.textTheme.labelLarge),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              signedMoney(total),
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(
+              run!.hasRun
+                  ? 'على ${sessionsPhrase(run!.sessions)} · '
+                        '${sessionsPhrase(run!.runLength)} '
+                        '${run!.runBuying! ? "شراء" : "بيع"} '
+                        'على التوالي'
+                  : 'على ${sessionsPhrase(run!.sessions)}',
+              style: theme.textTheme.bodySmall?.copyWith(color: muted),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

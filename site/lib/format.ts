@@ -99,3 +99,26 @@ export function dateLabel(value: Date | null | undefined): string {
   const day = String(value.getDate()).padStart(2, '0');
   return `${year}/${month}/${day}`;
 }
+
+/**
+ * A count of sessions, in the Arabic the number actually takes.
+ *
+ * MIRROR OF `sessionsPhrase` in lib/core/formatters.dart. Arabic counted nouns
+ * take four different forms and «على 5 جلسة» / «2 جلسات» are both wrong
+ * the way a native reader notices immediately:
+ *
+ *   1        جلسة واحدة      — no numeral; the word carries it
+ *   2        جلستين          — the dual, and again no numeral
+ *   3–10     N جلسات        — plural
+ *   11+      N جلسة         — back to the singular
+ *
+ * RETURNS THE WHOLE PHRASE, and callers must NOT wrap it in `.num` — that
+ * class is `direction: ltr` and would throw the Arabic word to the wrong end.
+ */
+export function sessionsPhrase(count: number): string {
+  const n = Math.trunc(count);
+  if (n === 1) return 'جلسة واحدة';
+  if (n === 2) return 'جلستين';
+  if (n >= 3 && n <= 10) return `${n} جلسات`;
+  return `${n} جلسة`;
+}

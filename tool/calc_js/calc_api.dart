@@ -11,6 +11,7 @@ import 'dart:convert';
 
 import 'package:egx_trade_journal/billing/entitlements.dart';
 import 'package:egx_trade_journal/core/calc/daily_decisions.dart';
+import 'package:egx_trade_journal/core/calc/flows_history.dart';
 import 'package:egx_trade_journal/core/calc/goal_plan.dart';
 import 'package:egx_trade_journal/core/calc/goal_projection.dart';
 import 'package:egx_trade_journal/core/calc/journal_analytics.dart';
@@ -436,5 +437,29 @@ String checklist(String json) {
     'items': [
       for (final i in ChecklistItem.values) {'id': i.id, 'label': i.label},
     ],
+  });
+}
+
+/// One nationality's window of EGX sessions, read rather than listed.
+///
+/// Input is a bare JSON array of numbers and nulls — `[5, 4, null, -3]`,
+/// newest first — because that is all the rule needs, and keeping the bridge
+/// free of the flows document's shape means neither the site nor the app has
+/// to reshape anything to ask.
+String flowsHistory(String json) {
+  final decoded = jsonDecode(json);
+  final nets = <double?>[
+    if (decoded is List)
+      for (final v in decoded) v is num ? v.toDouble() : null,
+  ];
+
+  final run = flowRun(nets);
+  if (run == null) return jsonEncode(null);
+  return jsonEncode({
+    'runLength': run.runLength,
+    'runBuying': run.runBuying,
+    'total': run.total,
+    'sessions': run.sessions,
+    'hasRun': run.hasRun,
   });
 }
