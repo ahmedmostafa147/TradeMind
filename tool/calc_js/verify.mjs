@@ -1,6 +1,9 @@
 // Runs every calc_api.dart function through the COMPILED JavaScript and prints
 // the results in exactly the shape tool/calc_js/verify.dart prints them.
 //
+// The bundle it loads is the committed one the site imports:
+//   site/lib/generated/radar-calc.js
+//
 //   dart compile js -O4 -o <out>.js tool/calc_js/radar_calc.dart
 //   dart run tool/calc_js/verify.dart            > vm.json
 //   node tool/calc_js/verify.mjs <out>.js        > js.json
@@ -15,14 +18,34 @@ if (!bundle) {
   process.exit(2);
 }
 
-// The bundle's main() assigns globalThis.radarCalc, so evaluating it is all the
-// wiring there is. No module system, no shim.
-const { runInThisContext } = await import('node:vm');
-runInThisContext(readFileSync(bundle, 'utf8'), { filename: bundle });
+// The bundle is an ES MODULE, not a classic script: gen-calc-js.mjs appends an
+// `export const radarCalc` footer so the site's bundler follows the file and
+// importers get a value instead of reaching for a global. That footer is why
+// evaluating it with vm.runInThisContext — which parses classic-script
+// syntax — died on `Unexpected token 'export'`, and left this half of the
+// guard unrun.
+//
+// It is imported as a data: URL rather than by path because module-ness in Node
+// comes from the package scope, and site/package.json has no `"type": "module"`
+// — so `import('.../radar-calc.js')` is only accepted by Node's module-syntax
+// DETECTION fallback, which warns on stderr and is not something a guard should
+// depend on. A data: URL is unambiguously a module, needs no temp file, and
+// leaves the committed bundle byte-identical — which matters, because
+// gen-calc-js.mjs --check gates the build on that file's hash.
+//
+// The EXPORT is what gets read, not globalThis: that is the value the site
+// actually imports, so the footer's contract is verified here too.
+const source = readFileSync(bundle, 'utf8');
+const module = await import(
+  'data:text/javascript;base64,' +
+    Buffer.from(source, 'utf8').toString('base64')
+);
 
-const calc = globalThis.radarCalc;
+const calc = module.radarCalc ?? globalThis.radarCalc;
 if (!calc) {
-  console.error('globalThis.radarCalc was not set — did main() run?');
+  console.error(
+    `${bundle} exported no radarCalc and set no global — did main() run?`
+  );
   process.exit(1);
 }
 
