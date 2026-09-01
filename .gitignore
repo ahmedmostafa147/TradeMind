@@ -54,3 +54,21 @@ app.*.map.json
 /.vercel
 services/market-data/node_modules/
 services/market-data/dist/
+
+# ── PRIVATE KEYS. NEVER. ────────────────────────────────────────────────────
+#
+# `python -m py_vapid --gen` writes private_key.pem and public_key.pem into
+# the CURRENT DIRECTORY, and the natural place to run it from is the repository
+# root. The private half is a credential: whoever holds it can make a
+# notification appear that looks like it came from Radar (see the note at the
+# top of worker/radar_alerts/send.py).
+#
+# Generating outside the repository is still the right habit. This is the net
+# under it, not a substitute for it.
+*.pem
+*.p8
+*.p12
+*.jks
+*.keystore
+# The Play upload key's config — RELEASE.md §1. Holds a store password.
+android/key.properties
