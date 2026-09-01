@@ -221,6 +221,36 @@ service cloud.firestore {
           && request.resource.data.createdAt == request.time;
       }
 
+      // THE TELEGRAM LINK — a one-time code, then the chat id it resolved to.
+      //
+      // THE CODE IS A CREDENTIAL, NOT A PREFERENCE. Anybody who obtains a live
+      // one can press Start with it and attach THEIR chat to this reader's
+      // alerts — which then delivers that reader's tickers, target prices and
+      // stop levels to a stranger, one notification at a time. So:
+      //
+      //   * Owner-only in both directions. An admin has no read here for the
+      //     same reason they have none on `push`: it is a capability.
+      //   * The client may write ONLY the code. `chatId` is written by the
+      //     worker through the Admin SDK after Telegram itself confirmed the
+      //     chat, so a client cannot point its own alerts at an arbitrary chat
+      //     — nor at somebody else's.
+      //   * Bounded and character-checked, because the worker looks the value
+      //     up by key and it arrives from a browser.
+      //
+      // Delete is the "turn it off" path, and it is the only thing that stops
+      // delivery: the worker reads this collection to know who to reach.
+      match /telegram/{docId} {
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && docId == 'link'
+          && request.resource.data.keys().hasOnly(['linkCode', 'createdAt'])
+          && request.resource.data.linkCode is string
+          && request.resource.data.linkCode.size() >= 8
+          && request.resource.data.linkCode.size() <= 64
+          && request.resource.data.linkCode.matches('^[A-Za-z0-9_-]+$')
+          && request.resource.data.createdAt == request.time;
+      }
+
       // NOTIFICATION SEND STATE — alert key to the date it last went out.
       //
       // NO RULE, ON PURPOSE. It falls to the deny-all catch-all at the bottom of
@@ -502,6 +532,15 @@ service cloud.firestore {
 
       allow delete: if isAdmin();
     }
+
+    // THE ALERTS BOT'S OWN READ CURSOR. Not user data, and no client rule.
+    //
+    // `botState/telegram` holds the `getUpdates` offset — where the worker
+    // resumed reading Telegram's queue. It belongs to the bot, not to any
+    // reader, and nothing in either client needs it, so it falls to the
+    // deny-all below and only the Admin SDK touches it. Written here rather
+    // than left undocumented, because a collection with no rule looks exactly
+    // like one somebody forgot.
 
     // Anything not matched above is denied, including any path a future
     // version adds before its rule does.
