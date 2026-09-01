@@ -65,6 +65,13 @@ services/market-data/dist/
 #
 # Generating outside the repository is still the right habit. This is the net
 # under it, not a substitute for it.
+# Editor and tool backups. One of these (gradle-wrapper.properties.bak) reached
+# the repository because a `git add -A` swept up a working tree that already had
+# it sitting there untracked.
+*.bak
+*.orig
+*.rej
+
 *.pem
 *.p8
 *.p12
