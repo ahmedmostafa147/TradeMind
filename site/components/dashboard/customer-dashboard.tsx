@@ -26,6 +26,7 @@ import {
 import { EquityChart, MonthlyBars } from '@/components/dashboard/charts';
 import { GoalPanel } from '@/components/dashboard/goal-panel';
 import { LegalNotice } from '@/components/dashboard/legal-notice';
+import { NotificationsPanel } from '@/components/dashboard/notifications-panel';
 import { AiTradeSheet } from '@/components/dashboard/ai-trade-sheet';
 import {
   Paywall,
@@ -912,6 +913,7 @@ function Journal() {
                 onChange={update}
                 source={settingsSource}
                 email={user?.email ?? null}
+                uid={user?.uid ?? null}
                 isAdmin={isAdmin}
                 onLogout={() => void logout()}
               />
@@ -1033,6 +1035,7 @@ function SettingsSection({
   onChange,
   source,
   email,
+  uid,
   isAdmin,
   onLogout,
 }: {
@@ -1044,6 +1047,7 @@ function SettingsSection({
   onChange: (next: Partial<typeof settings>) => void;
   source: SettingsSource;
   email: string | null;
+  uid: string | null;
   isAdmin: boolean;
   onLogout: () => void;
 }) {
@@ -1229,6 +1233,12 @@ function SettingsSection({
           </button>
         </div>
       </section>
+
+      {/* Only for a signed-in account, because a push subscription is stored
+          under that account's own document. There is no signed-out state on
+          this screen, but the uid is threaded through as nullable rather than
+          asserted — the panel simply does not render without one. */}
+      {uid !== null && <NotificationsPanel uid={uid} />}
 
       {/* Moved out of the (app) layout, where it was pinned under every tab. */}
       <LegalNotice />

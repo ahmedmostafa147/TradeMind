@@ -17,3 +17,7 @@ firebase-admin~=6.5
 
 # Tests only.
 pytest~=8.3
+
+# Web Push (VAPID). The alerts worker's only new dependency — see
+# radar_alerts/send.py for why this is the W3C Push API and not FCM.
+pywebpush~=2.0

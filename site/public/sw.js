@@ -30,7 +30,7 @@
 // Bumping this string is what retires every previous cache — see `activate`.
 // Change it whenever the caching RULES change; the content itself is handled by
 // the strategies below.
-const VERSION = 'radar-v3';
+const VERSION = 'radar-v4';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
@@ -163,4 +163,85 @@ self.addEventListener('fetch', (event) => {
 
   // Documents, and the RSC payloads the router prefetches.
   event.respondWith(networkFirst(event, request, SHELL_CACHE));
+});
+
+/*
+ * ── PUSH ────────────────────────────────────────────────────────────────────
+ *
+ * The other end of worker/radar_alerts/send.py. The payload is the JSON that
+ * file builds: { title, body, path }.
+ *
+ * SOMETHING MUST ALWAYS BE SHOWN. The subscription was made with
+ * `userVisibleOnly: true`, which is not advice — a browser that receives a push
+ * and sees no notification revokes the subscription after a few offences, and
+ * the reader stops getting alerts with nothing to see anywhere. So every path
+ * below ends in showNotification, including the one where the payload is
+ * unreadable.
+ */
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch (error) {
+    // Malformed, or someone sent plain text. Still shown — see above.
+    payload = {};
+  }
+
+  const title = typeof payload.title === 'string' && payload.title ? payload.title : 'رادار';
+  const body =
+    typeof payload.body === 'string' && payload.body
+      ? payload.body
+      : 'في حاجة جديدة في دفترك.';
+
+  // A RELATIVE PATH ONLY, and resolved against our own origin below. The
+  // payload arrives from the network, and a notification that could carry an
+  // absolute URL would be a way to make a click on a Radar notification open
+  // somebody else's site.
+  const path =
+    typeof payload.path === 'string' && payload.path.startsWith('/')
+      ? payload.path
+      : '/dashboard/';
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      dir: 'rtl',
+      lang: 'ar',
+      data: { path },
+      // Collapses repeats of the same alert on the lock screen rather than
+      // stacking them. The worker already suppresses duplicates across days;
+      // this handles the same alert arriving on two subscriptions of one
+      // browser, which happens after a profile restore.
+      tag: title,
+    })
+  );
+});
+
+/*
+ * Clicking one focuses the tab Radar is already open in, rather than opening a
+ * second copy of the dashboard beside it — which is what `openWindow` alone
+ * does, and it is the difference between "the app came to the front" and "now I
+ * have two of these".
+ */
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const path = (event.notification.data && event.notification.data.path) || '/dashboard/';
+  const target = new URL(path, self.location.origin);
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clients) => {
+        for (const client of clients) {
+          if (new URL(client.url).origin !== target.origin) continue;
+          if ('focus' in client) {
+            client.navigate(target.href).catch(() => {});
+            return client.focus();
+          }
+        }
+        return self.clients.openWindow(target.href);
+      })
+  );
 });

@@ -88,6 +88,19 @@ export default function PrivacyPage() {
             </tr>
             <tr>
               <td>
+                <strong>عنوان التنبيهات</strong> بتاع المتصفح اللي فعّلت منه
+                التنبيهات، ومفاتيح التشفير بتاعته — وقايمة بأسماء التنبيهات
+                اللي اتبعتت لك وتاريخها
+              </td>
+              <td>
+                لما <strong>تفعّل التنبيهات</strong> بنفسك من «الإعدادات» بس
+              </td>
+              <td>
+                عشان نقدر نبعتلك التنبيه، وعشان منكررش نفس التنبيه عليك كل يوم
+              </td>
+            </tr>
+            <tr>
+              <td>
                 زيارة صفحة على الموقع: الصفحة اللي اتفتحت، والبلد، ونوع الجهاز
                 والمتصفح — <strong>مجمّعة، ومش مربوطة بحسابك</strong>
               </td>
@@ -126,6 +139,49 @@ export default function PrivacyPage() {
         الصفحة الفلانية اتفتحت كذا مرة النهاردة، مش مين اللي فتحها. الأرقام دي
         عمرها ما بتتلاقى مع دفترك ولا مع حسابك، وحتى لو انت مسجّل دخول.
       </p>
+
+      {/* THE ONE PLACE A SERVER OF OURS READS THE JOURNAL, AND IT SAYS SO.
+
+          Everywhere else in this product, trades are owner-only and
+          firestore.rules enforces it — the operator cannot read them, and the
+          admin dashboard shows profiles and counters only. The alerts job is a
+          service account, which those rules do not apply to at all.
+
+          That is a genuine expansion of who touches the journal, so it is
+          disclosed HERE rather than left to be inferred from the feature. It is
+          a callout and not a footnote for the same reason: a reader deciding
+          whether to switch notifications on is the reader who needs it.
+
+          The three limits stated below are real and enforced in
+          worker/radar_alerts/collect.py — projections rather than whole
+          documents, only subscribers, only open trades. If any of them changes,
+          this paragraph changes in the same commit. */}
+      <div className="callout">
+        <strong>لو فعّلت التنبيهات:</strong> عشان نعرف نقولك إن سهم وصل سعرك أو
+        إن مركز كسر الاستوب، فيه برنامج عندنا بيقرا{' '}
+        <strong>قايمة المراقبة والصفقات المفتوحة بتاعتك</strong> مرة واحدة كل
+        يوم بعد إقفال البورصة. وده بيحصل بحدود مكتوبة في الكود:
+        <ul>
+          <li>
+            <strong>للمشتركين في التنبيهات بس.</strong> لو مفعّلتهاش، البرنامج ده
+            عمره ما بيفتح حسابك أصلًا.
+          </li>
+          <li>
+            <strong>حقول محدودة، مش الصفقة كلها.</strong> بيطلب رمز السهم
+            والاستوب للمراكز <strong>المفتوحة</strong> بس، والرمز والسعر
+            المستهدف من قايمة المراقبة. سعر الدخول والكمية والملاحظات والسبب
+            والتصنيفات والسجل <strong>مش بتتطلب أصلًا</strong>، ورأس مالك
+            وإعدادات المخاطرة مش بيتلمسوا خالص.
+          </li>
+          <li>
+            <strong>مفيش حاجة بتتخزّن.</strong> الأرقام دي بتعيش لحظة الحساب
+            وبس. اللي بيتكتب هو أسماء التنبيهات اللي اتبعتت وتاريخها — عشان
+            منبعتش نفس التنبيه كل يوم — ومفيهوش أسعار ولا رموز ولا فلوس.
+          </li>
+        </ul>
+        أول ما تقفل التنبيهات، اشتراكك بيتمسح والبرنامج بيبطّل يشوف حسابك من
+        أول يوم بعدها.
+      </div>
 
       <h2>٢. الصور وميزة القراءة الآلية</h2>
       <p>
