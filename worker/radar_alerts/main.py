@@ -62,16 +62,31 @@ def main(argv: list[str] | None = None) -> int:
 
     # Imported here rather than at module scope so `--help` and the unit tests
     # do not need firebase-admin or a credential present.
-    from radar_alerts import collect, quotes, send as sender
+    from radar_alerts import collect, live_prices, send as sender, telegram
     from radar_alerts.rules import flow_flip, stop_breaches, suppress_recently_sent, watchlist_hits
     from radar_flows.store import init_app
 
+    # TWO CHANNELS, EITHER OF WHICH MAY BE ABSENT. A deployment with only a
+    # Telegram token works, and so does one with only VAPID. Both missing is the
+    # only configuration that can deliver nothing at all, and that is the one
+    # that exits non-zero — a run that "succeeds" while reaching nobody is the
+    # silent failure every exit code in this project exists to prevent.
     key = ""
+    telegram_token = ""
     if not args.dry_run:
         try:
             key = sender.private_key()
         except sender.MissingKey as error:
-            log.error("%s", error)
+            log.info("web push disabled: %s", error)
+        try:
+            telegram_token = telegram.bot_token()
+        except telegram.MissingToken as error:
+            log.info("telegram disabled: %s", error)
+        if not key and not telegram_token:
+            log.error(
+                "neither channel is configured — set RADAR_VAPID_PRIVATE_KEY, "
+                "RADAR_TELEGRAM_BOT_TOKEN, or both."
+            )
             return EXIT_NOT_CONFIGURED
 
     init_app()
@@ -80,16 +95,50 @@ def main(argv: list[str] | None = None) -> int:
     db = firestore.client()
     today = date.today()
 
+    # ── Pending Telegram links are drained FIRST. ────────────────────────────
+    #
+    # Somebody who pressed Start a minute ago should be reachable on this run
+    # rather than the next one. Doing it before the alerts are decided is what
+    # makes "link, then wait for the next run" into "link, and the next run
+    # includes you".
+    if telegram_token and not args.dry_run:
+        try:
+            _, pending = collect.load_telegram_links(db)
+            offset = collect.load_update_offset(db)
+            codes, next_offset = telegram.drain_link_requests(telegram_token, offset)
+            for code, chat_id in codes.items():
+                uid = pending.get(code)
+                if uid is None:
+                    # A code nobody is waiting on: already redeemed, expired, or
+                    # typed by somebody who invented it. Ignored silently — this
+                    # is an open chat anyone can message.
+                    continue
+                collect.save_telegram_chat(db, uid, chat_id)
+                log.info("telegram linked for %s", uid)
+            collect.save_update_offset(db, next_offset)
+        except Exception as error:  # noqa: BLE001 — linking must not stop alerts.
+            log.warning("could not drain telegram links: %s", error)
+
     try:
         subscribers = collect.load_subscribers(db)
+        chats, _ = collect.load_telegram_links(db)
         market = flow_flip(collect.load_recent_foreign_nets(db, FLIP_LOOKBACK))
     except Exception as error:  # noqa: BLE001 — an unreadable database is exit 2.
         log.error("could not read from Firestore: %s", error)
         return EXIT_READ_FAILED
 
+    # A READER WITH TELEGRAM AND NO BROWSER SUBSCRIPTION IS STILL A SUBSCRIBER.
+    # `load_subscribers` walks the `push` collection, so a Telegram-only reader
+    # would otherwise be invisible to every rule below.
+    known = {s.uid for s in subscribers}
+    for uid in chats:
+        if uid not in known:
+            subscribers.append(collect.Subscriber(uid, [], collect._load_sent(db, uid)))
+
     log.info(
-        "%d subscriber(s); market rule %s",
+        "%d subscriber(s) — %d telegram; market rule %s",
         len(subscribers),
+        len(chats),
         "fired" if market else "quiet",
     )
     if not subscribers:
@@ -116,7 +165,10 @@ def main(argv: list[str] | None = None) -> int:
             return EXIT_READ_FAILED
 
         if tickers:
-            prices = quotes.fetch_prices(sorted(tickers))
+            # The live feed first, our own delayed route for whatever it did not
+            # carry. See radar_alerts/live_prices.py for what that buys and what
+            # it does NOT entitle the copy to claim.
+            prices = live_prices.prices_for(sorted(tickers))
 
     degraded = False
     total_sent = 0
@@ -140,17 +192,37 @@ def main(argv: list[str] | None = None) -> int:
             total_sent += len(alerts)
             continue
 
+        origin = live_prices.site_origin()
+        chat_id = chats.get(subscriber.uid)
+
         delivered_keys: list[str] = []
         for alert in alerts:
             reached_anyone = False
-            for subscription in list(subscriber.subscriptions):
-                outcome = sender.send(subscription, alert, key)
-                if outcome == sender.DELIVERED:
+
+            if key:
+                for subscription in list(subscriber.subscriptions):
+                    outcome = sender.send(subscription, alert, key)
+                    if outcome == sender.DELIVERED:
+                        reached_anyone = True
+                    elif outcome == sender.GONE_SUBSCRIPTION:
+                        subscription["ref"].delete()
+                        subscriber.subscriptions.remove(subscription)
+                    else:
+                        degraded = True
+
+            # BOTH CHANNELS, NOT ONE OR THE OTHER. Somebody who linked Telegram
+            # AND allowed browser notifications asked for both, and picking one
+            # to suppress is a judgement nothing here has a basis for making.
+            if telegram_token and chat_id is not None:
+                if telegram.send(telegram_token, chat_id, alert, origin):
                     reached_anyone = True
-                elif outcome == sender.GONE_SUBSCRIPTION:
-                    subscription["ref"].delete()
-                    subscriber.subscriptions.remove(subscription)
                 else:
+                    # A blocked bot or a deleted account answers the same way as
+                    # a bad minute at Telegram, and the two want opposite
+                    # responses. Treated as transient here: the link is dropped
+                    # only when the reader turns it off, because deleting it on a
+                    # transport error would silently unsubscribe somebody who did
+                    # nothing.
                     degraded = True
             # ONLY A DELIVERED ALERT IS RECORDED AS SENT. Marking one that never
             # arrived would suppress it for the whole quiet window — a stop
