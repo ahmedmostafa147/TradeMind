@@ -467,9 +467,24 @@ service cloud.firestore {
 
       allow create, update: if isAdmin()
         && docId == 'counts'
-        && request.resource.data.keys().hasOnly([
-             'userCount', 'since', 'updatedAt'
-           ])
+        // `since` USED TO BE HERE AND IS GONE ON PURPOSE.
+        //
+        // It carried the launch date the count was filtered from. The filter
+        // was removed — it was hiding real traders who signed up before the
+        // date we had written down — and the client stopped writing the field.
+        //
+        // THE BUG THAT CAUSED: the whitelist below is permissive, so dropping a
+        // key from it is harmless. But `since` ALSO had its own
+        // `is string` line further down, and that one is a REQUIREMENT, not a
+        // permission. With the field no longer sent it evaluated false and
+        // EVERY publish was denied — silently, because the failure surfaces
+        // only as a red line on /admin that nobody reads unless they look.
+        // The landing page sat on a stale `1` in the meantime.
+        //
+        // The lesson is not "remember both places". It is that a field's
+        // presence and a field's shape were checked in two different lines, so
+        // removing the field needed both edits and only one was obvious.
+        && request.resource.data.keys().hasOnly(['userCount', 'updatedAt'])
         // `is number`, NOT `is int` — deliberately, and for the reason spelled
         // out on `waitingThresholdDays` above: the two SDKs disagree about
         // whether a whole number serialises as an integer or a double, and
@@ -478,8 +493,6 @@ service cloud.firestore {
         && request.resource.data.userCount is number
         && request.resource.data.userCount >= 0
         && request.resource.data.userCount <= 1000000000
-        && request.resource.data.since is string
-        && request.resource.data.since.size() <= 10
         // THE SERVER'S CLOCK, for the same reason `trialStartedAt` is: a
         // freshness stamp taken from the writing machine can be wrong by
         // however much that machine's clock is wrong, and this one exists
