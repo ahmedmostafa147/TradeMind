@@ -93,8 +93,17 @@ class _StockQuoteBadgeState extends State<StockQuoteBadge> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
+                // «إغلاق», not «السعر بالبورصة». The label used to imply a live
+                // quote and there is no such thing here: the EGX has no free
+                // intraday feed, and the upstream endpoint silently answers a
+                // one-minute request with daily candles. What this number
+                // actually is, always, is the last daily close — so it says so,
+                // with the date it belongs to. A figure that looks live and is
+                // two days old is worse than an honest one.
                 Text(
-                  'السعر بالبورصة: ${money(info.price)}',
+                  info.priceDate == null
+                      ? 'آخر إغلاق: ${money(info.price)}'
+                      : 'إغلاق ${dateLabel(info.priceDate)}: ${money(info.price)}',
                   style: theme.textTheme.bodySmall,
                 ),
               ],

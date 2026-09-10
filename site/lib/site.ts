@@ -78,6 +78,7 @@ export const site = {
 export const nav = [
   { href: '#why', label: 'المشكلة' },
   { href: '#tools', label: 'الأدوات' },
+  { href: '#plan', label: 'خطة الادخار' },
   { href: '#discipline', label: 'الانضباط' },
   { href: '#pricing', label: 'السعر' },
   { href: '#faq', label: 'أسئلة' },

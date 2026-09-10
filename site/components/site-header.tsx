@@ -14,9 +14,15 @@ export function SiteHeader() {
           className="flex shrink-0 items-center gap-2.5"
           aria-label={`${site.name} — الصفحة الرئيسية`}
         >
-          {/* A 96px source for a mark that never renders above 32px CSS —
-              enough for a 3x display, and 5KB against the 368KB original.
-              alt="" because the adjacent wordmark already names the link. */}
+          {/* The mark alone — the «Radar» wordmark that used to sit beside it is
+              gone by request. A 96px source for something that never renders
+              above 32px CSS: enough for a 3x display, and 5KB against the 368KB
+              original.
+
+              alt="" is still correct, and now matters more: the Link's
+              aria-label names the destination, so giving the image its own
+              alternative text would make a screen reader announce the same link
+              twice. */}
           <Image
             src="/logo-96.png"
             alt=""
@@ -25,7 +31,6 @@ export function SiteHeader() {
             className="size-8 rounded-md"
             priority
           />
-          <span className="text-base font-bold tracking-tight">{site.name}</span>
         </Link>
 
         {/* Anchor links are hidden on small screens rather than folded into a

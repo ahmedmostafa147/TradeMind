@@ -7,11 +7,20 @@
   still most EGX users' phones. Both paths are handed the same mark and the
   same background so they cannot drift apart.
 
-  `<item>` with gravity and an explicit size, NOT `<bitmap>`: splash_logo is a
-  VECTOR, and <bitmap> only accepts a raster — pointing it at a vector fails to
-  inflate at launch, which is the one moment there is no UI left to report it.
-  Item gravity and sizing need API 23; minSdk here is 24, so every device that
-  can install this app supports them.
+  splash_logo is now a RASTER, one PNG per density under drawable-*dpi/,
+  generated from assets/logo.png by tool/gen-pwa-icons.mjs. It replaced a
+  hand-drawn vector of a radar scope that predated the artwork and never matched
+  it — the launch screen showed one mark and the launcher icon another. Deriving
+  both from the same source is what stops that recurring, and `npm --prefix site
+  run icons:check` fails if either goes stale.
+
+  `<item>` with gravity and an explicit size rather than `<bitmap>`: <item>
+  works for raster and vector alike, so this line does not have to change again
+  if the mark ever goes back to being a vector. Item gravity and sizing need API
+  23; minSdk here is 24, so every device that can install this app supports them.
+
+  The 160dp box matches the source PNGs (160dp at each bucket's scale), so the
+  mark is drawn 1:1 and never resampled.
 -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/splash_background" />

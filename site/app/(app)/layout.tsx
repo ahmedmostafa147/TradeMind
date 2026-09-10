@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { InstallButton } from '@/components/pwa';
@@ -28,11 +29,23 @@ export default function AppLayout({
 
       <header className="border-b border-border-default bg-surface">
         <div className="mx-auto flex h-14 max-w-6xl items-center px-5">
+          {/* The mark, not the word. This header carried the «Radar» wordmark
+              as text; it is the logo now, matching the marketing header — one
+              identity across both shells. The name still reaches assistive
+              tech through aria-label, and the page <title> still carries it. */}
           <Link
             href="/"
-            className="text-sm font-bold tracking-tight transition-colors hover:text-brand-ink"
+            className="flex shrink-0 items-center transition-opacity hover:opacity-80"
+            aria-label={`${site.name} — الصفحة الرئيسية`}
           >
-            {site.name}
+            <Image
+              src="/logo-96.png"
+              alt=""
+              width={28}
+              height={28}
+              className="size-7 rounded-md"
+              priority
+            />
           </Link>
           {/* The journal is the surface worth installing — it is what
               `start_url` opens — so the offer belongs here as much as on the

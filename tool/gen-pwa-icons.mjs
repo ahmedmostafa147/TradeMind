@@ -1,18 +1,37 @@
 #!/usr/bin/env node
 /**
- * Generates the PWA icon set from assets/logo.png.
+ * Generates EVERY image derived from assets/logo.png — web and Android both.
  *
- *   node tool/gen-pwa-icons.mjs           write the icons
+ *   node tool/gen-pwa-icons.mjs           write them
  *   node tool/gen-pwa-icons.mjs --check   verify they are current, write nothing
  *
- * Outputs, all into site/public/icons/ so the manifest can point at stable,
- * un-hashed URLs:
+ * WHY EVERYTHING AND NOT JUST THE PWA ICONS
+ * It used to emit only the three manifest icons and apple-icon.png. The site's
+ * header logo and the favicon were hand-exported once and never again, so when
+ * the artwork was redrawn they silently kept the OLD mark — the header on every
+ * page served a logo the app no longer used, and nothing anywhere reported it.
+ * A derived image that is not derived by this script is an image that will go
+ * stale. So all of them are here, and `--check` covers all of them.
+ *
+ * Outputs into site/public/icons/, so the manifest points at stable, un-hashed
+ * URLs:
  *
  *   icon-192.png            the small `any` icon
  *   icon-512.png            the large `any` icon, also what install prompts show
  *   icon-maskable-512.png   `any` is NOT enough on Android — see below
  *
- * and it flattens site/app/apple-icon.png, for the reason under APPLE below.
+ * and elsewhere:
+ *
+ *   site/public/logo-96.png            the site header mark
+ *   site/app/icon.png                  the favicon (a Next metadata file)
+ *   site/app/apple-icon.png            flattened, for the reason under APPLE
+ *   android/.../drawable-*dpi/splash_logo.png   the launch screen mark
+ *
+ * THE ANDROID SPLASH IS HERE ON PURPOSE. It used to be a hand-drawn vector of a
+ * radar scope, written before this artwork existed and never reconciled with
+ * it, so the launch screen showed one mark and the launcher icon another. It is
+ * the glyph lifted onto transparency now — the same glyph the maskable icon
+ * uses — which means the splash cannot drift from the icon again.
  *
  * WHY MASKABLE IS A SEPARATE FILE
  * The source mark is a rounded square with TRANSPARENT corners. Android applies
@@ -45,7 +64,37 @@ const CHECK_ONLY = process.argv.includes('--check');
 
 const SOURCE = join(ROOT, 'assets/logo.png');
 const OUT_DIR = join(ROOT, 'site/public/icons');
-const APPLE_ICON = join(ROOT, 'site/app/apple-icon.png');
+const ANDROID_RES = join(ROOT, 'android/app/src/main/res');
+
+/**
+ * Where each output lands. Anything not listed here goes to OUT_DIR.
+ *
+ * apple-icon.png and icon.png are Next metadata files and must sit in app/;
+ * logo-96.png is referenced by <Image src="/logo-96.png"> so it must be at the
+ * public root, not under icons/.
+ */
+const PATHS = {
+  'apple-icon.png': join(ROOT, 'site/app/apple-icon.png'),
+  'icon.png': join(ROOT, 'site/app/icon.png'),
+  'logo-96.png': join(ROOT, 'site/public/logo-96.png'),
+};
+
+/**
+ * The launch mark, one PNG per density.
+ *
+ * drawable/launch_background.xml draws it at 160dp, so each file is 160dp at
+ * that bucket's scale factor. Android 12+ asks for a 240dp canvas and masks the
+ * inner 160dp circle, but it accepts and scales this same asset — one mark for
+ * both paths is the point, since the two splash implementations drifting apart
+ * is the failure that produced the hand-drawn vector this replaces.
+ */
+const SPLASH_DENSITIES = {
+  mdpi: 160,
+  hdpi: 240,
+  xhdpi: 320,
+  xxhdpi: 480,
+  xxxhdpi: 640,
+};
 
 /**
  * The mark's own background, sampled from the source rather than typed in, so
@@ -141,14 +190,39 @@ async function build() {
       .flatten({ background })
       .png()
       .toBuffer(),
+
+    // The favicon. Kept at 96 rather than 32: browsers downscale for the tab
+    // but reuse this for bookmarks, history and the Windows taskbar, where 32
+    // is visibly soft. Alpha is preserved — unlike Apple, every browser that
+    // reads this honours it, and a tab strip is not always dark.
+    'icon.png': await sharp(SOURCE).resize(96, 96).png().toBuffer(),
+
+    // The site header mark, rendered at 2x its 28px display size for retina.
+    'logo-96.png': await sharp(SOURCE).resize(96, 96).png().toBuffer(),
+
+    ...Object.fromEntries(
+      await Promise.all(
+        Object.entries(SPLASH_DENSITIES).map(async ([bucket, px]) => [
+          `splash-${bucket}.png`,
+          // The glyph alone. The splash paints its own background, so shipping
+          // the mark's rounded square on top of it would show as a faintly
+          // different dark panel — the exact seam glyphOf exists to avoid.
+          await glyphOf(SOURCE, px),
+        ])
+      )
+    ),
   };
 }
 
 const files = await build();
 
-/** apple-icon.png is a Next metadata file and lives in app/, not public/. */
+/** Splash frames are Android resources; the rest are web assets. */
 function pathOf(name) {
-  return name === 'apple-icon.png' ? APPLE_ICON : join(OUT_DIR, name);
+  const splash = name.match(/^splash-(\w+)\.png$/);
+  if (splash) {
+    return join(ANDROID_RES, `drawable-${splash[1]}`, 'splash_logo.png');
+  }
+  return PATHS[name] ?? join(OUT_DIR, name);
 }
 
 if (CHECK_ONLY) {
@@ -158,16 +232,17 @@ if (CHECK_ONLY) {
     if (!existsSync(path) || !readFileSync(path).equals(bytes)) stale.push(name);
   }
   if (stale.length > 0) {
-    console.error('\n\x1b[31m✖ PWA icons are stale:\x1b[0m');
-    for (const name of stale) console.error(`  • ${name}`);
+    console.error('\n\x1b[31m✖ generated images are stale:\x1b[0m');
+    for (const name of stale) console.error(`  • ${name} → ${pathOf(name)}`);
     console.error('\nRun `node tool/gen-pwa-icons.mjs` and commit the result.\n');
     process.exit(1);
   }
-  console.log('\x1b[32m✔\x1b[0m PWA icons match assets/logo.png');
+  console.log('\x1b[32m✔\x1b[0m every generated image matches assets/logo.png');
 } else {
-  mkdirSync(OUT_DIR, { recursive: true });
   for (const [name, bytes] of Object.entries(files)) {
-    writeFileSync(pathOf(name), bytes);
-    console.log(`wrote ${name}`);
+    const path = pathOf(name);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, bytes);
+    console.log(`wrote ${path.slice(ROOT.length + 1)}`);
   }
 }

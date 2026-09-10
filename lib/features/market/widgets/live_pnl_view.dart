@@ -127,8 +127,13 @@ class LivePnlView extends ConsumerWidget {
                   ),
                   if (info.priceDate case final date?) ...[
                     const SizedBox(height: 2),
+                    // Prefixed with «إغلاق». A bare date under a price reads as
+                    // "as of", which a reader completes as "as of now" — but
+                    // this is the last daily CLOSE and never anything else, so
+                    // the word does the work the date alone was leaving to
+                    // assumption.
                     NumericText(
-                      dateLabel(date),
+                      'إغلاق ${dateLabel(date)}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.outline,
                         fontSize: 10,

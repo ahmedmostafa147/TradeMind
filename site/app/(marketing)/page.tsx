@@ -1,4 +1,5 @@
 import { ClosingCta } from '@/components/closing-cta';
+import { CompoundWidget } from '@/components/compound-widget';
 import { Discipline } from '@/components/discipline';
 import { Faq, faq } from '@/components/faq';
 import { Features } from '@/components/features';
@@ -61,6 +62,7 @@ export default function HomePage() {
       <Problem />
       <Features />
       <Tools />
+      <CompoundWidget />
       <Discipline />
       <Pricing />
       <Faq />

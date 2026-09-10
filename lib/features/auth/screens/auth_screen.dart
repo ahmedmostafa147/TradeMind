@@ -28,20 +28,35 @@ class AuthScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Icon(
-                    Icons.candlestick_chart_rounded,
-                    size: 56,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Radar',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
+                  // The product's own mark, not a stock Material glyph.
+                  // `candlestick_chart_rounded` stood here and was wrong twice
+                  // over: it is the icon a dozen other trading apps ship, and
+                  // it shared nothing with the launcher icon or the splash, so
+                  // the first screen after launch looked like a different app.
+                  //
+                  // ClipRRect because the source is a rounded square with
+                  // TRANSPARENT corners; letting it draw unclipped is fine, but
+                  // clipping to the same radius keeps the edge crisp when the
+                  // image is scaled down from 1024px.
+                  //
+                  // No «Radar» wordmark under it — removed by request. The name
+                  // still reaches a screen reader through the semantic label.
+                  Semantics(
+                    label: 'Radar',
+                    image: true,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: Image.asset(
+                        'assets/logo.png',
+                        width: 84,
+                        height: 84,
+                        // The mark is a fixed square; anything else would be a
+                        // packaging mistake worth seeing rather than hiding.
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 20),
                   Text(
                     'سجّل صفقاتك، احسب المخاطرة، والتزم بقواعدك.',
                     textAlign: TextAlign.center,
