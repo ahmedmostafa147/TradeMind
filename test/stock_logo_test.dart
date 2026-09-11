@@ -70,7 +70,7 @@ void main() {
     });
 
     test('is null when there is nothing to ask for', () {
-      // ~3% of listings have no logo, and every Yahoo-sourced quote has none.
+      // ~3% of listings have no logo, and a ticker outside logo-ids.json has none.
       // Null is the normal state the chip fallback exists for, not an error.
       expect(EgxMarketService.logoUrl(null), isNull);
       expect(EgxMarketService.logoUrl(''), isNull);

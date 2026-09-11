@@ -1,8 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useBoard } from '@/lib/use-board';
-import { DELAY_LABEL } from '@/lib/tradingview';
+import { boardSourceLabel, useBoard } from '@/lib/use-board';
 import { TradingViewChartDialog } from '@/components/dashboard/tradingview-chart-dialog';
 import { StockCard } from '@/components/dashboard/stock-card';
 import {
@@ -37,7 +36,7 @@ const FILTER_PRESETS: {
 const PAGE_SIZE = 60;
 
 export function StocksPanel({ onPick }: { onPick: (ticker: string) => void }) {
-  const { rows: board, loading, error } = useBoard();
+  const { rows: board, loading, error, delaySeconds, source } = useBoard();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
   const [chartSymbol, setChartSymbol] = useState<string | null>(null);
@@ -183,7 +182,7 @@ export function StocksPanel({ onPick }: { onPick: (ticker: string) => void }) {
       )}
 
       <p className="text-[11px] leading-relaxed text-fg-subtle pt-2">
-        الأسعار {DELAY_LABEL} — رادار يمنحك التغطية الشاملة ولا يقدم أي توصيات استثمارية ماليّة.
+        {boardSourceLabel(source, delaySeconds)} — رادار يمنحك التغطية الشاملة ولا يقدم أي توصيات استثمارية ماليّة.
       </p>
     </section>
   );

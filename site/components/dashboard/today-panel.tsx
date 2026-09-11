@@ -12,7 +12,6 @@ import {
 } from "@/components/icons";
 import { decisionsOf, type DecisionItem } from "@/lib/decisions";
 import {
-  dateLabel,
   EMPTY_VALUE,
   money,
   percent,
@@ -21,7 +20,7 @@ import {
   signedPercent,
 } from "@/lib/format";
 import { normalizeTicker } from "@/lib/egx-directory";
-import { unrealised, type Quote } from "@/lib/quote";
+import { quoteSourceLabel, unrealised, type Quote } from "@/lib/quote";
 import type { Trade, TradeStatus } from "@/lib/trade";
 import { useQuotes } from "@/lib/use-quotes";
 import { TodaySummaryBanner } from "@/components/dashboard/today-summary-banner";
@@ -747,9 +746,16 @@ function NoteDialog({
  * an error and never a zero. A price that failed to arrive must not look like a
  * position that has not moved.
  *
- * «آخر إغلاق» is the honest label. This is a daily close from an unofficial
- * feed, not a live tick, and calling it anything else would invite somebody to
- * trade on it.
+ * «آخر سعر» is the honest label, and the source is named under it. Neither
+ * feed (EGXBot first, TradingView second) is a live tick — one declares a
+ * fifteen-minute delay, the other declares nothing — and calling it anything
+ * else would invite somebody to trade on it.
+ *
+ * NO DATE UNDER THE PRICE. There used to be one, read off `quote.asOf`, which
+ * was the candle's own timestamp when Yahoo was the source. Neither remaining
+ * source says when its figure was struck, so `asOf` is the moment the route
+ * answered — and printing that as the date of a close would have put Friday's
+ * date under Thursday's close every weekend.
  */
 function LivePnl({
   quote,
@@ -802,10 +808,10 @@ function LivePnl({
         </p>
       </div>
       <div className="text-end">
-        <p className="text-[11px] text-fg-muted">آخر إغلاق</p>
+        <p className="text-[11px] text-fg-muted">آخر سعر</p>
         <p className="num text-sm font-semibold">{money(quote.price)}</p>
-        <p className="num text-[11px] text-fg-subtle">
-          {dateLabel(quote.asOf)}
+        <p className="text-[11px] text-fg-subtle">
+          {quoteSourceLabel(quote.source)}
         </p>
       </div>
     </div>
