@@ -37,7 +37,11 @@ export function useQuotes(symbols: string[]): {
     let cancelled = false;
     setLoading(true);
 
-    fetch(`/api/quote?symbols=${encodeURIComponent(key)}`)
+    // WITH THE TRAILING SLASH. `trailingSlash: true` is on, so the bare path
+    // answered 308 and the browser followed it — one extra round trip on every
+    // screen with an open position, measured on production before this was
+    // written. `useBoard` had it right.
+    fetch(`/api/quote/?symbols=${encodeURIComponent(key)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((body: unknown) => {
         if (cancelled || body === null) return;
@@ -51,7 +55,7 @@ export function useQuotes(symbols: string[]): {
         setQuotes(next);
       })
       .catch(() => {
-        // Offline, or the route gave up on Yahoo. Both mean "no price", which
+        // Offline, or both sources were down. Either means "no price", which
         // the caller already renders.
       })
       .finally(() => {

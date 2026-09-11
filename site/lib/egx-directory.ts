@@ -14,10 +14,10 @@
  * disclaimer and RELEASE.md rule out, and this deliberately does not do it: the
  * list is fixed, alphabetically arbitrary, and identical for every user.
  *
- * It is bundled rather than fetched for the reason the Dart doc gives: Yahoo's
- * search endpoint does not resolve EGX codes (searching "COMI" returns a
- * Chinese company, "TMGH" returns nothing), and a bundled list works offline —
- * which on this site means it works inside the service worker's cached shell.
+ * It is bundled rather than fetched because a bundled list works offline —
+ * which on this site means it works inside the service worker's cached shell —
+ * and because these thirty Arabic names are the curated ones the trade form
+ * shows, ahead of whatever a price source happens to call the company.
  */
 export const EGX_DIRECTORY: Record<string, string> = {
   COMI: 'البنك التجاري الدولي (CIB)',

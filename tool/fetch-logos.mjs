@@ -21,7 +21,7 @@
 // fail a deploy. Run it by hand when the board gains listings; the monogram
 // fallback covers anything missing in the meantime.
 //
-//   node tool/fetch-logos.mjs           # refresh
+//   node tool/fetch-logos.mjs           # refresh the SVGs AND logo-ids.json
 //   node tool/fetch-logos.mjs --check   # report drift, write nothing
 //
 // Usage note: it OVERWRITES what it downloads and never deletes. A slug that
@@ -34,6 +34,18 @@ import { dirname, join } from 'node:path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'site', 'public', 'logos');
+
+/**
+ * Ticker → logo slug, written next to the SVGs.
+ *
+ * The board's prices come from EGXBot first (see /api/stocks), and EGXBot
+ * knows nothing about TradingView's logo slugs. Rather than call TradingView
+ * on every board request just to learn which file to show, the mapping is
+ * captured HERE, once, at the same moment the files themselves are — so a logo
+ * depends on no upstream answering at runtime, the same property the files
+ * already had.
+ */
+const MAP = join(ROOT, 'site', 'lib', 'generated', 'logo-ids.json');
 
 const SCANNER = 'https://scanner.tradingview.com/egypt/scan';
 const CDN = 'https://s3-symbol-logo.tradingview.com';
@@ -87,14 +99,25 @@ async function board() {
 
   const body = await response.json();
   const ids = new Set();
+  /** @type {Record<string, string>} */
+  const bySymbol = {};
   for (const row of body.data ?? []) {
     const id = row?.d?.[1];
-    if (typeof id === 'string' && LOGO_ID.test(id)) ids.add(id);
+    if (typeof id !== 'string' || !LOGO_ID.test(id)) continue;
+    ids.add(id);
+    const symbol = String(row?.s ?? row?.d?.[0] ?? '')
+      .trim()
+      .toUpperCase()
+      .replace(/^EGX:/, '');
+    if (symbol !== '') bySymbol[symbol] = id;
   }
-  return [...ids].sort();
+  return {
+    ids: [...ids].sort(),
+    bySymbol: Object.fromEntries(Object.entries(bySymbol).sort(([a], [b]) => (a < b ? -1 : 1))),
+  };
 }
 
-const ids = await board();
+const { ids, bySymbol } = await board();
 await mkdir(OUT, { recursive: true });
 const have = new Set(
   (await readdir(OUT).catch(() => [])).filter((f) => f.endsWith('.svg')).map((f) => f.slice(0, -4))
@@ -109,6 +132,14 @@ if (checkOnly) {
   // state. This is a report, so it can run anywhere without failing a build.
   process.exit(0);
 }
+
+// The map is written BEFORE the downloads and regardless of how they go: a
+// slug we failed to fetch today is still the right slug, and the monogram
+// covers it until the next run.
+await mkdir(dirname(MAP), { recursive: true });
+await writeFile(MAP, `${JSON.stringify(bySymbol, null, 2)}
+`, 'utf8');
+console.log(`wrote ${Object.keys(bySymbol).length} ticker→logo entries to site/lib/generated/logo-ids.json`);
 
 let written = 0;
 let refused = 0;

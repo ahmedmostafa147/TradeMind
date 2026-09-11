@@ -1,31 +1,39 @@
-import { nameForTicker, normalizeTicker } from '@/lib/egx-directory';
-
 /**
  * The last traded price for an EGX symbol, and what a browser is allowed to
  * know about it.
  *
- * The counterpart of `EgxStockInfo` / `fetchStockInfo` in
- * lib/features/market/services/egx_market_service.dart. Deliberately smaller
- * than the Dart model: the app also derives 52-week highs and lows from a year
- * of candles, and the only thing the dashboard needs is the last close, so this
- * asks for the last few days instead of a year.
+ * The counterpart of `EgxStockInfo` in
+ * lib/features/market/services/egx_market_service.dart, and the shape
+ * `/api/quote` sends to both the dashboard and the app.
  *
- * THE PRICE IS A LAST CLOSE, NOT A LIVE TICK, and the UI has to say so. The
- * source is Yahoo's unofficial chart endpoint — the same one the app uses,
- * unchanged in reliability by being called from a server.
+ * ── THE PRICE IS NOT A LIVE TICK, AND THE UI HAS TO SAY SO ─────────────────
+ *
+ * It comes from EGXBot first and TradingView second (see the route). Neither
+ * is the exchange's licensed feed: TradingView declares a fifteen-minute delay
+ * and EGXBot declares nothing, and an undeclared delay is not a zero delay.
+ * `source` rides along so the screen can say which of the two it is quoting.
+ *
+ * ── THERE IS NO SESSION TIMESTAMP ANY MORE ─────────────────────────────────
+ *
+ * Yahoo, now gone, was the one source that handed back the candle's own time,
+ * and the UI printed it under the price as the date of the close. Neither
+ * remaining source says WHEN its figure was struck — outside trading hours it
+ * is the last session's close with no date attached — so `asOf` is the moment
+ * the route answered, and nothing may render it as the date of a close.
  */
+export type QuoteSource = 'egxbot' | 'tradingview';
+
 export type Quote = {
   symbol: string;
-  /** Arabic name from the bundled directory, when the code is one we know. */
+  /** Arabic name: the bundled directory first, then whatever the source had. */
   name: string | null;
   price: number;
-  /** The close before [price]. Null when the series holds only one session. */
-  previousClose: number | null;
-  /** price − previousClose, and the same as a fraction. Null together. */
+  /** The day's move as money, and the same as a FRACTION (0.0215 = +2.15%). Null together. */
   change: number | null;
   changePercent: number | null;
-  /** When that price was struck, from the candle's own timestamp. */
+  /** When the route answered — NOT when the price was struck. See above. */
   asOf: Date;
+  source: QuoteSource | null;
 };
 
 /** What the API route sends; `asOf` crosses as an ISO string. */
@@ -45,11 +53,24 @@ export function decodeQuote(wire: unknown): Quote | null {
     symbol: w.symbol,
     name: typeof w.name === 'string' ? w.name : null,
     price: w.price,
-    previousClose: num(w.previousClose),
     change: num(w.change),
     changePercent: num(w.changePercent),
     asOf,
+    source:
+      w.source === 'egxbot' || w.source === 'tradingview' ? w.source : null,
   };
+}
+
+/** What a screen may say about where a quote came from. Never «مباشر». */
+export function quoteSourceLabel(source: QuoteSource | null): string {
+  switch (source) {
+    case 'egxbot':
+      return 'المصدر: EGXBot — مش سعر لحظي';
+    case 'tradingview':
+      return 'المصدر: TradingView — متأخر 15 دقيقة';
+    default:
+      return 'مش سعر لحظي';
+  }
 }
 
 /**
@@ -72,72 +93,4 @@ export function unrealised(
   if (!Number.isFinite(pnl)) return null;
   const pct = (price - entryPrice) / entryPrice;
   return { pnl, pct: Number.isFinite(pct) ? pct : 0 };
-}
-
-/**
- * Parses Yahoo's chart payload down to the last close.
- *
- * Server-side, but exported and pure so the shape of the response is something
- * that can be reasoned about without a network. The `range`/`interval` pair is
- * required rather than cosmetic — the Dart original documents that omitting it
- * makes Yahoo return empty `indicators` and leaves only a stale `meta` price.
- */
-export function parseYahooChart(body: unknown, symbol: string): Quote | null {
-  if (typeof body !== 'object' || body === null) return null;
-  const chart = (body as Record<string, unknown>).chart;
-  if (typeof chart !== 'object' || chart === null) return null;
-  const results = (chart as Record<string, unknown>).result;
-  if (!Array.isArray(results) || results.length === 0) return null;
-
-  const first = results[0] as Record<string, unknown>;
-  const timestamps = first.timestamp;
-  const indicators = first.indicators as Record<string, unknown> | undefined;
-  const quoteBlocks = indicators?.quote;
-  if (!Array.isArray(timestamps) || !Array.isArray(quoteBlocks)) return null;
-
-  const closes = (quoteBlocks[0] as Record<string, unknown> | undefined)?.close;
-  if (!Array.isArray(closes)) return null;
-
-  /** Real closes only, newest first — Yahoo pads the series with nulls for
-   *  sessions that have not printed, so the last element is routinely null. */
-  const usable: { close: number; at: number }[] = [];
-  for (let i = closes.length - 1; i >= 0; i -= 1) {
-    const close = closes[i];
-    const at = timestamps[i];
-    if (typeof close !== 'number' || !Number.isFinite(close) || close <= 0) {
-      continue;
-    }
-    if (typeof at !== 'number' || !Number.isFinite(at)) continue;
-    usable.push({ close, at });
-    if (usable.length === 2) break;
-  }
-  if (usable.length === 0) return null;
-
-  const [latest, previous] = usable;
-  const previousClose = previous?.close ?? null;
-  const change = previousClose === null ? null : latest.close - previousClose;
-  // Guarded rather than assumed non-zero: a previous close of 0 would divide
-  // to Infinity and render as a nonsense percentage.
-  const changePercent =
-    change === null || previousClose === null || previousClose === 0
-      ? null
-      : change / previousClose;
-
-  return {
-    symbol,
-    name: nameForTicker(symbol),
-    price: latest.close,
-    previousClose,
-    change,
-    changePercent,
-    asOf: new Date(latest.at * 1000),
-  };
-}
-
-/** `.CA` is Yahoo's suffix for the Egyptian exchange. */
-export function yahooChartUrl(symbol: string): string {
-  return (
-    `https://query1.finance.yahoo.com/v8/finance/chart/${normalizeTicker(symbol)}.CA` +
-    '?range=5d&interval=1d'
-  );
 }

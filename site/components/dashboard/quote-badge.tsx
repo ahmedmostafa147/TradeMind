@@ -80,8 +80,8 @@ export function QuoteBadge({
         </span>
       ) : (
         // «مباشر» used to sit here. Nothing on this path is live: the route
-        // answers from TradingView's 15-minute-delayed board, or from Yahoo's
-        // last daily close.
+        // answers from EGXBot, which declares no delay, or from TradingView's
+        // 15-minute-delayed board.
         <span className="shrink-0 rounded-md bg-surface-high px-2 py-1 font-semibold text-fg-subtle">
           آخر سعر
         </span>

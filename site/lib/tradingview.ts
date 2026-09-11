@@ -2,11 +2,13 @@
  * The EGX board from TradingView's scanner. PURE PARSING — the fetch lives in
  * the route, this file only shapes what came back.
  *
- * ── WHY THIS EXISTS ALONGSIDE /api/quote ───────────────────────────────────
+ * ── IT IS THE FALLBACK NOW ─────────────────────────────────────────────────
  *
- * Yahoo gives us thirty hardcoded symbols at YESTERDAY'S CLOSE. This gives the
- * whole board — 293 listings when it was wired up — DURING the session, in one
- * request, with the Arabic company name attached.
+ * EGXBot answers first for every price in the product (owner's call, 11 سبتمبر
+ * 2026; see egxbot-fetch.ts). This board is asked for the tickers EGXBot does
+ * not carry, and for the whole screen when EGXBot's page could not be read. It
+ * replaced Yahoo — thirty hardcoded symbols at yesterday's close — which is
+ * gone entirely.
  *
  * ── IT IS DELAYED, AND THE DELAY IS NOT OURS TO CHOOSE ─────────────────────
  *
@@ -22,14 +24,18 @@
  * `scanner.tradingview.com` is what their own screener calls. It has no contract,
  * no versioning, and their terms discourage redistribution — the owner weighed
  * that and chose to use it (12 أغسطس). What follows from that decision is a
- * design constraint, not a disclaimer: this source may vanish without notice, so
- * every caller keeps the Yahoo path as a fallback and no screen may be built that
- * only works when this responds.
+ * design constraint, not a disclaimer: this source may vanish without notice,
+ * and no screen may be built that only works when it responds — which is also
+ * why it is the second source and not the only one.
  */
 
 /** TradingView's own word for the EGX feed, decoded. */
 export const DELAY_SECONDS = 900;
 
+/**
+ * Only right when TradingView answered — EGXBot declares no delay at all. The
+ * screens caption by source (`boardSourceLabel`) rather than by this constant.
+ */
 export const DELAY_LABEL = 'متأخر 15 دقيقة';
 
 export type BoardRow = {

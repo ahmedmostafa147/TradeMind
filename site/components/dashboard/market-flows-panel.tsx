@@ -6,7 +6,7 @@ import { flowsHistory, type FlowRun } from '@/lib/calc';
 import { money, sessionsPhrase, signedMoney } from '@/lib/format';
 import type { FlowTable, InvestorClass, Nationality } from '@/lib/market-flows';
 import { loadRecentFlows, type StoredFlows } from '@/lib/market-flows-store';
-import { useBoard } from '@/lib/use-board';
+import { boardSourceLabel, useBoard } from '@/lib/use-board';
 import { TradingViewChartDialog } from '@/components/dashboard/tradingview-chart-dialog';
 import { EgxBotHeroWidget } from '@/components/dashboard/egxbot-hero-widget';
 import { MarketMoversSection } from '@/components/dashboard/market-movers';
@@ -32,7 +32,12 @@ export function MarketFlowsPanel() {
   // asked for `/api/stocks` without the trailing slash — a 308 and a second
   // round trip before the board even started loading. One caller, one path,
   // and a reader who visits both tabs gets one response out of the HTTP cache.
-  const { rows: stocks, loading: loadingStocks } = useBoard();
+  const {
+    rows: stocks,
+    loading: loadingStocks,
+    delaySeconds,
+    source: boardSource,
+  } = useBoard();
 
   useEffect(() => {
     let cancelled = false;
@@ -144,8 +149,8 @@ export function MarketFlowsPanel() {
         {/* The disclaimer is WEAKEST where the product most looks like it is
             recommending: a list titled «أعلى ٥ أسهم» is the closest thing here
             to a pick. «استرشادية فقط» on its own does not say the thing. */}
-        المصدر: TradingView Egypt Scanner والبورصة المصرية — الأسعار متأخرة ١٥
-        دقيقة. الترتيب ده وصف للي حصل في الجلسة، للاسترشاد بس،{' '}
+        {boardSourceLabel(boardSource, delaySeconds)}، والتدفّقات من البورصة
+        المصرية. الترتيب ده وصف للي حصل في الجلسة، للاسترشاد بس،{' '}
         <strong>وليس توصية بالبيع أو الشراء</strong>.
       </p>
     </div>

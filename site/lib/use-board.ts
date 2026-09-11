@@ -4,6 +4,23 @@ import { useEffect, useState } from 'react';
 
 import type { BoardRow } from '@/lib/tradingview';
 
+/** Who answered the board. Named so the caption can say so, never «مباشر». */
+export type BoardSource = 'egxbot' | 'tradingview';
+
+export function boardSourceLabel(
+  source: BoardSource | null,
+  delaySeconds: number | null
+): string {
+  if (source === 'egxbot') return 'المصدر: EGXBot — الأسعار مش لحظية';
+  if (source === 'tradingview') {
+    const minutes = delaySeconds === null ? null : Math.round(delaySeconds / 60);
+    return minutes === null
+      ? 'المصدر: TradingView — الأسعار مش لحظية'
+      : `المصدر: TradingView — الأسعار متأخرة ${minutes} دقيقة`;
+  }
+  return 'الأسعار مش لحظية';
+}
+
 /**
  * The whole EGX board, from `/api/stocks`.
  *
@@ -22,11 +39,13 @@ export function useBoard(): {
   loading: boolean;
   error: string | null;
   delaySeconds: number | null;
+  source: BoardSource | null;
 } {
   const [rows, setRows] = useState<BoardRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [delaySeconds, setDelaySeconds] = useState<number | null>(null);
+  const [source, setSource] = useState<BoardSource | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,6 +57,7 @@ export function useBoard(): {
           ok?: boolean;
           stocks?: BoardRow[];
           delaySeconds?: number | null;
+          source?: string;
           reason?: string;
         };
 
@@ -50,6 +70,11 @@ export function useBoard(): {
 
         setRows(body.stocks);
         setDelaySeconds(body.delaySeconds ?? null);
+        setSource(
+          body.source === 'egxbot' || body.source === 'tradingview'
+            ? body.source
+            : null
+        );
       } catch {
         if (!cancelled) setError('تعذّر الوصول للسيرفر. اتأكد من النت.');
       } finally {
@@ -62,5 +87,5 @@ export function useBoard(): {
     };
   }, []);
 
-  return { rows, loading, error, delaySeconds };
+  return { rows, loading, error, delaySeconds, source };
 }

@@ -139,8 +139,8 @@ void main() {
         isEmpty,
         reason:
             'No source behind this product is live. TradingView declares a '
-            '900-second delay on EGX and Yahoo answers with the last daily '
-            'close; the exchange licenses real-time data and sells it. The '
+            '900-second delay on EGX and EGXBot declares nothing at all; the '
+            'exchange licenses real-time data and sells it. The '
             'claim was scrubbed from five places once already.'
             '\n\n${offenders.join('\n')}',
       );

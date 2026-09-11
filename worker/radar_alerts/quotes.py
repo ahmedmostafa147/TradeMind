@@ -5,7 +5,7 @@
 CLAUDE.md §10 records why: the phone and the browser used to fetch prices from
 different sources and showed two different numbers for the same open position.
 The route is the one endpoint both surfaces share, and a worker that went
-straight to TradingView or Yahoo would be a THIRD reader of a third source,
+straight to EGXBot or TradingView would be a THIRD reader of a third source,
 re-introducing exactly the split that was closed — except this one decides
 whether to tell somebody their stop broke.
 
@@ -30,8 +30,9 @@ log = logging.getLogger(__name__)
 #: Where the route lives. Overridable so a preview deployment can be pointed at.
 DEFAULT_ORIGIN = "https://radar-one-phi.vercel.app"
 
-#: The route fans out one upstream request per symbol on its Yahoo fallback, so
-#: asking for everything at once can outlive its own `maxDuration`. Batched.
+#: The route batches its own upstream calls (eighty codes per EGXBot request),
+#: but a request for every subscriber's every ticker at once is still one slow
+#: answer that a single timeout can lose whole. Batched here too.
 BATCH = 40
 
 TIMEOUT_SECONDS = 25
