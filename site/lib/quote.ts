@@ -11,7 +11,8 @@
  * It comes from EGXBot first and TradingView second (see the route). Neither
  * is the exchange's licensed feed: TradingView declares a fifteen-minute delay
  * and EGXBot declares nothing, and an undeclared delay is not a zero delay.
- * `source` rides along so the screen can say which of the two it is quoting.
+ * `source` rides along for the caller's own diagnosis — NO SCREEN PRINTS IT
+ * (owner's call, 13 سبتمبر 2026; see `PRICES_CAPTION` in market-polling.ts).
  *
  * ── THERE IS NO SESSION TIMESTAMP ANY MORE ─────────────────────────────────
  *
@@ -59,18 +60,6 @@ export function decodeQuote(wire: unknown): Quote | null {
     source:
       w.source === 'egxbot' || w.source === 'tradingview' ? w.source : null,
   };
-}
-
-/** What a screen may say about where a quote came from. Never «مباشر». */
-export function quoteSourceLabel(source: QuoteSource | null): string {
-  switch (source) {
-    case 'egxbot':
-      return 'المصدر: EGXBot — مش سعر لحظي';
-    case 'tradingview':
-      return 'المصدر: TradingView — متأخر 15 دقيقة';
-    default:
-      return 'مش سعر لحظي';
-  }
 }
 
 /**

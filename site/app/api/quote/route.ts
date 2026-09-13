@@ -16,7 +16,7 @@ import { fetchTradingViewBoard } from '@/lib/tradingview-fetch';
  * Not authenticated, on purpose — it returns prices the exchange publishes to
  * everyone, and takes no input beyond a list of tickers.
  *
- * ── EGXBOT FIRST, TRADINGVIEW FOR WHAT IT DID NOT ANSWER, NOTHING ELSE ──────
+ * ── ONE SOURCE PER ANSWER: EGXBOT, OR TRADINGVIEW ONLY WHEN EGXBOT IS DOWN ──
  *
  * Owner's call (11 سبتمبر 2026): EGXBot is the first source for every price in
  * the product, TradingView the fallback, and Yahoo — the original source, thirty
@@ -24,10 +24,12 @@ import { fetchTradingViewBoard } from '@/lib/tradingview-fetch';
  * third tier. Three sources for one number is two more ways for the phone and
  * the browser to disagree.
  *
- * The fallback is PER SYMBOL, not per request. EGXBot carries ~277 of the ~292
- * listings TradingView does; a ticker it lacks is looked up on the board, and
- * the board is fetched at all only when something is still missing. So a
- * request for four positions is usually one upstream call.
+ * The fallback is PER REQUEST, not per symbol (13 سبتمبر, owner's call again).
+ * The first version filled the handful of tickers EGXBot does not carry from
+ * TradingView, which put two feeds' numbers side by side on one screen. Now a
+ * response is entirely one source: a ticker EGXBot lacks is simply absent and
+ * renders as «مفيش سعر», and TradingView answers only when EGXBot answered
+ * nothing at all.
  *
  * ── NO INPUT REACHES AN UPSTREAM URL PATH ──────────────────────────────────
  *
@@ -73,66 +75,58 @@ export async function GET(request: Request) {
   }
 
   const asOf = new Date().toISOString();
-  const quotes = new Map<string, QuoteWire>();
+  const quotes: QuoteWire[] = [];
+  let source: QuoteSource | 'none' = 'none';
+  // Whether the exchange is in session, as the source sees it. The dashboard
+  // polls quickly while this is true and slowly otherwise; null means the
+  // source did not say, and the client treats that as "keep polling".
+  let open: boolean | null = null;
 
   const egxbot = await fetchEgxBotQuotes(symbols);
   if (egxbot !== null) {
+    source = 'egxbot';
+    open = egxbot.open;
     for (const symbol of symbols) {
       const q = egxbot.quotes.get(symbol);
       if (q === undefined) continue;
-      quotes.set(symbol, {
+      quotes.push({
         symbol,
         name: nameForTicker(symbol),
         price: q.price,
         changePercent: fraction(q.changePercent),
         change: moneyChange(q.price, q.changePercent),
         asOf,
-        source: 'egxbot',
+        source,
       });
     }
-  }
-
-  const missing = symbols.filter((s) => !quotes.has(s));
-  if (missing.length > 0) {
+  } else {
     const board = await fetchTradingViewBoard();
     if (board !== null) {
+      source = 'tradingview';
       const bySymbol = new Map(board.map((row) => [row.symbol, row]));
-      for (const symbol of missing) {
+      for (const symbol of symbols) {
         const row = bySymbol.get(symbol);
         if (row === undefined) continue;
-        quotes.set(symbol, {
+        quotes.push({
           symbol,
           name: nameForTicker(symbol) ?? row.name,
           price: row.price,
           changePercent: fraction(row.changePercent),
           change: moneyChange(row.price, row.changePercent),
           asOf,
-          source: 'tradingview',
+          source,
         });
       }
     }
   }
 
-  // Which source answered, for the caller: 'egxbot' when everything came from
-  // it, 'mixed' when the fallback filled a gap, 'tradingview' when EGXBot was
-  // down, 'none' when nothing answered. A symbol neither carries is simply
-  // absent — the UI renders «مفيش سعر», never a zero.
-  const sources = new Set<QuoteSource>(
-    [...quotes.values()].map((q) => q.source as QuoteSource)
-  );
-  const source =
-    sources.size === 0
-      ? 'none'
-      : sources.size > 1
-        ? 'mixed'
-        : [...sources][0];
-
   return NextResponse.json(
-    { ok: true, source, quotes: symbols.map((s) => quotes.get(s)).filter(Boolean) },
+    { ok: true, source, open, quotes },
     {
-      // One minute of CDN caching collapses a dashboard full of open positions
-      // into one upstream call, and a minute is inside either source's delay.
-      headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' },
+      // Half a minute of CDN caching collapses every open dashboard into one
+      // upstream call per tick, and matches the client's in-session poll —
+      // a longer window would have the poll re-reading the same answer.
+      headers: { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' },
     }
   );
 }
