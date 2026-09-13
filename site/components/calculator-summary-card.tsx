@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { SmartTradePlan } from '@/lib/smart-trade';
+import { explainSizing } from '@/lib/sizing-explanation';
 import { money, percent, quantity } from '@/lib/format';
 import {
   CheckCircleIcon,
@@ -14,15 +15,21 @@ import {
 
 export function CalculatorSummaryCard({
   plan,
+  budget = null,
+  capital = 0,
   onTradeCreate,
 }: {
   plan: SmartTradePlan;
+  /** What the trader typed in «المبلغ اللي هدخل بيه», for the explanation. */
+  budget?: number | null;
+  capital?: number;
   onTradeCreate?: () => void;
 }) {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const { sizing, quality, rewardRiskRatio, expectedProfit, expectedLoss } = plan;
   const resolved = rewardRiskRatio !== null && sizing.effectiveQty !== null;
+  const explanation = resolved ? explainSizing(plan, budget, capital) : null;
 
   function copyText(key: string, text: string | null) {
     if (!text || !resolved) return;
@@ -93,6 +100,21 @@ export function CalculatorSummaryCard({
           حدّك المسموح <strong className="num text-fg">{money(sizing.maxLoss)}</strong> على الصفقة
         </span>
       </div>
+
+      {/* WHY THIS NUMBER. The answer and the cap were both on screen and the
+          division between them was not, which is how a correct «11» got read
+          as a bug. The trader's own figures, in one line — and when their cash
+          would have bought more, what that would have cost them at the stop. */}
+      {explanation && (
+        <div className="space-y-1.5 rounded-lg border border-border-default bg-surface-low p-3 text-xs leading-relaxed text-fg-muted">
+          <p className="font-bold text-fg">ليه الرقم ده؟</p>
+          <p>{explanation.reason}</p>
+          {explanation.counterfactual && (
+            <p className="text-loss">{explanation.counterfactual}</p>
+          )}
+          {explanation.advice && <p>{explanation.advice}</p>}
+        </div>
+      )}
 
       {/* Warning if over risk */}
       {sizing.overRisk && (
