@@ -52,7 +52,10 @@ function logoFor(symbol: string): string | null {
   return typeof id === 'string' && LOGO_ID.test(id) ? id : null;
 }
 
-async function fromEgxBot(): Promise<BoardRow[] | null> {
+async function fromEgxBot(): Promise<{
+  rows: BoardRow[];
+  open: boolean | null;
+} | null> {
   const listing = await fetchEgxBotBoard();
   if (listing === null) return null;
 
@@ -60,7 +63,7 @@ async function fromEgxBot(): Promise<BoardRow[] | null> {
   // those codes, which is at worst a few minutes older.
   const live = await fetchEgxBotQuotes(listing.map((row) => row.symbol));
 
-  return listing.map((row) => {
+  const rows = listing.map((row) => {
     const q = live?.quotes.get(row.symbol);
     return {
       symbol: row.symbol,
@@ -76,16 +79,26 @@ async function fromEgxBot(): Promise<BoardRow[] | null> {
       logoId: logoFor(row.symbol),
     };
   });
+  return { rows, open: live?.open ?? null };
 }
+
+// Half a minute, matching the dashboard's in-session poll (see use-board.ts).
+const CACHE = { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' };
 
 export async function GET() {
   const egxbot = await fromEgxBot();
-  if (egxbot !== null && egxbot.length > 0) {
+  if (egxbot !== null && egxbot.rows.length > 0) {
     return NextResponse.json(
-      { ok: true, source: 'egxbot', stocks: egxbot, delaySeconds: null },
       {
-        headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' },
-      }
+        ok: true,
+        source: 'egxbot',
+        // Whether the exchange is in session, as the source sees it — the
+        // client polls quickly while true. Null when the source did not say.
+        open: egxbot.open,
+        stocks: egxbot.rows,
+        delaySeconds: null,
+      },
+      { headers: CACHE }
     );
   }
 
@@ -99,12 +112,11 @@ export async function GET() {
       {
         ok: true,
         source: 'tradingview',
+        open: null,
         stocks,
         delaySeconds: stocks[0].delaySeconds,
       },
-      {
-        headers: { 'Cache-Control': 's-maxage=60, stale-while-revalidate=300' },
-      }
+      { headers: CACHE }
     );
   }
 

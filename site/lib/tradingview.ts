@@ -17,7 +17,8 @@
  * read off the response rather than assumed, so if they ever change it the UI
  * says the new number instead of a stale promise. Real-time EGX data is licensed
  * and sold by the exchange; nothing free is live, and the product must not claim
- * otherwise. See `DELAY_LABEL`.
+ * otherwise. No screen prints the figure either — captions name neither a
+ * source nor a delay (`PRICES_CAPTION`).
  *
  * ── AND IT IS AN UNDOCUMENTED ENDPOINT ─────────────────────────────────────
  *
@@ -32,11 +33,6 @@
 /** TradingView's own word for the EGX feed, decoded. */
 export const DELAY_SECONDS = 900;
 
-/**
- * Only right when TradingView answered — EGXBot declares no delay at all. The
- * screens caption by source (`boardSourceLabel`) rather than by this constant.
- */
-export const DELAY_LABEL = 'متأخر 15 دقيقة';
 
 export type BoardRow = {
   /** `COMI` — no exchange prefix, no suffix. */

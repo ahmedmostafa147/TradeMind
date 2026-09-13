@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { EgxBotHeroData } from '@/lib/egxbot-fetch';
+import { PRICES_CAPTION } from '@/lib/market-polling';
 import { TrendingUpIcon } from '@/components/icons';
 
 /** Slow enough to be polite to a third party, quick enough to feel current. */
@@ -10,12 +11,16 @@ const POLL_MS = 60_000;
 /**
  * EGX30 and the session's leader, as EGXBot has them.
  *
- * ── IT DOES NOT SAY «مباشر» ────────────────────────────────────────────────
+ * ── IT DOES NOT SAY «مباشر», AND IT DOES NOT NAME ITS SOURCE ───────────────
  *
- * It used to, next to a pulsing green dot. The source declares no delay at all
- * (see `EgxBotHeroData`), so the claim had nothing behind it, and the project
- * already banned that wording in five other places for the weaker case where a
- * delay was at least known.
+ * It used to say «مباشر», next to a pulsing green dot. The source declares no
+ * delay at all (see `EgxBotHeroData`), so the claim had nothing behind it, and
+ * the project already banned that wording in five other places for the weaker
+ * case where a delay was at least known.
+ *
+ * It then said «المصدر: EGXBot» — and that line was the template every other
+ * price caption copied. Naming the feed advertised another product inside
+ * ours; gone everywhere on 13 سبتمبر (see `PRICES_CAPTION`).
  *
  * ── AND IT STOPS POLLING WHEN NOBODY IS LOOKING ────────────────────────────
  *
@@ -87,7 +92,7 @@ export function EgxBotHeroWidget() {
       )}
 
       <p className="w-full text-[11px] text-fg-subtle sm:w-auto">
-        المصدر: EGXBot — استرشادي، ومش سعر لحظي.
+        {PRICES_CAPTION}
       </p>
     </div>
   );

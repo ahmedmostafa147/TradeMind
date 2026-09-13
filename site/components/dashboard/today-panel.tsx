@@ -20,7 +20,7 @@ import {
   signedPercent,
 } from "@/lib/format";
 import { normalizeTicker } from "@/lib/egx-directory";
-import { quoteSourceLabel, unrealised, type Quote } from "@/lib/quote";
+import { unrealised, type Quote } from "@/lib/quote";
 import type { Trade, TradeStatus } from "@/lib/trade";
 import { useQuotes } from "@/lib/use-quotes";
 import { TodaySummaryBanner } from "@/components/dashboard/today-summary-banner";
@@ -746,10 +746,12 @@ function NoteDialog({
  * an error and never a zero. A price that failed to arrive must not look like a
  * position that has not moved.
  *
- * «آخر سعر» is the honest label, and the source is named under it. Neither
- * feed (EGXBot first, TradingView second) is a live tick — one declares a
- * fifteen-minute delay, the other declares nothing — and calling it anything
- * else would invite somebody to trade on it.
+ * «آخر سعر» is the honest label. Neither feed (EGXBot first, TradingView as
+ * the fallback) is the exchange's licensed tick, and calling it anything else
+ * would invite somebody to trade on it. The source is NOT named under it —
+ * it briefly was, and naming a feed inside the product is the owner's no
+ * (see `PRICES_CAPTION`); the figure refreshes on its own while the session
+ * is open (`useQuotes`), which is what «current» should mean here.
  *
  * NO DATE UNDER THE PRICE. There used to be one, read off `quote.asOf`, which
  * was the candle's own timestamp when Yahoo was the source. Neither remaining
@@ -810,9 +812,6 @@ function LivePnl({
       <div className="text-end">
         <p className="text-[11px] text-fg-muted">آخر سعر</p>
         <p className="num text-sm font-semibold">{money(quote.price)}</p>
-        <p className="text-[11px] text-fg-subtle">
-          {quoteSourceLabel(quote.source)}
-        </p>
       </div>
     </div>
   );
