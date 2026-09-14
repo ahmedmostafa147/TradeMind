@@ -42,6 +42,11 @@ log = logging.getLogger(__name__)
 #: Per-user subcollection holding one document per browser that opted in.
 PUSH_COLLECTION = "push"
 
+#: Per-user document holding the Telegram link: the one-time code the settings
+#: screen showed, and the chat id once the reader has pressed Start.
+TELEGRAM_COLLECTION = "telegram"
+TELEGRAM_DOCUMENT = "link"
+
 #: Per-user document recording which alert keys have already gone out.
 #: Written by this worker and read by nobody else — see firestore.rules, where
 #: it has no client rule at all and therefore falls to the deny-all catch-all.
@@ -213,3 +218,85 @@ def load_recent_foreign_nets(db, sessions: int) -> list[float | None]:
             # `flow_flip` ends the run there rather than reading across it.
             nets.append(None)
     return nets
+
+
+# ── Telegram links. Same minimisation as everything else above. ──────────────
+
+
+def load_telegram_links(db) -> tuple[dict[str, int], dict[str, str]]:
+    """`(chat id by uid, uid by pending link code)`.
+
+    ONE COLLECTION GROUP READ, not a walk of `users` — the same reason
+    `load_subscribers` starts from `push`. Somebody who never opened the
+    settings screen has no document here and is never read.
+    """
+    chats: dict[str, int] = {}
+    pending: dict[str, str] = {}
+
+    for snapshot in db.collection_group(TELEGRAM_COLLECTION).stream():
+        user_ref = snapshot.reference.parent.parent
+        if user_ref is None:
+            continue
+        data = snapshot.to_dict() or {}
+
+        chat_id = data.get("chatId")
+        if isinstance(chat_id, int) and not isinstance(chat_id, bool):
+            chats[user_ref.id] = chat_id
+
+        code = data.get("linkCode")
+        if isinstance(code, str) and code and user_ref.id not in chats:
+            pending[code] = user_ref.id
+
+    return chats, pending
+
+
+def save_telegram_chat(db, uid: str, chat_id: int) -> None:
+    """Completes a link, and SPENDS THE CODE in the same write.
+
+    The code is a credential — anybody holding a live one can attach their own
+    chat to this reader's alerts and start receiving their watchlist and stop
+    levels. Deleting it at the moment it is redeemed is what makes it
+    single-use.
+    """
+    from google.cloud.firestore_v1 import DELETE_FIELD
+
+    (
+        db.collection("users")
+        .document(uid)
+        .collection(TELEGRAM_COLLECTION)
+        .document(TELEGRAM_DOCUMENT)
+        .set({"chatId": chat_id, "linkCode": DELETE_FIELD}, merge=True)
+    )
+
+
+def clear_telegram_chat(db, uid: str) -> None:
+    """Drops a chat the bot can no longer reach — blocked, or account deleted."""
+    (
+        db.collection("users")
+        .document(uid)
+        .collection(TELEGRAM_COLLECTION)
+        .document(TELEGRAM_DOCUMENT)
+        .delete()
+    )
+
+
+# ── The bot's own read cursor. Not user data. ────────────────────────────────
+
+
+def load_update_offset(db) -> int | None:
+    """Where `getUpdates` should resume from.
+
+    Stored OUTSIDE any user document because it belongs to the bot, not to a
+    reader. Without it every run re-reads the same link requests forever.
+    """
+    snapshot = db.collection("botState").document("telegram").get()
+    if not snapshot.exists:
+        return None
+    value = (snapshot.to_dict() or {}).get("updateOffset")
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def save_update_offset(db, offset: int | None) -> None:
+    if offset is None:
+        return
+    db.collection("botState").document("telegram").set({"updateOffset": offset})

@@ -26,6 +26,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   serverTimestamp,
   setDoc,
@@ -193,6 +194,77 @@ export async function disablePush(uid: string): Promise<void> {
   const registration = await navigator.serviceWorker.ready;
   const subscription = await registration.pushManager.getSubscription();
   if (subscription) await subscription.unsubscribe();
+}
+
+/**
+ * The Telegram bot's username, e.g. `RadarEgxBot`. Empty when not configured.
+ *
+ * Public by nature — it is the handle anybody can search for. The bot's TOKEN
+ * is the credential and lives only in the worker's environment.
+ */
+export const TELEGRAM_BOT = (process.env.NEXT_PUBLIC_TELEGRAM_BOT ?? '').replace(
+  /^@/,
+  ''
+);
+
+export type TelegramLink =
+  | { state: 'off' }
+  /** A code was issued and the reader has not pressed Start yet. */
+  | { state: 'pending'; url: string }
+  | { state: 'linked' };
+
+/**
+ * A one-time code, from the browser's own CSPRNG.
+ *
+ * NOT `Math.random()`. Whoever holds a live code can attach their chat to this
+ * reader's alerts and start receiving their tickers and stop levels, so the
+ * value has to be unguessable rather than merely unique. Base36 of 16 random
+ * bytes clears the rule's 8–64 character bound with room to spare.
+ */
+function newCode(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes)
+    .map((b) => b.toString(36).padStart(2, '0'))
+    .join('');
+}
+
+/** What the settings screen should show for this account. */
+export async function telegramState(uid: string): Promise<TelegramLink> {
+  if (TELEGRAM_BOT === '') return { state: 'off' };
+  const snapshot = await getDoc(doc(firestore(), 'users', uid, 'telegram', 'link'));
+  const data = snapshot.data();
+  if (data && typeof data.chatId === 'number') return { state: 'linked' };
+  if (data && typeof data.linkCode === 'string' && data.linkCode) {
+    return { state: 'pending', url: startUrl(data.linkCode) };
+  }
+  return { state: 'off' };
+}
+
+function startUrl(code: string): string {
+  return `https://t.me/${TELEGRAM_BOT}?start=${encodeURIComponent(code)}`;
+}
+
+/**
+ * Issues a fresh code and returns the link to press.
+ *
+ * A NEW CODE EVERY TIME, replacing any previous one. The old value stops
+ * resolving the moment this write lands, which is what limits the window in
+ * which an abandoned link is worth stealing.
+ */
+export async function startTelegramLink(uid: string): Promise<string> {
+  const code = newCode();
+  await setDoc(doc(firestore(), 'users', uid, 'telegram', 'link'), {
+    linkCode: code,
+    // Server clock, required by firestore.rules — the same stamp every other
+    // client-created document in this project carries.
+    createdAt: serverTimestamp(),
+  });
+  return startUrl(code);
+}
+
+/** Turns Telegram off. Deleting the document is what stops delivery. */
+export async function unlinkTelegram(uid: string): Promise<void> {
+  await deleteDoc(doc(firestore(), 'users', uid, 'telegram', 'link'));
 }
 
 /** True when this browser currently holds a push subscription. */
